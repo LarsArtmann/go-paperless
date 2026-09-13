@@ -1870,3 +1870,527 @@ func classifyStatus(resp *http.Response, snippet []byte, path string) error {
 
 	return wrapped
 }
+
+// DocumentNoteUser is the (possibly anonymous) author of a document note.
+type DocumentNoteUser struct {
+	ID        int
+	Username  string
+	FirstName string
+	LastName  string
+}
+
+// DocumentNote is one operator comment attached to a stored document.
+type DocumentNote struct {
+	ID      int
+	Note    string
+	Created time.Time
+	// User is the note's author, or nil when the server cannot resolve it
+	// (e.g. the author account was deleted).
+	User *DocumentNoteUser
+}
+
+// documentNoteUserPayload mirrors the BasicUserSerializer the notes
+// endpoint embeds.
+type documentNoteUserPayload struct {
+	ID        int    `json:"id"`
+	Username  string `json:"username"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// documentNotePayload mirrors the Note serializer fields the SDK relies on.
+type documentNotePayload struct {
+	ID      int                      `json:"id"`
+	Note    string                   `json:"note"`
+	Created time.Time                `json:"created"`
+	User    *documentNoteUserPayload `json:"user"`
+}
+
+// decodeDocumentNotes maps the server's note array (the notes endpoint is
+// not paginated and always answers with a bare JSON array).
+func decodeDocumentNotes(raw []byte) ([]DocumentNote, error) {
+	var payloads []documentNotePayload
+	if err := json.Unmarshal(raw, &payloads); err != nil {
+		return nil, errorfamily.WrapCorruption(err, "paperless.decode_notes",
+			"could not decode document notes")
+	}
+
+	notes := make([]DocumentNote, 0, len(payloads))
+	for _, payload := range payloads {
+		note := DocumentNote{
+			ID:      payload.ID,
+			Note:    payload.Note,
+			Created: payload.Created,
+		}
+
+		if payload.User != nil {
+			note.User = &DocumentNoteUser{
+				ID:        payload.User.ID,
+				Username:  payload.User.Username,
+				FirstName: payload.User.FirstName,
+				LastName:  payload.User.LastName,
+			}
+		}
+
+		notes = append(notes, note)
+	}
+
+	return notes, nil
+}
+
+// ListDocumentNotes returns the notes attached to one document, newest
+// first (the server's ordering). The notes endpoint is not paginated —
+// the response is a bare JSON array.
+func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]DocumentNote, error) {
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodGet,
+		fmt.Sprintf(pathDocumentNotes, documentID),
+		"",
+		nil,
+		"",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list document notes (document %d): %w", documentID, err)
+	}
+
+	return decodeDocumentNotes(raw)
+}
+
+// AddDocumentNote appends one note to a document and returns the server's
+// updated note list (the notes endpoint answers every mutation with the
+// full remaining list, newest first).
+func (c *Client) AddDocumentNote(
+	ctx context.Context,
+	documentID int,
+	note string,
+) ([]DocumentNote, error) {
+	if documentID <= 0 {
+		return nil, errorfamily.NewRejection("paperless.empty_document_id",
+			"document ID is required to add a note")
+	}
+
+	if note == "" {
+		return nil, errorfamily.NewRejection("paperless.empty_note",
+			"note text is required")
+	}
+
+	payload, err := json.Marshal(struct {
+		Note string `json:"note"`
+	}{Note: note})
+	if err != nil {
+		return nil, errorfamily.WrapInfrastructure(err, "paperless.marshal_note",
+			"could not encode the note payload")
+	}
+
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodPost,
+		fmt.Sprintf(pathDocumentNotes, documentID),
+		"",
+		bytes.NewReader(payload),
+		"application/json",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("add document note (document %d): %w", documentID, err)
+	}
+
+	return decodeDocumentNotes(raw)
+}
+
+// DeleteDocumentNote removes one note from a document and returns the
+// server's updated note list. The note is addressed by the query
+// parameter the endpoint expects (DELETE .../notes/?id=<noteID>).
+func (c *Client) DeleteDocumentNote(
+	ctx context.Context,
+	documentID, noteID int,
+) ([]DocumentNote, error) {
+	if documentID <= 0 {
+		return nil, errorfamily.NewRejection("paperless.empty_document_id",
+			"document ID is required to delete a note")
+	}
+
+	if noteID <= 0 {
+		return nil, errorfamily.NewRejection("paperless.empty_note_id",
+			"note ID is required to delete a note")
+	}
+
+	query := url.Values{}
+	query.Set("id", strconv.Itoa(noteID))
+
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodDelete,
+		fmt.Sprintf(pathDocumentNotes, documentID),
+		query.Encode(),
+		nil,
+		"",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("delete document note (document %d, note %d): %w",
+			documentID, noteID, err)
+	}
+
+	return decodeDocumentNotes(raw)
+}
+
+// ShareLinkFileVersion names which rendition of a document a share link
+// exposes. The server's default (and the zero-value fallback it applies
+// when the field is omitted) is the archive version.
+type ShareLinkFileVersion string
+
+const (
+	// ShareLinkFileVersionArchive exposes the OCR'd archive rendition.
+	ShareLinkFileVersionArchive ShareLinkFileVersion = "archive"
+	// ShareLinkFileVersionOriginal exposes the untouched original file.
+	ShareLinkFileVersionOriginal ShareLinkFileVersion = "original"
+)
+
+// ShareLink is one public download link for a document. Slug is
+// server-generated; the full share URL is <base>/share/<slug>.
+type ShareLink struct {
+	ID      int
+	Created time.Time
+	// Expiration is when the link stops working; zero means it never
+	// expires.
+	Expiration time.Time
+	Slug       string
+	DocumentID int
+	// FileVersion says which rendition the link serves (archive or
+	// original).
+	FileVersion ShareLinkFileVersion
+}
+
+// shareLinkPayload mirrors the ShareLink serializer fields the SDK relies
+// on (id, created, expiration, slug, document, file_version).
+type shareLinkPayload struct {
+	ID          int        `json:"id"`
+	Created     time.Time  `json:"created"`
+	Expiration  *time.Time `json:"expiration"`
+	Slug        string     `json:"slug"`
+	Document    int        `json:"document"`
+	FileVersion string     `json:"file_version"`
+}
+
+func (p shareLinkPayload) shareLink() ShareLink {
+	link := ShareLink{
+		ID:          p.ID,
+		Created:     p.Created,
+		Slug:        p.Slug,
+		DocumentID:  p.Document,
+		FileVersion: ShareLinkFileVersion(p.FileVersion),
+	}
+
+	if p.Expiration != nil {
+		link.Expiration = *p.Expiration
+	}
+
+	return link
+}
+
+// CreateShareLinkRequest asks for one share link. A zero FileVersion is
+// omitted from the POST so the server applies its default (archive); a
+// nil Expiration means the link never expires.
+type CreateShareLinkRequest struct {
+	DocumentID  int
+	FileVersion ShareLinkFileVersion
+	Expiration  *time.Time
+}
+
+// ListShareLinks returns every share link on the server, paginating the
+// same bounded way as the document listings.
+func (c *Client) ListShareLinks(ctx context.Context) ([]ShareLink, error) {
+	links := []ShareLink{}
+
+	for page := 1; page <= maxDocumentListPages; page++ {
+		query := url.Values{}
+		query.Set("page", strconv.Itoa(page))
+		query.Set("page_size", strconv.Itoa(documentListPageSize))
+
+		raw, err := c.doRequest(ctx, http.MethodGet, pathShareLinks, query.Encode(), nil, "")
+		if err != nil {
+			return nil, fmt.Errorf("list share links (page %d): %w", page, err)
+		}
+
+		list := struct {
+			Results []shareLinkPayload `json:"results"`
+		}{}
+
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return nil, errorfamily.WrapCorruption(err, "paperless.decode_share_links",
+				"could not decode share link list").
+				WithContext("page", strconv.Itoa(page))
+		}
+
+		for _, payload := range list.Results {
+			links = append(links, payload.shareLink())
+		}
+
+		if len(list.Results) < documentListPageSize {
+			break
+		}
+	}
+
+	return links, nil
+}
+
+// CreateShareLink makes one public download link for a document. The
+// server generates the slug — the POST deliberately sends only the
+// document, the optional file version, and the optional expiration.
+func (c *Client) CreateShareLink(
+	ctx context.Context,
+	req CreateShareLinkRequest,
+) (ShareLink, error) {
+	if req.DocumentID <= 0 {
+		return ShareLink{}, errorfamily.NewRejection("paperless.empty_document_id",
+			"document ID is required to create a share link")
+	}
+
+	payload, err := json.Marshal(struct {
+		Document    int                  `json:"document"`
+		FileVersion ShareLinkFileVersion `json:"file_version,omitempty"`
+		Expiration  *time.Time           `json:"expiration,omitempty"`
+	}{
+		Document:    req.DocumentID,
+		FileVersion: req.FileVersion,
+		Expiration:  req.Expiration,
+	})
+	if err != nil {
+		return ShareLink{}, errorfamily.WrapInfrastructure(err, "paperless.marshal_share_link",
+			"could not encode the share link payload").
+			WithContext("document", strconv.Itoa(req.DocumentID))
+	}
+
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodPost,
+		pathShareLinks,
+		"",
+		bytes.NewReader(payload),
+		"application/json",
+	)
+	if err != nil {
+		return ShareLink{}, fmt.Errorf("create share link (document %d): %w",
+			req.DocumentID, err)
+	}
+
+	var created shareLinkPayload
+	if err := json.Unmarshal(raw, &created); err != nil {
+		return ShareLink{}, errorfamily.WrapCorruption(err, "paperless.decode_share_link",
+			"could not decode the created share link").
+			WithContext("document", strconv.Itoa(req.DocumentID))
+	}
+
+	return created.shareLink(), nil
+}
+
+// DeleteShareLink revokes one public link; every consumer of the slug
+// loses access immediately.
+func (c *Client) DeleteShareLink(ctx context.Context, linkID int) error {
+	if linkID <= 0 {
+		return errorfamily.NewRejection("paperless.empty_share_link_id",
+			"share link ID is required to delete a share link")
+	}
+
+	if _, err := c.doRequest(
+		ctx,
+		http.MethodDelete,
+		pathShareLinks+strconv.Itoa(linkID)+"/",
+		"",
+		nil,
+		"",
+	); err != nil {
+		return fmt.Errorf("delete share link %d: %w", linkID, err)
+	}
+
+	return nil
+}
+
+// SavedViewFilterRule is one filter criterion of a saved view: the
+// server's numeric rule type (e.g. 6 = "has tag ...") and its string
+// value.
+type SavedViewFilterRule struct {
+	RuleType int
+	Value    string
+}
+
+// savedViewFilterRulePayload mirrors the SavedViewFilterRule serializer.
+type savedViewFilterRulePayload struct {
+	RuleType int    `json:"rule_type"`
+	Value    string `json:"value"`
+}
+
+// SavedView is one stored filter view ("Inbox", ...) in the web UI. The
+// SDK models the stable core fields; servers add or drop UI fields
+// (icon, page_size, display mode, ...) across versions and unknown JSON
+// fields are ignored.
+type SavedView struct {
+	ID   int
+	Name string
+	// ShowOnDashboard and ShowInSidebar mirror the view's visibility
+	// flags; a server that no longer serves them decodes as false.
+	ShowOnDashboard bool
+	ShowInSidebar   bool
+	SortField       string
+	SortReverse     bool
+	FilterRules     []SavedViewFilterRule
+}
+
+// savedViewPayload mirrors the SavedView serializer's stable fields.
+type savedViewPayload struct {
+	ID              int                          `json:"id"`
+	Name            string                       `json:"name"`
+	ShowOnDashboard bool                         `json:"show_on_dashboard"`
+	ShowInSidebar   bool                         `json:"show_in_sidebar"`
+	SortField       string                       `json:"sort_field"`
+	SortReverse     bool                         `json:"sort_reverse"`
+	FilterRules     []savedViewFilterRulePayload `json:"filter_rules"`
+}
+
+func (p savedViewPayload) savedView() SavedView {
+	view := SavedView{
+		ID:              p.ID,
+		Name:            p.Name,
+		ShowOnDashboard: p.ShowOnDashboard,
+		ShowInSidebar:   p.ShowInSidebar,
+		SortField:       p.SortField,
+		SortReverse:     p.SortReverse,
+		FilterRules:     make([]SavedViewFilterRule, 0, len(p.FilterRules)),
+	}
+
+	for _, rule := range p.FilterRules {
+		view.FilterRules = append(view.FilterRules, SavedViewFilterRule{
+			RuleType: rule.RuleType,
+			Value:    rule.Value,
+		})
+	}
+
+	return view
+}
+
+// CreateSavedViewRequest asks for one saved view. Name is required; the
+// filter rules carry the server's numeric rule types.
+type CreateSavedViewRequest struct {
+	Name            string
+	ShowOnDashboard bool
+	ShowInSidebar   bool
+	SortField       string
+	SortReverse     bool
+	FilterRules     []SavedViewFilterRule
+}
+
+// ListSavedViews returns every saved view on the server, paginating the
+// same bounded way as the document listings.
+func (c *Client) ListSavedViews(ctx context.Context) ([]SavedView, error) {
+	views := []SavedView{}
+
+	for page := 1; page <= maxDocumentListPages; page++ {
+		query := url.Values{}
+		query.Set("page", strconv.Itoa(page))
+		query.Set("page_size", strconv.Itoa(documentListPageSize))
+
+		raw, err := c.doRequest(ctx, http.MethodGet, pathSavedViews, query.Encode(), nil, "")
+		if err != nil {
+			return nil, fmt.Errorf("list saved views (page %d): %w", page, err)
+		}
+
+		list := struct {
+			Results []savedViewPayload `json:"results"`
+		}{}
+
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return nil, errorfamily.WrapCorruption(err, "paperless.decode_saved_views",
+				"could not decode saved view list").
+				WithContext("page", strconv.Itoa(page))
+		}
+
+		for _, payload := range list.Results {
+			views = append(views, payload.savedView())
+		}
+
+		if len(list.Results) < documentListPageSize {
+			break
+		}
+	}
+
+	return views, nil
+}
+
+// CreateSavedView stores one saved view and returns its ID.
+func (c *Client) CreateSavedView(
+	ctx context.Context,
+	req CreateSavedViewRequest,
+) (int, error) {
+	if req.Name == "" {
+		return 0, errorfamily.NewRejection("paperless.empty_saved_view",
+			"saved view name is required")
+	}
+
+	rules := make([]savedViewFilterRulePayload, 0, len(req.FilterRules))
+	for _, rule := range req.FilterRules {
+		rules = append(rules, savedViewFilterRulePayload(rule))
+	}
+
+	payload, err := json.Marshal(struct {
+		Name            string                       `json:"name"`
+		ShowOnDashboard bool                         `json:"show_on_dashboard"`
+		ShowInSidebar   bool                         `json:"show_in_sidebar"`
+		SortField       string                       `json:"sort_field"`
+		SortReverse     bool                         `json:"sort_reverse"`
+		FilterRules     []savedViewFilterRulePayload `json:"filter_rules"`
+	}{
+		Name:            req.Name,
+		ShowOnDashboard: req.ShowOnDashboard,
+		ShowInSidebar:   req.ShowInSidebar,
+		SortField:       req.SortField,
+		SortReverse:     req.SortReverse,
+		FilterRules:     rules,
+	})
+	if err != nil {
+		return 0, errorfamily.WrapInfrastructure(err, "paperless.marshal_saved_view",
+			"could not encode the saved view payload").
+			WithContext("name", req.Name)
+	}
+
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodPost,
+		pathSavedViews,
+		"",
+		bytes.NewReader(payload),
+		"application/json",
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create saved view %q: %w", req.Name, err)
+	}
+
+	var created savedViewPayload
+	if err := json.Unmarshal(raw, &created); err != nil {
+		return 0, errorfamily.WrapCorruption(err, "paperless.decode_saved_view",
+			"could not decode the created saved view").
+			WithContext("name", req.Name)
+	}
+
+	return created.ID, nil
+}
+
+// DeleteSavedView removes one saved view from the server.
+func (c *Client) DeleteSavedView(ctx context.Context, viewID int) error {
+	if viewID <= 0 {
+		return errorfamily.NewRejection("paperless.empty_saved_view_id",
+			"saved view ID is required to delete a saved view")
+	}
+
+	if _, err := c.doRequest(
+		ctx,
+		http.MethodDelete,
+		pathSavedViews+strconv.Itoa(viewID)+"/",
+		"",
+		nil,
+		"",
+	); err != nil {
+		return fmt.Errorf("delete saved view %d: %w", viewID, err)
+	}
+
+	return nil
+}

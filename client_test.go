@@ -2956,18 +2956,30 @@ func TestListShareLinksPaginates(t *testing.T) {
 
 	var requestedPages []string
 
+	pageEntries := func(start, end, document int, version string) string {
+		entries := make([]string, 0, end-start)
+		for id := start; id < end; id++ {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"created":"2026-09-13T09:00:00Z","expiration":null,`+
+					`"slug":"slug-%d","document":%d,"file_version":%q}`, id, id, document, version))
+		}
+
+		return strings.Join(entries, ",")
+	}
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestedPages = append(requestedPages, r.URL.Query().Get("page"))
 
 		switch r.URL.Query().Get("page") {
 		case "1":
-			_, _ = w.Write([]byte(`{"count":2,"next":"?page=2","previous":null,"results":[` +
-				`{"id":1,"created":"2026-09-13T09:00:00Z","expiration":null,"slug":"abc",` +
-				`"document":7,"file_version":"archive"}]}`))
+			_, _ = w.Write([]byte(`{"count":102,"next":"?page=2","previous":null,"results":[` +
+				pageEntries(1, 101, 7, "archive") + `]}`))
 		case "2":
-			_, _ = w.Write([]byte(`{"count":2,"next":null,"previous":null,"results":[` +
-				`{"id":2,"created":"2026-09-13T09:30:00Z",` +
-				`"expiration":"2026-12-31T23:59:59Z","slug":"def",` +
+			_, _ = w.Write([]byte(`{"count":102,"next":null,"previous":null,"results":[` +
+				`{"id":101,"created":"2026-09-13T09:30:00Z","expiration":null,"slug":"slug-101",` +
+				`"document":8,"file_version":"original"},` +
+				`{"id":102,"created":"2026-09-13T09:30:00Z",` +
+				`"expiration":"2026-12-31T23:59:59Z","slug":"slug-102",` +
 				`"document":8,"file_version":"original"}]}`))
 		default:
 			t.Errorf("unexpected page %q", r.URL.Query().Get("page"))
@@ -2986,11 +2998,12 @@ func TestListShareLinksPaginates(t *testing.T) {
 		t.Fatalf("ListShareLinks: %v", err)
 	}
 
-	if len(links) != 2 {
-		t.Fatalf("links = %d, want 2 across two pages", len(links))
+	if len(links) != 102 {
+		t.Fatalf("links = %d, want 102 across two pages", len(links))
 	}
 
-	if links[0].ID != 1 || links[0].DocumentID != 7 || links[0].FileVersion != ShareLinkFileVersionArchive {
+	if links[0].ID != 1 || links[0].DocumentID != 7 ||
+		links[0].FileVersion != ShareLinkFileVersionArchive {
 		t.Fatalf("links[0] = %+v", links[0])
 	}
 
@@ -2998,12 +3011,12 @@ func TestListShareLinksPaginates(t *testing.T) {
 		t.Fatalf("links[0].Expiration = %v, want zero for null", links[0].Expiration)
 	}
 
-	if links[1].FileVersion != ShareLinkFileVersionOriginal {
-		t.Fatalf("links[1].FileVersion = %q", links[1].FileVersion)
+	if links[100].FileVersion != ShareLinkFileVersionOriginal {
+		t.Fatalf("links[100].FileVersion = %q", links[100].FileVersion)
 	}
 
-	if links[1].Expiration.IsZero() {
-		t.Fatal("links[1].Expiration must decode the server value")
+	if links[101].Expiration.IsZero() {
+		t.Fatal("links[101].Expiration must decode the server value")
 	}
 
 	if len(requestedPages) != 2 {
@@ -3098,7 +3111,10 @@ func TestCreateShareLinkDefaultsFileVersionAndCarriesExpiration(t *testing.T) {
 	}
 
 	if payload.FileVersion != "" {
-		t.Fatalf("zero FileVersion must be omitted (server defaults to archive), got %q", payload.FileVersion)
+		t.Fatalf(
+			"zero FileVersion must be omitted (server defaults to archive), got %q",
+			payload.FileVersion,
+		)
 	}
 
 	if payload.Expiration == nil || !payload.Expiration.Equal(expiration) {
@@ -3190,7 +3206,8 @@ func TestListSavedViewsMapsFilterRules(t *testing.T) {
 		t.Fatalf("sort = %q reverse=%t", view.SortField, view.SortReverse)
 	}
 
-	if len(view.FilterRules) != 2 || view.FilterRules[0].RuleType != 6 || view.FilterRules[0].Value != "has_tag:1" {
+	if len(view.FilterRules) != 2 || view.FilterRules[0].RuleType != 6 ||
+		view.FilterRules[0].Value != "has_tag:1" {
 		t.Fatalf("filter rules = %+v", view.FilterRules)
 	}
 }
