@@ -21,63 +21,63 @@
 
 | Feature                             | Status                | Notes                                                                                                                                      |
 | ----------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Client construction with validation | 🟢 `FULLY_FUNCTIONAL` | `New` rejects empty URL/token and non-HTTP schemes, returns `ErrInvalidConfig` (`client.go:140`); `client_test.go:18`, `client_test.go:30` |
-| Construction options                | 🟢 `FULLY_FUNCTIONAL` | `WithHTTPClient` and `WithTimeout` (`client.go:114`); exercised by `example_test.go:20`                                                    |
+| Client construction with validation | 🟢 `FULLY_FUNCTIONAL` | `New` rejects empty URL/token and non-HTTP schemes, returns `ErrInvalidConfig` (`client.go:118`); `client_test.go:18`, `client_test.go:30` |
+| Construction options                | 🟢 `FULLY_FUNCTIONAL` | `WithHTTPClient` and `WithTimeout` (`client.go:125`); exercised by `example_test.go:20`                                                    |
 
 ## Document ingestion
 
 | Feature                   | Status                | Notes                                                                                                                                                    |
 | ------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Multipart document upload | 🟢 `FULLY_FUNCTIONAL` | `Upload` posts to the consumption queue and returns the task UUID (`client.go:224`); wire format asserted in `TestUploadSendsMultipartWithDocumentField` |
-| Upload metadata fields    | 🟢 `FULLY_FUNCTIONAL` | title, created, correspondent, tags, document_type, custom_fields (`client.go:401`); per-field tests `client_test.go:652`, `client_test.go:1342`         |
+| Multipart document upload | 🟢 `FULLY_FUNCTIONAL` | `Upload` posts to the consumption queue and returns the task UUID (`client.go:372`); wire format asserted in `TestUploadSendsMultipartWithDocumentField` |
+| Upload metadata fields    | 🟢 `FULLY_FUNCTIONAL` | title, created, correspondent, tags, document_type, custom_fields (`client.go:629`); per-field tests `client_test.go:652`, `client_test.go:1342`         |
 
 ## Async consumption tracking
 
 | Feature                     | Status                | Notes                                                                                                                                                                                                                        |
 | --------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task polling by ID          | 🟢 `FULLY_FUNCTIONAL` | `GetTask` filters `/api/tasks/` by task_id, `found=false` for empty results (`client.go:366`); `TestGetTaskNotFound`                                                                                                         |
-| Outcome classification      | 🟢 `FULLY_FUNCTIONAL` | `classifyTask` prefers `result_data.document_id`, falls back to `duplicate_of`, then `related_document_ids` (`client.go:341`); consumed/duplicate/failure/pending/malformed/bare-array tests at `client_test.go:1389`–`1612` |
-| Duplicate-refusal detection | 🟢 `FULLY_FUNCTIONAL` | `TaskOutcome.DuplicateRefused`/`DuplicateInTrash` separate checksum-dedup refusals from real failures (`client.go:301`); `TestGetTaskClassifiesDuplicateRefusal`                                                             |
-| Terminal-state model        | 🟢 `FULLY_FUNCTIONAL` | `TaskStatus.Terminal` treats unknown future statuses as non-terminal, the safe default for retry decisions (`client.go:290`)                                                                                                 |
+| Task polling by ID          | 🟢 `FULLY_FUNCTIONAL` | `GetTask` filters `/api/tasks/` by task_id, `found=false` for empty results (`client.go:527`); `TestGetTaskNotFound`                                                                                                         |
+| Outcome classification      | 🟢 `FULLY_FUNCTIONAL` | `classifyTask` prefers `result_data.document_id`, falls back to `duplicate_of`, then `related_document_ids` (`client.go:498`); consumed/duplicate/failure/pending/malformed/bare-array tests at `client_test.go:1389`–`1612` |
+| Duplicate-refusal detection | 🟢 `FULLY_FUNCTIONAL` | `TaskOutcome.DuplicateRefused`/`DuplicateInTrash` separate checksum-dedup refusals from real failures (`client.go:443`); `TestGetTaskClassifiesDuplicateRefusal`                                                             |
+| Terminal-state model        | 🟢 `FULLY_FUNCTIONAL` | `TaskStatus.Terminal` treats unknown future statuses as non-terminal, the safe default for retry decisions (`client.go:438`)                                                                                                 |
 
 ## Metadata lookups (idempotent)
 
 | Feature                                  | Status                | Notes                                                                                                                                               |
 | ---------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EnsureTag` (never joins the classifier) | 🟢 `FULLY_FUNCTIONAL` | Creates with matching_algorithm "none" and self-heals legacy auto tags via PATCH (`client.go:503`); four dedicated tests `client_test.go:191`–`361` |
-| `EnsureCorrespondent` (keeps "auto")     | 🟢 `FULLY_FUNCTIONAL` | Auto matching kept deliberately for correspondents (`client.go:614`); find/create tests `client_test.go:721`, `client_test.go:758`                  |
-| `EnsureDocumentType` (find or create)    | 🟢 `FULLY_FUNCTIONAL` | An existing type keeps its configured algorithm, no self-heal (`client.go:625`); `TestEnsureDocumentTypeFindsAndCreates`                            |
-| `EnsureCustomField` / `FindCustomField`  | 🟢 `FULLY_FUNCTIONAL` | Read-only lookup plus create-as-string when missing (`client.go:650`, `client.go:683`); `TestEnsureAndFindCustomField`                              |
+| `EnsureTag` (never joins the classifier) | 🟢 `FULLY_FUNCTIONAL` | Creates with matching_algorithm "none" and self-heals legacy auto tags via PATCH (`client.go:731`); four dedicated tests `client_test.go:191`–`361` |
+| `EnsureCorrespondent` (keeps "auto")     | 🟢 `FULLY_FUNCTIONAL` | Auto matching kept deliberately for correspondents (`client.go:840`); find/create tests `client_test.go:721`, `client_test.go:758`                  |
+| `EnsureDocumentType` (find or create)    | 🟢 `FULLY_FUNCTIONAL` | An existing type keeps its configured algorithm, no self-heal (`client.go:851`); `TestEnsureDocumentTypeFindsAndCreates`                            |
+| `EnsureCustomField` / `FindCustomField`  | 🟢 `FULLY_FUNCTIONAL` | Read-only lookup plus create-as-string when missing (`client.go:907`, `client.go:874`); `TestEnsureAndFindCustomField`                              |
 
 ## Name resolution
 
 | Feature            | Status                | Notes                                                                                                                                                      |
 | ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ID to display name | 🟢 `FULLY_FUNCTIONAL` | `GetCorrespondentName` and `GetDocumentTypeName` via the detail endpoints (`client.go:730`, `client.go:737`); `client_test.go:1128`, `client_test.go:1235` |
+| ID to display name | 🟢 `FULLY_FUNCTIONAL` | `GetCorrespondentName` and `GetDocumentTypeName` via the detail endpoints (`client.go:1094`, `client.go:1101`); `client_test.go:1128`, `client_test.go:1235` |
 
 ## Document management
 
 | Feature               | Status                    | Notes                                                                                                                                                                     |
 | --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Checksum listing      | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentChecksums` paginates (100/page, ≤100 pages) and reads both flat and 3.x `versions[]` checksums (`client.go:905`); `client_test.go:472`, `client_test.go:536` |
-| Full metadata listing | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentMetas` returns `DocumentMeta` incl. custom fields and effective checksum (`client.go:1012`); `TestListDocumentMetasReturnsFields`                            |
-| Metadata update       | 🟢 `FULLY_FUNCTIONAL`     | `UpdateDocument` PATCHes only set fields and rejects empty requests before the round trip (`client.go:1072`); `client_test.go:864`, `client_test.go:930`                  |
-| Delete document       | 🟢 `FULLY_FUNCTIONAL`     | `DeleteDocument` (`client.go:1177`); `TestDeleteDocumentSendsDelete`                                                                                                      |
-| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1195`); happy path + 404 error-wrap tests (`client_test.go:1647`–`1703`)                                                     |
+| Checksum listing      | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentChecksums` paginates (100/page, ≤100 pages) and reads both flat and 3.x `versions[]` checksums (`client.go:1269`); `client_test.go:472`, `client_test.go:536` |
+| Full metadata listing | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentMetas` returns `DocumentMeta` incl. custom fields and effective checksum (`client.go:1373`); `TestListDocumentMetasReturnsFields`                            |
+| Metadata update       | 🟢 `FULLY_FUNCTIONAL`     | `UpdateDocument` PATCHes only set fields and rejects empty requests before the round trip (`client.go:1433`); `client_test.go:864`, `client_test.go:930`                  |
+| Delete document       | 🟢 `FULLY_FUNCTIONAL`     | `DeleteDocument` (`client.go:1536`); `TestDeleteDocumentSendsDelete`                                                                                                      |
+| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1554`); happy path + 404 error-wrap tests (`client_test.go:1646`–`1703`)                                                     |
 
 ## Server compatibility
 
 | Feature            | Status                | Notes                                                                                                                                                      |
 | ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ping               | 🟢 `FULLY_FUNCTIONAL` | Targets the documents list, not the HTML-only API root that 406s JSON (`client.go:838`); contract test `TestPingAgainstHtmlOnlyApiRoot`                    |
-| Capability probing | 🟢 `FULLY_FUNCTIONAL` | `ProbeCapabilities` samples one page and reports checksum shape plus negotiated API version (`client.go:1319`); four-shape table test `client_test.go:982` |
+| Ping               | 🟢 `FULLY_FUNCTIONAL` | Targets the documents list, not the HTML-only API root that 406s JSON (`client.go:1202`); contract test `TestPingAgainstHtmlOnlyApiRoot`                    |
+| Capability probing | 🟢 `FULLY_FUNCTIONAL` | `ProbeCapabilities` samples one page and reports checksum shape plus negotiated API version (`client.go:1744`); four-shape table test `client_test.go:982` |
 
 ## Error handling and retries
 
 | Feature                     | Status                    | Notes                                                                                                                                                                                                                              |
 | --------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Error-family classification | 🟢 `FULLY_FUNCTIONAL`     | 401/403 → Rejection, 429/5xx → Transient, other 4xx → Rejection with body snippet (`classifyStatus`, `client.go:1419`); asserted across upload/ping/list tests                                                                     |
-| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date (`client.go:1375`, `client.go:1391`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:616`) paths are tested |
+| Error-family classification | 🟢 `FULLY_FUNCTIONAL`     | 401/403 → Rejection, 429/5xx → Transient, other 4xx → Rejection with body snippet (`classifyStatus`, `client.go:1847`); asserted across upload/ping/list tests                                                                     |
+| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date (`client.go:1800`, `client.go:1819`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:616`) paths are tested |
 
 ## Planned
 
