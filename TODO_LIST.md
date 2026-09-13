@@ -15,10 +15,9 @@
 
 ## High Impact
 
-| Task                                            | Status    | Impact | Effort | Evidence                                                                                                                                                                                                                                                                                            |
-| ----------------------------------------------- | --------- | ------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add GitHub Actions CI running `nix flake check` | 🔴 `TODO` | High   | ~1h    | `.github/` holds only `dependabot.yml`; `flake.nix:95` defines `checks.build/lint/format` that nothing schedules; `README.md:78` calls `nix flake check` the "CI equivalent"                                                                                                                        |
-| Make the sandboxed flake checks hermetic        | 🔴 `TODO` | High   | 1-2h   | `nix flake check` fails: `checks.build/build-standalone/lint` (`flake.nix:96`, `flake.nix:105`, `flake.nix:117`) are sandboxed builds whose `go build` must download `go-error-family` and the sandbox DNS is refused — vendor the dep or fetch modules via Nix; prerequisite for the CI task above |
+| Task                                            | Status    | Impact | Effort | Evidence                                                                                                                                                                                                                                     |
+| ----------------------------------------------- | --------- | ------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add GitHub Actions CI running `nix flake check` | 🔴 `TODO` | High   | ~1h    | `.github/` holds only `dependabot.yml`; `flake.nix` defines `checks.build/test/lint/format` that nothing schedules; `README.md:78` calls `nix flake check` the "CI equivalent"; hermetic since 2026-09-13 (`nix run .#check` exits 0) |
 
 ## Medium Impact
 

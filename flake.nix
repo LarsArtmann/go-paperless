@@ -163,7 +163,7 @@
             check =
               mkApp "check" "Run every flake check (build, test, lint, format) — CI equivalent" [ pkgs.nix ]
                 ''
-                  exec nix --no-pager flake check "$@"
+                  exec nix flake check "$@"
                 '';
 
             test = mkApp "test" "Run the Go test suite" [ goPkg ] ''

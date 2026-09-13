@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `nix flake check` now passes fully hermetic: `checks.build`, a new
+  `checks.test` (full suite in the sandbox) and `checks.lint` use
+  `buildGoModule` (modules fetched via Nix into a fixed-output derivation,
+  materialised as `vendor/`) instead of downloading `go-error-family` at
+  build time; the sandbox no longer needs DNS
+- Removed `checks.build-standalone` (single-module repo, no `go.work`;
+  it duplicated `checks.build`)
+- All flake apps export `GOEXPERIMENT` themselves and carry
+  `meta.description` (visible in `nix flake show`); new `nix run .#check`
+  app runs `nix flake check` as the one-command CI equivalent
+
 ### Fixed
 
 - `nix run .#fmt` (and `nix flake check` evaluation): the fmt app passed an
