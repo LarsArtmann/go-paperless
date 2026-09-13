@@ -37,6 +37,16 @@
 
 ## c) NOT STARTED
 
+> **Annotation (2026-09-13, post-execution):** every item in sections b), c),
+> and d) except the pipeline-masking lesson (d-2, standing discipline) has
+> since shipped: hermetic flake checks (T01, `nix flake check` exit 0 with a
+> new `checks.test`), CI workflow with gosec/govulncheck green (T02), go.mod
+> bumped to 1.27.1 with `.crushrc` LSP toolchain pin (T03), `DownloadDocument`
+> + 503 tests (T05), `.golangci.yml` with tagliatelle json:snake + nolintlint,
+> 11 redundant nolints removed (T09), dprint.json deleted, build-standalone
+> deleted, go.work gitignore override removed, app meta.description added.
+> Line numbers cited below reflect the pre-execution tree.
+
 | Work | Why | Still wanted? |
 |---|---|---|
 | GitHub Actions CI running `nix flake check` | Blocked by hermetic-checks gap (gate fails in sandbox) | Yes — TODO_LIST High |
@@ -48,6 +58,12 @@
 | pkg.go.dev / GitHub Release publishing | Never attempted; push state unknown | Awaiting user intent (question g-2) |
 
 ## d) TOTALLY FUCKED UP
+
+> **Annotation (2026-09-13, post-execution):** items d-1, d-4, d-5, d-6 are
+> fixed (hermetic checks; go 1.27.1 + `.crushrc` GOTOOLCHAIN=auto; dprint.json
+> deleted; build-standalone deleted). d-2 (pipeline masking) is a standing
+> discipline — the same trap resurfaced once today and was caught by checking
+> PIPESTATUS/direct exit codes.
 
 1. **The documented "CI equivalent" is a lie on this machine.** README.md:78 + AGENTS.md:11 present `nix flake check` as the gate; it fails because sandboxed checks can't fetch modules (DNS via `[::1]:53` refused). Severity: blocks any CI until fixed. Workaround: the individual flake apps all pass. Root cause: checks are sandboxed `runCommand` builds without a module-fetch strategy. TODO filed.
 2. **I produced a false "FLAKE CHECK OK" banner mid-session.** `nix flake check 2>&1 | tail -8 && echo OK` — `tail`'s exit code masked the failure. This is the *exact* pipeline-masking failure my own global memory documents ("verify raw summaries, not filtered tails"). I caught it in the same session and re-ran with `set -o pipefail`, but it shipped a wrong intermediate signal.

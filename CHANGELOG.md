@@ -4,10 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.1.1] - 2026-09-13
 
 ### Changed
 
+- Go floor raised to 1.27.1: `encoding/json/v2` is the default toolchain
+  there, so consumers no longer need `GOEXPERIMENT=jsonv2`; consumer
+  toolchains must be Go 1.27+ to build against this version
 - Added `.golangci.yml`: `tagliatelle` now actively enforces snake_case
   JSON tags (the Paperless-ngx wire convention) and `nolintlint` requires
   explained, used directives; the 11 now-redundant `//nolint:tagliatelle`
@@ -15,9 +18,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Hygiene: deleted ghost `dprint.json` (treefmt owns formatting, nothing
   invoked dprint) and the dead `!go.work` gitignore override that the
   buildflow block re-ignored anyway
-- Go floor raised to 1.27.1: `encoding/json/v2` is the default toolchain
-  there, so consumers no longer need `GOEXPERIMENT=jsonv2`; consumer
-  toolchains must be Go 1.27+ to build against this version
 - `nix flake check` now passes fully hermetic: `checks.build`, a new
   `checks.test` (full suite in the sandbox) and `checks.lint` use
   `buildGoModule` (modules fetched via Nix into a fixed-output derivation,
@@ -28,6 +28,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - All flake apps export `GOEXPERIMENT` themselves and carry
   `meta.description` (visible in `nix flake show`); new `nix run .#check`
   app runs `nix flake check` as the one-command CI equivalent
+- GitHub Actions CI: `nix flake check` plus `govulncheck` and `gosec` on
+  every push and pull request
+- Package godoc now states the Go requirement, the `GetTask` bare-array
+  tolerance, and the UTC reading of timezone-less dates; new
+  `ExampleNew_invalidConfig` shows `errors.Is` against `ErrInvalidConfig`
+- Governance: `SECURITY.md` (private reporting path, threat-model notes);
+  CONTRIBUTING points at `TODO_LIST.md` for open work
 
 ### Fixed
 
@@ -52,7 +59,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `UpdateDocument`, `DeleteDocument`, `DownloadDocument`
 - Version tolerance: `ProbeCapabilities`, `Capabilities.ChecksumShape`
 - Respectful retries: `RetryAfterError` carrying `Retry-After` hints
+- Tunable default transport constants: `DefaultMaxIdleConns`,
+  `DefaultMaxIdleConnsPerHost`, `DefaultIdleConnTimeout` (shipped in 0.1.0,
+  unlisted until now)
+- `ErrInvalidConfig` sentinel for `New` validation failures (shipped in
+  0.1.0, unlisted until now)
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.1.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.0
