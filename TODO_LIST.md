@@ -21,12 +21,8 @@
 
 ## Medium Impact
 
-| Task                                              | Status    | Impact | Effort | Evidence                                                                                                                                                                                  |
-| ------------------------------------------------- | --------- | ------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add `.golangci.yml` so the nolint directives bite | 🔴 `TODO` | Med    | 30min  | No `.golangci.yml` in the repo; 11 sites use `//nolint:tagliatelle` (e.g. `client.go:319`), which golangci-lint does not enable by default — JSON-tag regressions are currently unguarded |
+No open items.
 
 ## Low Impact
 
-| Task                                          | Status    | Impact | Effort | Evidence                                                                                                                                                                        |
-| --------------------------------------------- | --------- | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Resolve the `go.work` gitignore contradiction | 🔴 `TODO` | Low    | 10min  | `.gitignore:11` un-ignores `go.work` ("required for multi-module workspace") but the buildflow block re-ignores it at `.gitignore:64`; last match wins, so the override is dead |
+No open items.

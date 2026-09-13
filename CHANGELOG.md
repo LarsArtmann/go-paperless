@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Added `.golangci.yml`: `tagliatelle` now actively enforces snake_case
+  JSON tags (the Paperless-ngx wire convention) and `nolintlint` requires
+  explained, used directives; the 11 now-redundant `//nolint:tagliatelle`
+  suppressions were removed
+- Hygiene: deleted ghost `dprint.json` (treefmt owns formatting, nothing
+  invoked dprint) and the dead `!go.work` gitignore override that the
+  buildflow block re-ignored anyway
 - Go floor raised to 1.27.1: `encoding/json/v2` is the default toolchain
   there, so consumers no longer need `GOEXPERIMENT=jsonv2`; consumer
   toolchains must be Go 1.27+ to build against this version

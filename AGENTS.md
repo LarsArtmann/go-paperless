@@ -28,7 +28,7 @@ replacement for its trimmed fork.
 - Tests are httptest-based (no live server needed).
 - `nolint` single-line with a reason: `//nolint:<linter> // reason`.
 - `// art-dupl:<scope>` comments mark accepted duplication for the clone
-  scanner (e.g. `client.go:839`) — don't "fix" them away without checking
+  scanner (e.g. `client.go:831`) — don't "fix" them away without checking
   the paired site named in the comment.
 - Errors: `github.com/larsartmann/go-error-family` (`New*`/`Wrap*` with dot-notation codes).
 
