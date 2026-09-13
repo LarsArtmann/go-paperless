@@ -52,7 +52,7 @@
 
 ## 3. Micro breakdown (every task ≤12min, ALL todos included)
 
-### T01 — Hermetic flake checks (8 × 12min)
+### T01 — Hermetic flake checks (8 × 12min) — ✅ done at `ae574d8` (vendorHash re-pinned after the go-retry bump: `067907f`)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -65,7 +65,7 @@
 | M01-07 | Run `nix flake check` bare (no pipes); confirm exit 0 | 12 |
 | M01-08 | Update TODO_LIST (statuses) + CHANGELOG `[Unreleased]` | 12 |
 
-### T02 — CI workflow (5 × 12min)
+### T02 — CI workflow (5 × 12min) — ✅ done at `4fd2427` (CI all green, run 34759332865; `pull_request` trigger still unverified — TODO_LIST)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -75,7 +75,7 @@
 | M02-04 | Open a scratch PR; verify the workflow runs and Dependabot-style builds pass | 12 |
 | M02-05 | Record CI URL in TODO_LIST evidence; mark TODO done | 12 |
 
-### T03 — Toolchain/gopls fix (3 × 12min)
+### T03 — Toolchain/gopls fix (3 × 12min) — ✅ done at `ae574d8`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -83,7 +83,7 @@
 | M03-02 | Test `go.mod` → 1.27 + flake go_1_27 build locally; check bank-sync/InboxClean constraint | 12 |
 | M03-03 | Apply chosen fix; gopls warnings = 0; full gate re-run | 12 |
 
-### T04 — Release (5 × 12min)
+### T04 — Release (5 × 12min) — ✅ done at `ae574d8` (tag `v0.1.1` pushed + proxy-verified; the tagged commit's gosec job was red, fixed at `4fd2427` — posture question open, status report §g-1)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -93,7 +93,7 @@
 | M04-04 | Push main + tag; `gh release create` with CHANGELOG notes | 12 |
 | M04-05 | Verify pkg.go.dev + `go get github.com/larsartmann/go-paperless@v0.1.1` in a scratch module | 12 |
 
-### T05 — Download + 503 tests (3 × 12min)
+### T05 — Download + 503 tests (3 × 12min) — ✅ done at `ae574d8`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -128,7 +128,7 @@
 | M08-04 | Deadline-exceeded → family + unwrap chain test | 12 |
 | M08-05 | `Upload` error paths (invalid URL via New already covered; empty task-id branch) | 12 |
 
-### T09 — Hygiene batch (5 × 12min)
+### T09 — Hygiene batch (5 × 12min) — ✅ done at `ae574d8`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -138,7 +138,7 @@
 | M09-04 | Delete `dprint.json` (treefmt owns formatting) — or wire it, if a dprint consumer exists | 12 |
 | M09-05 | Open LICENSE (confirm MIT), fetch the two consumer repo links | 12 |
 
-### T10 — Godoc (3 × 12min)
+### T10 — Godoc (3 × 12min) — ✅ done at `2f38b84`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -146,7 +146,7 @@
 | M10-02 | `errors.Is(err, ErrInvalidConfig)` example; `parseDocumentCreated` UTC note; `GetTask` bare-array note | 12 |
 | M10-03 | `go vet` + render check (`pkgs site` / godoc -http) | 12 |
 
-### T11 — README mechanics (4 × 12min)
+### T11 — README mechanics (4 × 12min) — ✅ done at `2f38b84`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -155,7 +155,7 @@
 | M11-03 | Badges: CI, Go Reference, Go version | 12 |
 | M11-04 | Re-verify all README links/claims | 12 |
 
-### T12 — Governance (3 × 12min)
+### T12 — Governance (3 × 12min) — ✅ done at `2f38b84`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -163,7 +163,7 @@
 | M12-02 | CONTRIBUTING: point at TODO_LIST + ROADMAP as task sources | 12 |
 | M12-03 | Link SECURITY/CONTRIBUTING from README footer | 12 |
 
-### T13 — HARVEST + annotate (3 × 12min)
+### T13 — HARVEST + annotate (3 × 12min) — ✅ done at `ae574d8`
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -171,7 +171,7 @@
 | M13-02 | Update TODO_LIST statuses after T01-T12 | 12 |
 | M13-03 | docs-health ANNOTATE: strike shipped items in the 13:42 status report | 12 |
 
-### T14 — Poll-until-terminal helper (7 × 12min)
+### T14 — Poll-until-terminal helper (7 × 12min) — ✅ done at `5f0853c`, `b6bc032` (code) + `acec996` (7 dedicated tests)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -183,7 +183,7 @@
 | M14-06 | Godoc + example | 12 |
 | M14-07 | CHANGELOG + FEATURES upsert | 12 |
 
-### T15 — Opt-in retry via go-retry (7 × 12min)
+### T15 — Opt-in retry via go-retry (7 × 12min) — ✅ done at `5f0853c`, `b6bc032` (code) + `acec996` (8 dedicated tests)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -195,7 +195,7 @@
 | M15-06 | Tests: opt-in retry on 429/5xx; Rejection never retried | 12 |
 | M15-07 | Docs: README Options row + CHANGELOG + FEATURES | 12 |
 
-### T16 — Duplicate ergonomics (3 × 12min)
+### T16 — Duplicate ergonomics (3 × 12min) — ✅ done at `5f0853c` (code) + `acec996` (table test)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -203,7 +203,7 @@
 | M16-02 | Implement + test | 12 |
 | M16-03 | Godoc + CHANGELOG | 12 |
 
-### T17 — Fuzz targets (5 × 12min)
+### T17 — Fuzz targets (5 × 12min) — ✅ done at `3b125f0` (four targets, 5s seed runs clean; found + fixed a real `parseRetryAfter` overflow at `acec996`)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -226,7 +226,7 @@
 | M18-07 | Optional CI job (manual trigger) | 12 |
 | M18-08 | Docs: how to run locally | 12 |
 
-### T19 — Storage paths (6 × 12min)
+### T19 — Storage paths (6 × 12min) — ✅ done at `5f0853c`, `b6bc032` (code) + `acec996` (tests; POST sends no slug)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -237,7 +237,7 @@
 | M19-05 | Tests | 12 |
 | M19-06 | Docs + CHANGELOG | 12 |
 
-### T20 — Logging hooks (5 × 12min)
+### T20 — Logging hooks (5 × 12min) — ✅ done at `b6bc032` (code) + `acec996` (mutation-no-leak + capped-body tests)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -247,7 +247,7 @@
 | M20-04 | Godoc + example | 12 |
 | M20-05 | CHANGELOG + FEATURES | 12 |
 
-### T21 — Concurrency/cap tests (4 × 12min)
+### T21 — Concurrency/cap tests (4 × 12min) — ✅ done at `acec996` (page-cap + concurrent-caller tests, race-clean)
 
 | ID | Micro task | Min |
 |---|---|---|
@@ -274,7 +274,7 @@
 | M23-04 | Decision record → ROADMAP/ADR | 12 |
 | M23-05 | File follow-up task or close idea | 12 |
 
-### T24 — Notes/share-links/saved-views slice (8 × 12min)
+### T24 — Notes/share-links/saved-views slice (8 × 12min) — ⛔ Won't implement — parked per the D3 default (no consumer demand surfaced); stays in ROADMAP theme 2
 
 | ID | Micro task | Min |
 |---|---|---|

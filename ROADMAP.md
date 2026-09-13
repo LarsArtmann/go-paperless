@@ -5,25 +5,22 @@
 
 ## Themes
 
-### 1. Consumption peace of mind
+### 1. Consumption peace of mind — SHIPPED 2026-09-13
 
 Uploading is only half the story: Paperless-ngx consumes asynchronously and
-refuses duplicates. The SDK hands callers the raw pieces (`GetTask`,
-`TaskOutcome`, `RetryAfterError`) and every consumer re-implements the wait
-loop and backoff on top.
+refuses duplicates. All three raw ideas below shipped in the v0.2.0 batch
+(see FEATURES.md "Async consumption tracking" and "Error handling and
+retries", CHANGELOG [Unreleased]):
 
-Raw ideas:
-
-- A polling helper that blocks until `TaskStatus.Terminal()` with a deadline
-  and context cancellation
-- A client-side retry policy that honors `RetryAfterError.After` instead of
-  blind exponential backoff in each consumer —
-  [go-retry](https://github.com/larsartmann/go-retry) is the natural vehicle
-  (its `DelayFunc` exists for exactly this, and its default retryable
-  predicate already speaks `errorfamily`); as an SDK option it must be
-  opt-in to preserve the fail-fast contract bank-sync depends on
-- First-class "was this a duplicate refusal?" ergonomics layered on
-  `TaskOutcome`
+- ~~A polling helper that blocks until `TaskStatus.Terminal()` with a
+  deadline and context cancellation~~ → `WaitForTask` + `DefaultTaskPollInterval`
+  (`client.go:580`)
+- ~~A client-side retry policy that honors `RetryAfterError.After`~~ →
+  opt-in `WithRetry(RetryPolicy)` backed by
+  [go-retry](https://github.com/larsartmann/go-retry), fail-fast default
+  preserved (`client.go:184`)
+- ~~First-class "was this a duplicate refusal?" ergonomics~~ →
+  `TaskOutcome.Duplicate()` (`client.go:465`)
 
 ### 2. Growing with the API
 
@@ -32,25 +29,30 @@ The client targets API v10 and the endpoints its two consumers need
 
 Raw ideas:
 
-- Notes, share links, and saved-view endpoints
-- Storage-path management alongside tags/correspondents/document types
-- Hook points for request/response logging so operators can trace sync runs
+- Notes, share links, and saved-view endpoints (parked per the D3 default —
+  no consumer demand surfaced yet)
+- ~~Storage-path management alongside tags/correspondents/document types~~ →
+  shipped: `FindStoragePath` / `EnsureStoragePath` / `ListStoragePaths`
+  (`client.go:971`)
+- ~~Hook points for request/response logging so operators can trace sync
+  runs~~ → shipped: `WithRequestHook` / `WithResponseHook` (`client.go:194`)
 - Streaming multipart upload for sources larger than the memory-safe
-  envelope the current in-memory buffering assumes (`client.go:195`)
+  envelope the current in-memory buffering assumes (`client.go:372`)
 
 ### 3. Confidence
 
-Version tolerance is probed (`ProbeCapabilities`), but the suite only ever
-speaks to synthetic httptest servers, and the tolerant parsers
-(`checksumFrom`, `parseRetryAfter`, `parseDocumentCreated`) are exactly the
-kind of hand-rolled fallback logic that benefits from property-based
-scrutiny.
+Version tolerance is probed (`ProbeCapabilities`), and the tolerant parsers
+now have property-based scrutiny — but the suite still only speaks to
+synthetic httptest servers.
 
 Raw ideas:
 
 - An integration test tier against a real paperless-ngx (containers)
   exercising upload → poll → reconcile end to end
-- Fuzz or property tests for the checksum/status/date parsers
+- ~~Fuzz or property tests for the checksum/status/date parsers~~ → shipped:
+  `FuzzParseRetryAfter`, `FuzzParseDocumentCreated`, `FuzzChecksumFrom`,
+  `FuzzClassifyTask` (`fuzz_test.go`; the retry-after fuzzer found and fixed
+  a real overflow)
 
 ## Non-goals
 
