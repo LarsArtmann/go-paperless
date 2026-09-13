@@ -63,7 +63,7 @@
 | Full metadata listing | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentMetas` returns `DocumentMeta` incl. custom fields and effective checksum (`client.go:1012`); `TestListDocumentMetasReturnsFields`                            |
 | Metadata update       | 🟢 `FULLY_FUNCTIONAL`     | `UpdateDocument` PATCHes only set fields and rejects empty requests before the round trip (`client.go:1072`); `client_test.go:864`, `client_test.go:930`                  |
 | Delete document       | 🟢 `FULLY_FUNCTIONAL`     | `DeleteDocument` (`client.go:1177`); `TestDeleteDocumentSendsDelete`                                                                                                      |
-| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1195`); happy path + 404 error-wrap tests (`client_test.go:1646`–`1687`)                                                     |
+| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1195`); happy path + 404 error-wrap tests (`client_test.go:1647`–`1703`)                                                     |
 
 ## Server compatibility
 
@@ -77,7 +77,7 @@
 | Feature                     | Status                    | Notes                                                                                                                                                                                                                              |
 | --------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Error-family classification | 🟢 `FULLY_FUNCTIONAL`     | 401/403 → Rejection, 429/5xx → Transient, other 4xx → Rejection with body snippet (`classifyStatus`, `client.go:1419`); asserted across upload/ping/list tests                                                                     |
-| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date (`client.go:1375`, `client.go:1391`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:615`) paths are tested |
+| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date (`client.go:1375`, `client.go:1391`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:616`) paths are tested |
 
 ## Planned
 

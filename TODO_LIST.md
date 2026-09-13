@@ -23,8 +23,6 @@
 
 | Task                                              | Status    | Impact | Effort | Evidence                                                                                                                                                                                  |
 | ------------------------------------------------- | --------- | ------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add a `DownloadDocument` test                     | 🔴 `TODO` | Med    | 15min  | `client.go:1195`; no test references `DownloadDocument` (rg verified) — only public method without coverage                                                                               |
-| Cover the 503 `Retry-After` branch                | 🔴 `TODO` | Med    | 15min  | `client.go:1443` wraps 503 in `RetryAfterError`; only the 429 path is tested (`client_test.go:583`)                                                                                       |
 | Add `.golangci.yml` so the nolint directives bite | 🔴 `TODO` | Med    | 30min  | No `.golangci.yml` in the repo; 11 sites use `//nolint:tagliatelle` (e.g. `client.go:319`), which golangci-lint does not enable by default — JSON-tag regressions are currently unguarded |
 
 ## Low Impact
