@@ -1701,3 +1701,867 @@ func TestDownloadDocumentWrapsErrorsWithDocumentID(t *testing.T) {
 		t.Fatalf("expected Rejection family for 404, got %v (%v)", family, err)
 	}
 }
+
+func TestWithRetryDefaultOffMakesSingleAttempt(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.ListStoragePaths(t.Context())
+	if err == nil {
+		t.Fatal("expected the 503 to surface")
+	}
+
+	if requests != 1 {
+		t.Fatalf("requests = %d, want exactly 1 without WithRetry", requests)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Transient {
+		t.Fatalf("expected Transient family, got %v (%v)", family, err)
+	}
+}
+
+func TestWithRetryRetriesTransient5xxUntilSuccess(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		if requests <= 2 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  3,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	paths, err := client.ListStoragePaths(t.Context())
+	if err != nil {
+		t.Fatalf("ListStoragePaths: %v", err)
+	}
+
+	if len(paths) != 0 {
+		t.Fatalf("paths = %v, want empty", paths)
+	}
+
+	if requests != 3 {
+		t.Fatalf("requests = %d, want 3 (two 503s then success)", requests)
+	}
+}
+
+func TestWithRetryNeverRetriesRejections(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  3,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.DownloadDocument(t.Context(), 42)
+	if err == nil {
+		t.Fatal("expected the 404 to surface")
+	}
+
+	if requests != 1 {
+		t.Fatalf("requests = %d, want exactly 1 (rejections are never retried)", requests)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+}
+
+func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		if requests == 1 {
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusServiceUnavailable)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  2,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	started := time.Now()
+	_, err = client.ListStoragePaths(t.Context())
+	elapsed := time.Since(started)
+	if err != nil {
+		t.Fatalf("ListStoragePaths: %v", err)
+	}
+
+	if requests != 2 {
+		t.Fatalf("requests = %d, want 2", requests)
+	}
+
+	if elapsed < 900*time.Millisecond {
+		t.Fatalf("elapsed = %s, want >= ~1s so the server's Retry-After hint is honored", elapsed)
+	}
+}
+
+func TestRetryPolicyDelayFuncBridgesRetryAfterHint(t *testing.T) {
+	t.Parallel()
+
+	delayFunc := (RetryPolicy{MaxAttempts: 2}).retryConfig().DelayFunc
+
+	if got := delayFunc(1, &RetryAfterError{After: 7 * time.Second}); got != 7*time.Second {
+		t.Fatalf("DelayFunc = %s, want the server hint 7s", got)
+	}
+
+	if got := delayFunc(1, errors.New("boom")); got != 0 {
+		t.Fatalf("DelayFunc = %s, want 0 (fall back to exponential backoff)", got)
+	}
+}
+
+func TestRetryPolicyZeroValueFillsDefaults(t *testing.T) {
+	t.Parallel()
+
+	config := (RetryPolicy{}).retryConfig()
+
+	if config.MaxAttempts != DefaultRetryMaxAttempts {
+		t.Fatalf("MaxAttempts = %d, want %d", config.MaxAttempts, DefaultRetryMaxAttempts)
+	}
+
+	if config.InitialDelay != DefaultRetryInitialDelay {
+		t.Fatalf("InitialDelay = %s, want %s", config.InitialDelay, DefaultRetryInitialDelay)
+	}
+
+	if config.MaxDelay != DefaultRetryMaxDelay {
+		t.Fatalf("MaxDelay = %s, want %s", config.MaxDelay, DefaultRetryMaxDelay)
+	}
+
+	if config.Multiplier != DefaultRetryMultiplier {
+		t.Fatalf("Multiplier = %f, want %f", config.Multiplier, DefaultRetryMultiplier)
+	}
+}
+
+func TestWithRetryReplaysUploadBodyByteForByte(t *testing.T) {
+	t.Parallel()
+
+	var (
+		bodies   [][]byte
+		requests int
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		raw, readErr := io.ReadAll(r.Body)
+		if readErr != nil {
+			t.Errorf("read request body: %v", readErr)
+		}
+
+		bodies = append(bodies, raw)
+
+		if requests == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`"task-uuid-retry"`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  2,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	taskID, err := client.Upload(t.Context(), UploadRequest{
+		Filename: "invoice.pdf",
+		Content:  []byte("%PDF-1.4 replay-me"),
+	})
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+
+	if taskID != "task-uuid-retry" {
+		t.Fatalf("task ID = %q", taskID)
+	}
+
+	if requests != 2 || len(bodies) != 2 {
+		t.Fatalf("requests = %d, bodies = %d, want 2 each", requests, len(bodies))
+	}
+
+	if !bytes.Equal(bodies[0], bodies[1]) {
+		t.Fatal("retried upload body differs from the first attempt")
+	}
+
+	if !strings.Contains(string(bodies[1]), "%PDF-1.4 replay-me") {
+		t.Fatalf("replayed body lost the file content: %q", bodies[1])
+	}
+}
+
+func TestNewRejectsNegativeRetryMaxAttempts(t *testing.T) {
+	t.Parallel()
+
+	_, err := New("https://paperless.example.com", "token", WithRetry(RetryPolicy{MaxAttempts: -1}))
+	if !errors.Is(err, ErrInvalidConfig) {
+		t.Fatalf("expected ErrInvalidConfig for negative MaxAttempts, got %v", err)
+	}
+}
+
+func TestWaitForTaskPendingThenSuccess(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		if gotQuery := r.URL.Query().Get("task_id"); gotQuery != "task-uuid-1" {
+			t.Errorf("task_id = %q, want task-uuid-1", gotQuery)
+		}
+
+		if requests == 1 {
+			_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-1","status":"pending"}]}`))
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-1","status":"success",` +
+			`"result_data":{"document_id":42},"related_document_ids":[42]}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(t.Context(), "task-uuid-1", time.Millisecond)
+	if err != nil {
+		t.Fatalf("WaitForTask: %v", err)
+	}
+
+	if outcome.Status != TaskStatusSuccess {
+		t.Fatalf("status = %q, want success", outcome.Status)
+	}
+
+	if outcome.DocumentID != 42 {
+		t.Fatalf("DocumentID = %d, want 42", outcome.DocumentID)
+	}
+
+	if requests != 2 {
+		t.Fatalf("requests = %d, want 2 (pending then success)", requests)
+	}
+}
+
+func TestWaitForTaskToleratesNotFoundThenSuccess(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		if requests == 1 {
+			_, _ = w.Write([]byte(`{"results":[]}`))
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-2","status":"success",` +
+			`"result_data":{"document_id":7}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(t.Context(), "task-uuid-2", time.Millisecond)
+	if err != nil {
+		t.Fatalf("WaitForTask: %v", err)
+	}
+
+	if outcome.DocumentID != 7 {
+		t.Fatalf("DocumentID = %d, want 7", outcome.DocumentID)
+	}
+
+	if requests != 2 {
+		t.Fatalf("requests = %d, want 2 (not-found keeps polling)", requests)
+	}
+}
+
+func TestWaitForTaskTerminalFailureIsRejection(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-3","status":"failure",` +
+			`"result_data":{"error_type":"ParseError","error_message":"bad pdf"}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(t.Context(), "task-uuid-3", time.Millisecond)
+	if err == nil {
+		t.Fatal("expected the terminal failure to surface as an error")
+	}
+
+	if requests != 1 {
+		t.Fatalf("requests = %d, want 1 (terminal on first poll)", requests)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family for paperless.task_failed, got %v (%v)", family, err)
+	}
+
+	if outcome.Status != TaskStatusFailure || outcome.ErrorMessage != "bad pdf" {
+		t.Fatalf("outcome = %+v, want populated failure outcome", outcome)
+	}
+}
+
+func TestWaitForTaskDuplicateRefusalIsNotAnError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-4","status":"failure",` +
+			`"result_data":{"duplicate_of":7,"duplicate_in_trash":false}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(t.Context(), "task-uuid-4", time.Millisecond)
+	if err != nil {
+		t.Fatalf("duplicate refusal must not be an error, got %v", err)
+	}
+
+	documentID, inTrash, refused := outcome.Duplicate()
+	if !refused || documentID != 7 || inTrash {
+		t.Fatalf("Duplicate() = (%d, %t, %t), want (7, false, true)", documentID, inTrash, refused)
+	}
+}
+
+func TestWaitForTaskContextDeadlineSurfacesLastPollError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
+
+	_, err = client.WaitForTask(ctx, "task-uuid-5", 5*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected the context deadline to surface as an error")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
+		t.Fatalf("expected Infrastructure family for the abandoned poll, got %v (%v)", family, err)
+	}
+
+	if !strings.Contains(err.Error(), "last poll error") {
+		t.Fatalf("error must surface the last poll error, got %v", err)
+	}
+}
+
+func TestWaitForTaskRejectsEmptyTaskID(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.WaitForTask(t.Context(), "", time.Millisecond)
+	if err == nil {
+		t.Fatal("expected an error for the empty task ID")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	}
+}
+
+func TestWaitForTaskWithRetryRecoversFromTransientPollFailure(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		switch requests {
+		case 1:
+			w.WriteHeader(http.StatusServiceUnavailable)
+		case 2:
+			_, _ = w.Write([]byte(`{"results":[]}`))
+		default:
+			_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-6","status":"success",` +
+				`"result_data":{"document_id":42}}]}`))
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  2,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(t.Context(), "task-uuid-6", time.Millisecond)
+	if err != nil {
+		t.Fatalf("WaitForTask: %v", err)
+	}
+
+	if outcome.DocumentID != 42 {
+		t.Fatalf("DocumentID = %d, want 42", outcome.DocumentID)
+	}
+
+	if requests != 3 {
+		t.Fatalf("requests = %d, want 3 (retried 503, tolerated not-found, success)", requests)
+	}
+}
+
+func TestTaskOutcomeDuplicateReportsRefusalDetails(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		outcome     TaskOutcome
+		wantID      int64
+		wantInTrash bool
+		wantRefused bool
+	}{
+		{
+			name:    "not a refusal",
+			outcome: TaskOutcome{Status: TaskStatusSuccess, DocumentID: 42},
+		},
+		{
+			name:        "refused duplicate",
+			outcome:     TaskOutcome{DuplicateRefused: true, DocumentID: 7},
+			wantID:      7,
+			wantRefused: true,
+		},
+		{
+			name:        "refused duplicate in trash",
+			outcome:     TaskOutcome{DuplicateRefused: true, DuplicateInTrash: true, DocumentID: 9},
+			wantID:      9,
+			wantInTrash: true,
+			wantRefused: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			documentID, inTrash, refused := tt.outcome.Duplicate()
+			if documentID != tt.wantID || inTrash != tt.wantInTrash || refused != tt.wantRefused {
+				t.Fatalf("Duplicate() = (%d, %t, %t), want (%d, %t, %t)",
+					documentID, inTrash, refused, tt.wantID, tt.wantInTrash, tt.wantRefused)
+			}
+		})
+	}
+}
+
+func TestEnsureStoragePathCreatesWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	var postBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			if got := r.URL.Query().Get("name__iexact"); got != "Invoices" {
+				t.Errorf("name__iexact = %q, want Invoices", got)
+			}
+
+			if got := r.URL.Query().Get("page_size"); got != "1" {
+				t.Errorf("page_size = %q, want 1", got)
+			}
+
+			_, _ = w.Write([]byte(`{"results":[]}`))
+		case http.MethodPost:
+			raw, readErr := io.ReadAll(r.Body)
+			if readErr != nil {
+				t.Errorf("read POST body: %v", readErr)
+			}
+
+			postBody = raw
+			_, _ = w.Write([]byte(`{"id":5,"slug":"invoices","name":"Invoices","path":"{created_year}/"}`))
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	id, err := client.EnsureStoragePath(t.Context(), "Invoices", "{created_year}/")
+	if err != nil {
+		t.Fatalf("EnsureStoragePath: %v", err)
+	}
+
+	if id != 5 {
+		t.Fatalf("id = %d, want 5", id)
+	}
+
+	var payload struct {
+		Name string  `json:"name"`
+		Path string  `json:"path"`
+		Slug *string `json:"slug"`
+	}
+	if err := json.Unmarshal(postBody, &payload); err != nil {
+		t.Fatalf("decode POST body %q: %v", postBody, err)
+	}
+
+	if payload.Name != "Invoices" || payload.Path != "{created_year}/" {
+		t.Fatalf("POST payload = %+v, want name + directory template", payload)
+	}
+
+	if payload.Slug != nil {
+		t.Fatalf("POST payload must not send a slug (the server generates it), got %q", *payload.Slug)
+	}
+}
+
+func TestEnsureStoragePathKeepsExistingTemplateWithoutPOST(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected %s: an existing storage path must be reused, not recreated", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[{"id":3,"slug":"archive","name":"Archive",` +
+			`"path":"{correspondent}/"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	id, err := client.EnsureStoragePath(t.Context(), "Archive", "{created_year}/{title}/")
+	if err != nil {
+		t.Fatalf("EnsureStoragePath: %v", err)
+	}
+
+	if id != 3 {
+		t.Fatalf("id = %d, want the existing 3", id)
+	}
+}
+
+func TestEnsureStoragePathRejectsEmptyArgs(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, err := client.EnsureStoragePath(t.Context(), "", "path"); err == nil {
+		t.Fatal("expected an error for the empty name")
+	}
+
+	if _, err := client.EnsureStoragePath(t.Context(), "Name", ""); err == nil {
+		t.Fatal("expected an error for the empty directory template")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	}
+}
+
+func TestFindStoragePathReturnsFoundFlag(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("name__iexact"); got == "Archive" {
+			_, _ = w.Write([]byte(`{"results":[{"id":3,"slug":"archive","name":"Archive",` +
+				`"path":"{correspondent}/"}]}`))
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	id, found, err := client.FindStoragePath(t.Context(), "Archive")
+	if err != nil || !found || id != 3 {
+		t.Fatalf("FindStoragePath(Archive) = (%d, %t, %v), want (3, true, nil)", id, found, err)
+	}
+
+	id, found, err = client.FindStoragePath(t.Context(), "Missing")
+	if err != nil || found || id != 0 {
+		t.Fatalf("FindStoragePath(Missing) = (%d, %t, %v), want (0, false, nil)", id, found, err)
+	}
+}
+
+func TestListStoragePathsPaginatesAndMaps(t *testing.T) {
+	t.Parallel()
+
+	var requestedPages []string
+
+	entries := make([]string, 0, 100)
+	for i := range 100 {
+		entries = append(entries, fmt.Sprintf(
+			`{"id":%d,"slug":"path-%d","name":"Path %d","path":"dir-%d/"}`, i, i, i, i))
+	}
+
+	fullPage := `{"count":101,"next":"?page=2","previous":null,"results":[` +
+		strings.Join(entries, ",") + `]}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPages = append(requestedPages, r.URL.Query().Get("page"))
+
+		if got := r.URL.Query().Get("page_size"); got != "100" {
+			t.Errorf("page_size = %q, want 100", got)
+		}
+
+		switch r.URL.Query().Get("page") {
+		case "1":
+			_, _ = w.Write([]byte(fullPage))
+		case "2":
+			_, _ = w.Write([]byte(`{"count":101,"next":null,"previous":null,"results":[` +
+				`{"id":100,"slug":"path-100","name":"Path 100","path":"dir-100/"}]}`))
+		default:
+			t.Errorf("unexpected page %q", r.URL.Query().Get("page"))
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	paths, err := client.ListStoragePaths(t.Context())
+	if err != nil {
+		t.Fatalf("ListStoragePaths: %v", err)
+	}
+
+	if len(paths) != 101 {
+		t.Fatalf("paths = %d, want 101 across two pages", len(paths))
+	}
+
+	if paths[0].ID != 0 || paths[0].Name != "Path 0" || paths[0].Slug != "path-0" || paths[0].Path != "dir-0/" {
+		t.Fatalf("paths[0] = %+v, want the mapped first entry", paths[0])
+	}
+
+	if paths[100].ID != 100 || paths[100].Name != "Path 100" {
+		t.Fatalf("paths[100] = %+v, want the mapped second-page entry", paths[100])
+	}
+
+	if len(requestedPages) != 2 || requestedPages[0] != "1" || requestedPages[1] != "2" {
+		t.Fatalf("requested pages = %v, want [1 2]", requestedPages)
+	}
+}
+
+func TestRequestHookObservesWithoutMutating(t *testing.T) {
+	t.Parallel()
+
+	var (
+		gotInfo     RequestInfo
+		gotInjected string
+		gotAuth     string
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotInjected = r.Header.Get("X-Injected")
+		gotAuth = r.Header.Get("Authorization")
+
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-9","status":"pending"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRequestHook(func(info RequestInfo) {
+		gotInfo = info
+		info.Header.Set("X-Injected", "yes")
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, _, err := client.GetTask(t.Context(), "task-uuid-9"); err != nil {
+		t.Fatalf("GetTask: %v", err)
+	}
+
+	if gotInfo.Method != http.MethodGet {
+		t.Fatalf("Method = %q, want GET", gotInfo.Method)
+	}
+
+	if !strings.Contains(gotInfo.URL, "/api/tasks/?task_id=task-uuid-9") {
+		t.Fatalf("URL = %q, want the tasks endpoint with the task_id query", gotInfo.URL)
+	}
+
+	if gotInfo.Header.Get("Authorization") != "Token token" {
+		t.Fatalf("hooked Authorization = %q, want the token (hooks must see it to redact it)", gotInfo.Header.Get("Authorization"))
+	}
+
+	if gotInjected != "" {
+		t.Fatal("hook mutation leaked into the real request")
+	}
+
+	if gotAuth != "Token token" {
+		t.Fatalf("server Authorization = %q", gotAuth)
+	}
+}
+
+func TestResponseHookSees2xxBodyAndCappedErrorBody(t *testing.T) {
+	t.Parallel()
+
+	var responses []ResponseInfo
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/tasks/") {
+			_, _ = w.Write([]byte(`{"results":[{"task_id":"task-uuid-10","status":"success",` +
+				`"result_data":{"document_id":42}}]}`))
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write(bytes.Repeat([]byte("x"), 2000))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithResponseHook(func(info ResponseInfo) {
+		responses = append(responses, info)
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, _, err := client.GetTask(t.Context(), "task-uuid-10"); err != nil {
+		t.Fatalf("GetTask: %v", err)
+	}
+
+	if len(responses) != 1 || responses[0].Status != http.StatusOK {
+		t.Fatalf("responses = %+v, want one 200 snapshot", responses)
+	}
+
+	if !strings.Contains(string(responses[0].Body), "document_id") {
+		t.Fatalf("2xx hook body = %q, want the full response body", responses[0].Body)
+	}
+
+	if responses[0].Header == nil {
+		t.Fatal("hooked response header must be present")
+	}
+
+	_, err = client.DownloadDocument(t.Context(), 42)
+	if err == nil {
+		t.Fatal("expected the 404 to surface")
+	}
+
+	if len(responses) != 2 || responses[1].Status != http.StatusNotFound {
+		t.Fatalf("responses = %+v, want a second 404 snapshot", responses)
+	}
+
+	if len(responses[1].Body) != maxErrorBodyBytes {
+		t.Fatalf("404 hook body = %d bytes, want the %d-byte cap", len(responses[1].Body), maxErrorBodyBytes)
+	}
+}
