@@ -34,13 +34,9 @@ jobs:
   gosec:
     name: gosec
     runs-on: ubuntu-24.04
-    env:
-      GOEXPERIMENT: jsonv2
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: securego/gosec@v2.29.0
-        with:
-          args: ./...
+      - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...
