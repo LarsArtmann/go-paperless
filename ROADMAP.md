@@ -17,7 +17,11 @@ Raw ideas:
 - A polling helper that blocks until `TaskStatus.Terminal()` with a deadline
   and context cancellation
 - A client-side retry policy that honors `RetryAfterError.After` instead of
-  blind exponential backoff in each consumer
+  blind exponential backoff in each consumer —
+  [go-retry](https://github.com/larsartmann/go-retry) is the natural vehicle
+  (its `DelayFunc` exists for exactly this, and its default retryable
+  predicate already speaks `errorfamily`); as an SDK option it must be
+  opt-in to preserve the fail-fast contract bank-sync depends on
 - First-class "was this a duplicate refusal?" ergonomics layered on
   `TaskOutcome`
 
