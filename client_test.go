@@ -613,6 +613,39 @@ func TestUpload429CarriesRetryAfterHint(t *testing.T) {
 	}
 }
 
+func TestUpload503CarriesRetryAfterHint(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Retry-After", "12")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.Upload(t.Context(), UploadRequest{Filename: "x.pdf", Content: []byte("x")})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	hint, ok := errors.AsType[*RetryAfterError](err)
+	if !ok {
+		t.Fatalf("expected RetryAfterError, got %T (%v)", err, err)
+	}
+
+	if hint.After != 12*time.Second {
+		t.Fatalf("hint = %s, want 12s", hint.After)
+	}
+
+	if errorfamily.Classify(err) != errorfamily.Transient {
+		t.Fatalf("wrapped family must stay Transient, got %v", errorfamily.Classify(err))
+	}
+}
+
 func TestParseRetryAfter(t *testing.T) {
 	t.Parallel()
 
@@ -1608,5 +1641,63 @@ func TestGetTaskRejectsMalformedJSON(t *testing.T) {
 	_, _, err = client.GetTask(t.Context(), "task-uuid-6")
 	if err == nil {
 		t.Fatal("expected an error for malformed JSON")
+	}
+}
+
+func TestDownloadDocumentReturnsOriginalBytes(t *testing.T) {
+	t.Parallel()
+
+	want := []byte("%PDF-1.7 original bytes")
+	var gotPath string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_, _ = w.Write(want)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	got, err := client.DownloadDocument(t.Context(), 42)
+	if err != nil {
+		t.Fatalf("DownloadDocument: %v", err)
+	}
+
+	if string(got) != string(want) {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+
+	if wantPath := "/api/documents/42/download/"; gotPath != wantPath {
+		t.Fatalf("request path = %q, want %q", gotPath, wantPath)
+	}
+}
+
+func TestDownloadDocumentWrapsErrorsWithDocumentID(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.DownloadDocument(t.Context(), 42)
+	if err == nil {
+		t.Fatal("expected error for missing document")
+	}
+
+	if !strings.Contains(err.Error(), "download document 42") {
+		t.Fatalf("error must name the failed download, got %v", err)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family for 404, got %v (%v)", family, err)
 	}
 }

@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Go floor raised to 1.27.1: `encoding/json/v2` is the default toolchain
+  there, so consumers no longer need `GOEXPERIMENT=jsonv2`; consumer
+  toolchains must be Go 1.27+ to build against this version
 - `nix flake check` now passes fully hermetic: `checks.build`, a new
   `checks.test` (full suite in the sandbox) and `checks.lint` use
   `buildGoModule` (modules fetched via Nix into a fixed-output derivation,

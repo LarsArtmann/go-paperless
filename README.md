@@ -26,9 +26,10 @@ go get github.com/larsartmann/go-paperless
 
 ## Requirements
 
-Go 1.26+. The module uses `encoding/json/v2`, so **building anything that
-imports it — including your own project — needs `GOEXPERIMENT=jsonv2`** in
-the environment.
+Go 1.27+. The module uses `encoding/json/v2`, which is the default there —
+no `GOEXPERIMENT` is needed. (On a Go ≤ 1.26 toolchain json/v2 only exists
+behind `GOEXPERIMENT=jsonv2`, and builds fail with "build constraints
+exclude all Go files" without it.)
 
 ## Getting started
 
@@ -69,7 +70,7 @@ func main() {
 ## Development
 
 ```bash
-nix develop          # dev shell (Go 1.26, GOEXPERIMENT=jsonv2)
+nix develop          # dev shell (Go 1.27, GOEXPERIMENT=jsonv2,simd)
 nix run .#build      # build
 nix run .#test       # tests
 nix run .#test-race  # tests with race detector
