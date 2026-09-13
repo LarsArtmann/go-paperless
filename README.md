@@ -1,5 +1,9 @@
 # go-paperless
 
+[![CI](https://github.com/LarsArtmann/go-paperless/actions/workflows/ci.yml/badge.svg)](https://github.com/LarsArtmann/go-paperless/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/larsartmann/go-paperless.svg)](https://pkg.go.dev/github.com/larsartmann/go-paperless)
+[![Go](https://img.shields.io/badge/Go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev)
+
 Paperless-ngx REST client SDK for Go.
 
 One client, two consumers: [InboxClean](https://github.com/LarsArtmann/InboxClean) and
@@ -37,26 +41,26 @@ exclude all Go files" without it.)
 package main
 
 import (
-    "context"
-    "fmt"
+	"context"
+	"fmt"
 
-    "github.com/larsartmann/go-paperless"
+	"github.com/larsartmann/go-paperless"
 )
 
 func main() {
-    client, err := paperless.New("http://paperless.local:8000", "my-token")
-    if err != nil {
-        panic(err)
-    }
-    ctx := context.Background()
-    if err := client.Ping(ctx); err != nil {
-        panic(err)
-    }
-    tagID, err := client.EnsureTag(ctx, "inboxclean")
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println(tagID)
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.Background()
+	if err := client.Ping(ctx); err != nil {
+		panic(err)
+	}
+	tagID, err := client.EnsureTag(ctx, "inboxclean")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(tagID)
 }
 ```
 
@@ -71,6 +75,7 @@ func main() {
 
 ```bash
 nix develop          # dev shell (Go 1.27, GOEXPERIMENT=jsonv2,simd)
+nix run .#check      # all checks (build, test, lint, format)
 nix run .#build      # build
 nix run .#test       # tests
 nix run .#test-race  # tests with race detector
@@ -82,3 +87,6 @@ nix flake check      # all checks (CI equivalent)
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+For security reporting, see [SECURITY.md](SECURITY.md); to contribute, see
+[CONTRIBUTING.md](CONTRIBUTING.md).

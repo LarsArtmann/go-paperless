@@ -86,3 +86,20 @@ func ExampleClient_GetTask() {
 		fmt.Println(outcome.Status, outcome.DocumentID)
 	}
 }
+
+// ExampleClient_EnsureTag mirrors the README quick start so signature
+// drift between README and code breaks the build.
+func ExampleClient_EnsureTag() {
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	tagID, err := client.EnsureTag(ctx, "inboxclean")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tagID)
+}
