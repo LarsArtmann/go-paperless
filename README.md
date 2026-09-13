@@ -14,12 +14,14 @@ pipelines are domain-coupled and stay in the consuming repos.
 ## Features
 
 - Upload documents (content-hash friendly metadata: tags, correspondents, document types, custom fields)
-- `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField` (tags self-heal legacy auto-matching)
-- Task polling (`GetTask`, `TaskOutcome`) for Paperless' async consumption pipeline, including duplicate-refusal detection
+- `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`, `EnsureStoragePath` (tags self-heal legacy auto-matching; storage paths keep their existing directory template)
+- Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate`)
 - Document management: list checksums/metadata, update metadata, download, delete
+- Storage paths: `FindStoragePath`, `ListStoragePaths`
 - Name resolution: `GetCorrespondentName`, `GetDocumentTypeName`
 - Capability probing (`ProbeCapabilities`) for version differences
-- Respectful retry: `RetryAfterError` carries `Retry-After` hints
+- Respectful retry: `RetryAfterError` carries `Retry-After` hints; opt-in automatic retries via `WithRetry(RetryPolicy)` (transient-only, bodies replay, hints override backoff)
+- Observability hooks: `WithRequestHook` / `WithResponseHook` value snapshots
 - Typed errors via [go-error-family](https://github.com/LarsArtmann/go-error-family)
 
 ## Installation
@@ -66,10 +68,13 @@ func main() {
 
 ## Options
 
-| Option                         | Effect                                                  |
-| ------------------------------ | ------------------------------------------------------- |
-| `WithHTTPClient(*http.Client)` | Use a custom HTTP client (transport, proxies, timeouts) |
-| `WithTimeout(time.Duration)`   | Per-request timeout on the default client               |
+| Option                                 | Effect                                                             |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `WithHTTPClient(*http.Client)`         | Use a custom HTTP client (transport, proxies, timeouts)            |
+| `WithTimeout(time.Duration)`           | Per-request timeout on the default client                          |
+| `WithRetry(RetryPolicy)`               | Opt-in automatic retries for transient failures (default: fail fast) |
+| `WithRequestHook(func(RequestInfo))`   | Observe every outgoing request (headers include the token — redact) |
+| `WithResponseHook(func(ResponseInfo))` | Observe every response (2xx full body; errors capped at 512 bytes)  |
 
 ## Development
 

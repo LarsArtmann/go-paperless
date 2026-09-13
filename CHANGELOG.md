@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- `WaitForTask` (plus `DefaultTaskPollInterval`): polls one consumption task
+  to a terminal state — immediate first poll, not-found and transient-error
+  tolerance, duplicate refusals are honest outcomes (not errors), a context
+  deadline bounds the wait and surfaces the last poll error
+- `TaskOutcome.Duplicate()`: accessor for duplicate-refusal details
+  (document ID, in-trash flag, refused flag)
+- Opt-in automatic retries: `RetryPolicy` + `WithRetry` (backed by
+  go-retry v0.5.0). Transient failures only (network, 429/503, 5xx);
+  rejections fail fast; request bodies replay byte-for-byte per attempt;
+  server `Retry-After` hints override exponential backoff; a negative
+  `MaxAttempts` is rejected via `ErrInvalidConfig`. Default behavior is
+  unchanged (single attempt, fail fast)
+- Storage paths: `FindStoragePath`, `EnsureStoragePath` (an existing path
+  keeps its configured directory template; the create POST sends only
+  `name` and `path` — the server generates the slug), `ListStoragePaths`
+  (bounded pagination like the document listings)
+- Observability hooks: `WithRequestHook` / `WithResponseHook` deliver
+  `RequestInfo` / `ResponseInfo` value snapshots with cloned headers (they
+  include the Authorization token / Set-Cookie — redact before logging);
+  non-2xx bodies are capped at 512 bytes
+- Tests: the five new APIs are exercised end-to-end over httptest (25 new
+  tests), four fuzz targets (`FuzzParseRetryAfter`,
+  `FuzzParseDocumentCreated`, `FuzzChecksumFrom`, `FuzzClassifyTask`) with
+  crash corpus seeds, a `maxDocumentListPages` page-cap test and a
+  concurrent-caller race test; coverage 86.1% → 88.4%
+
+### Fixed
+
+- `parseRetryAfter` now treats delay-seconds values too large for
+  `time.Duration` as unparseable — they previously overflowed into a
+  negative delay (found by fuzzing)
+- `EnsureStoragePath` no longer sends an empty `slug` field on create
+
 ## [0.1.1] - 2026-09-13
 
 ### Changed
