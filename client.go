@@ -81,6 +81,9 @@ const (
 	// pathCustomFields lists and creates custom field definitions.
 	pathCustomFields = "/api/custom_fields/"
 
+	// pathStoragePaths lists and creates storage paths.
+	pathStoragePaths = "/api/storage_paths/"
+
 	// pathDocumentDetail is the per-document DRF route with the ID spliced
 	// in (view/update/delete single documents).
 	pathDocumentDetail = "/api/documents/%d/"
@@ -183,6 +186,47 @@ func WithRetry(policy RetryPolicy) Option {
 	}
 }
 
+// WithRequestHook installs an observer called with a snapshot of every
+// outgoing API request before it is sent. The header INCLUDES the
+// Authorization token — hooks that log headers must redact it. The hook
+// observes only; mutating the snapshot has no effect on the request.
+func WithRequestHook(hook func(RequestInfo)) Option {
+	return func(c *Client) {
+		if hook != nil {
+			c.requestHook = hook
+		}
+	}
+}
+
+// ResponseInfo is the observation snapshot of one API response. Body is the
+// full body for 2xx responses and the error snippet (capped, see
+// maxErrorBodyBytes) otherwise.
+type ResponseInfo struct {
+	Status int
+	Header http.Header
+	Body   []byte
+}
+
+// RequestInfo is the observation snapshot of one outgoing API request. Body
+// is not included (multipart uploads are single-read streams).
+type RequestInfo struct {
+	Method string
+	URL    string
+	Header http.Header
+}
+
+// WithResponseHook installs an observer called with a snapshot of every API
+// response after its body has been read. The header INCLUDES any
+// Set-Cookie values — hooks that log headers must redact secrets. The hook
+// observes only; mutating the snapshot has no effect on the caller's data.
+func WithResponseHook(hook func(ResponseInfo)) Option {
+	return func(c *Client) {
+		if hook != nil {
+			c.responseHook = hook
+		}
+	}
+}
+
 // retryConfig maps the policy onto go-retry's engine, bridging server
 // Retry-After hints into the delay computation.
 func (p RetryPolicy) retryConfig() retry.Config {
@@ -224,15 +268,18 @@ func (p RetryPolicy) retryConfig() retry.Config {
 // Client talks to a single Paperless-ngx instance. The zero value is not
 // usable — construct via New.
 type Client struct {
-	baseURL    *url.URL
-	token      string
-	httpClient *http.Client
-	retry      *RetryPolicy
+	baseURL      *url.URL
+	token        string
+	httpClient   *http.Client
+	retry        *RetryPolicy
+	requestHook  func(RequestInfo)
+	responseHook func(ResponseInfo)
 }
 
 // New creates a client for the given base URL (e.g. "https://paperless.example.com")
-// and API token. Returns ErrInvalidConfig when either is empty or the URL is
-// not parseable. Options customize the HTTP transport.
+// and API token. Returns ErrInvalidConfig when either is empty, the URL is
+// not parseable, or a WithRetry policy is malformed. Options customize the
+// HTTP transport.
 func New(baseURL, token string, opts ...Option) (*Client, error) {
 	if baseURL == "" || token == "" {
 		return nil, ErrInvalidConfig
@@ -260,6 +307,10 @@ func New(baseURL, token string, opts ...Option) (*Client, error) {
 
 	for _, opt := range opts {
 		opt(client)
+	}
+
+	if client.retry != nil && client.retry.MaxAttempts < 0 {
+		return nil, fmt.Errorf("%w: retry MaxAttempts must be >= 0", ErrInvalidConfig)
 	}
 
 	return client, nil
@@ -525,7 +576,11 @@ const DefaultTaskPollInterval = 2 * time.Second
 // On a terminal outcome the outcome is fully populated. err is non-nil only
 // for a real terminal failure (status failure without a duplicate refusal —
 // duplicate refusals are honest outcomes, not errors).
-func (c *Client) WaitForTask(ctx context.Context, taskID string, interval time.Duration) (TaskOutcome, error) {
+func (c *Client) WaitForTask(
+	ctx context.Context,
+	taskID string,
+	interval time.Duration,
+) (TaskOutcome, error) {
 	if taskID == "" {
 		return TaskOutcome{}, errorfamily.NewRejection("paperless.empty_task_id",
 			"task ID is required to poll a consumption task")
@@ -889,6 +944,151 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 	}
 
 	return created.ID, nil
+}
+
+// StoragePath is one Paperless-ngx storage path definition: the server-side
+// directory template (e.g. "{created_year}/{correspondent}") documents are
+// filed into, addressed by name.
+type StoragePath struct {
+	ID   int
+	Slug string
+	Name string
+	Path string
+}
+
+// storagePathPayload mirrors Paperless-ngx's storage path serializer fields
+// the SDK relies on.
+type storagePathPayload struct {
+	ID   int    `json:"id"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// FindStoragePath looks up a storage path by exact (case-insensitive) name
+// WITHOUT creating it — the read-only lookup for dry-run reporting.
+func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, error) {
+	query := url.Values{}
+	query.Set("name__iexact", name)
+	query.Set("page_size", "1")
+
+	raw, reqErr := c.doRequest(ctx, http.MethodGet, pathStoragePaths, query.Encode(), nil, "")
+	if reqErr != nil {
+		return 0, false, reqErr
+	}
+
+	list := struct {
+		Results []storagePathPayload `json:"results"`
+	}{}
+
+	if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
+		return 0, false, errorfamily.WrapCorruption(
+			unmarshalErr,
+			"paperless.decode_storage_paths",
+			"could not decode storage path search result",
+		).WithContext("name", name)
+	}
+
+	if len(list.Results) == 0 {
+		return 0, false, nil
+	}
+
+	return list.Results[0].ID, true, nil
+}
+
+// EnsureStoragePath returns the ID of the storage path with the given name,
+// creating it with the given directory template when missing. An EXISTING
+// path keeps its configured template — mirroring the document type policy:
+// the template is deliberate user config, and overriding it from a sync
+// pipeline would be wrong.
+func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int, error) {
+	if name == "" || path == "" {
+		return 0, errorfamily.NewRejection("paperless.empty_storage_path",
+			"storage path name and directory template are required")
+	}
+
+	existing, found, findErr := c.FindStoragePath(ctx, name)
+	if findErr != nil {
+		return 0, fmt.Errorf("find storage path %q: %w", name, findErr)
+	}
+
+	if found {
+		return existing, nil
+	}
+
+	payload, err := json.Marshal(storagePathPayload{Name: name, Path: path})
+	if err != nil {
+		return 0, errorfamily.WrapInfrastructure(
+			err,
+			"paperless.marshal_storage_path",
+			"could not encode storage path payload",
+		).WithContext("name", name)
+	}
+
+	raw, err := c.doRequest(
+		ctx,
+		http.MethodPost,
+		pathStoragePaths,
+		"",
+		bytes.NewReader(payload),
+		"application/json",
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create storage path %q: %w", name, err)
+	}
+
+	created := storagePathPayload{}
+	if unmarshalErr := json.Unmarshal(raw, &created); unmarshalErr != nil {
+		return 0, errorfamily.WrapCorruption(
+			unmarshalErr,
+			"paperless.decode_storage_path",
+			"could not decode created storage path",
+		).WithContext("name", name)
+	}
+
+	return created.ID, nil
+}
+
+// ListStoragePaths returns every storage path definition on the server,
+// paginating the same bounded way as the document listings.
+func (c *Client) ListStoragePaths(ctx context.Context) ([]StoragePath, error) {
+	paths := []StoragePath{}
+
+	for page := 1; page <= maxDocumentListPages; page++ {
+		query := url.Values{}
+		query.Set("page", strconv.Itoa(page))
+		query.Set("page_size", strconv.Itoa(documentListPageSize))
+
+		raw, err := c.doRequest(ctx, http.MethodGet, pathStoragePaths, query.Encode(), nil, "")
+		if err != nil {
+			return nil, fmt.Errorf("list storage paths (page %d): %w", page, err)
+		}
+
+		list := struct {
+			Results []storagePathPayload `json:"results"`
+		}{}
+
+		if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
+			return nil, errorfamily.WrapCorruption(unmarshalErr, "paperless.decode_storage_paths",
+				"could not decode storage path list").
+				WithContext("page", strconv.Itoa(page))
+		}
+
+		for _, entry := range list.Results {
+			paths = append(paths, StoragePath{
+				ID:   entry.ID,
+				Slug: entry.Slug,
+				Name: entry.Name,
+				Path: entry.Path,
+			})
+		}
+
+		if len(list.Results) < documentListPageSize {
+			break
+		}
+	}
+
+	return paths, nil
 }
 
 // GetCorrespondentName resolves a correspondent ID to its display name.
@@ -1407,16 +1607,27 @@ func (c *Client) doRequest(
 		}
 	}
 
-	data, err := retry.DoWithValue(ctx, c.retry.retryConfig(), func(_ context.Context, _ int) ([]byte, error) {
-		var attemptBody io.Reader
-		if body != nil {
-			attemptBody = bytes.NewReader(snapshot)
-		}
+	data, err := retry.DoWithValue(
+		ctx,
+		c.retry.retryConfig(),
+		func(_ context.Context, _ int) ([]byte, error) {
+			var attemptBody io.Reader
+			if body != nil {
+				attemptBody = bytes.NewReader(snapshot)
+			}
 
-		attemptData, _, attemptErr := c.doRequestDetail(ctx, method, path, rawQuery, attemptBody, contentType)
+			attemptData, _, attemptErr := c.doRequestDetail(
+				ctx,
+				method,
+				path,
+				rawQuery,
+				attemptBody,
+				contentType,
+			)
 
-		return attemptData, attemptErr
-	})
+			return attemptData, attemptErr
+		},
+	)
 
 	return data, err
 }
@@ -1453,6 +1664,14 @@ func (c *Client) doRequestDetail(
 		req.Header.Set("Content-Type", contentType)
 	}
 
+	if c.requestHook != nil {
+		c.requestHook(RequestInfo{
+			Method: req.Method,
+			URL:    req.URL.String(),
+			Header: req.Header.Clone(),
+		})
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, errorfamily.WrapTransient(err, "paperless.request_failed", "request to Paperless-ngx failed").
@@ -1462,14 +1681,30 @@ func (c *Client) doRequestDetail(
 
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, resp.Header, classifyStatus(resp, path)
+	var data []byte
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		data, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, resp.Header, errorfamily.WrapInfrastructure(err, "paperless.read_response", "could not read response body").
+				WithContext("path", path)
+		}
+	} else {
+		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
+		resp.Body = io.NopCloser(bytes.NewReader(snippet))
+		data = snippet
 	}
 
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.Header, errorfamily.WrapInfrastructure(err, "paperless.read_response", "could not read response body").
-			WithContext("path", path)
+	if c.responseHook != nil {
+		c.responseHook(ResponseInfo{
+			Status: resp.StatusCode,
+			Header: resp.Header.Clone(),
+			Body:   data,
+		})
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, resp.Header, classifyStatus(resp, path)
 	}
 
 	return data, resp.Header, nil
