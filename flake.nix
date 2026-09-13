@@ -56,21 +56,19 @@
             };
           };
 
-          mkApp =
-            name: description: runtimeInputs: text:
-            {
-              type = "app";
-              meta.description = description;
-              program = "${
-                pkgs.writeShellApplication {
-                  inherit name runtimeInputs;
-                  text = ''
-                    export GOEXPERIMENT=${goExperiment}
-                    ${text}
-                  '';
-                }
-              }/bin/${name}";
-            };
+          mkApp = name: description: runtimeInputs: text: {
+            type = "app";
+            meta.description = description;
+            program = "${
+              pkgs.writeShellApplication {
+                inherit name runtimeInputs;
+                text = ''
+                  export GOEXPERIMENT=${goExperiment}
+                  ${text}
+                '';
+              }
+            }/bin/${name}";
+          };
         in
         {
           treefmt = {
@@ -115,47 +113,58 @@
           };
 
           checks = {
-            build = goModule (goModuleArgs // {
-              buildPhase = ''
-                runHook preBuild
-                go build ./...
-                runHook postBuild
-              '';
-              installPhase = ''touch "$out"'';
-            });
+            build = goModule (
+              goModuleArgs
+              // {
+                buildPhase = ''
+                  runHook preBuild
+                  go build ./...
+                  runHook postBuild
+                '';
+                installPhase = ''touch "$out"'';
+              }
+            );
 
-            test = goModule (goModuleArgs // {
-              doCheck = true;
-              buildPhase = ''
-                runHook preBuild
-                go build ./...
-                runHook postBuild
-              '';
-              checkPhase = ''
-                runHook preCheck
-                go test ./... -count=1
-                runHook postCheck
-              '';
-              installPhase = ''touch "$out"'';
-            });
+            test = goModule (
+              goModuleArgs
+              // {
+                doCheck = true;
+                buildPhase = ''
+                  runHook preBuild
+                  go build ./...
+                  runHook postBuild
+                '';
+                checkPhase = ''
+                  runHook preCheck
+                  go test ./... -count=1
+                  runHook postCheck
+                '';
+                installPhase = ''touch "$out"'';
+              }
+            );
 
-            lint = goModule (goModuleArgs // {
-              nativeBuildInputs = [ pkgs.golangci-lint ];
-              buildPhase = ''
-                runHook preBuild
-                export HOME=$TMPDIR
-                export GOLANGCI_LINT_CACHE=$TMPDIR/golangci-lint-cache
-                golangci-lint run ./...
-                runHook postBuild
-              '';
-              installPhase = ''touch "$out"'';
-            });
+            lint = goModule (
+              goModuleArgs
+              // {
+                nativeBuildInputs = [ pkgs.golangci-lint ];
+                buildPhase = ''
+                  runHook preBuild
+                  export HOME=$TMPDIR
+                  export GOLANGCI_LINT_CACHE=$TMPDIR/golangci-lint-cache
+                  golangci-lint run ./...
+                  runHook postBuild
+                '';
+                installPhase = ''touch "$out"'';
+              }
+            );
           };
 
           apps = {
-            check = mkApp "check" "Run every flake check (build, test, lint, format) — CI equivalent" [ pkgs.nix ] ''
-              exec nix --no-pager flake check "$@"
-            '';
+            check =
+              mkApp "check" "Run every flake check (build, test, lint, format) — CI equivalent" [ pkgs.nix ]
+                ''
+                  exec nix --no-pager flake check "$@"
+                '';
 
             test = mkApp "test" "Run the Go test suite" [ goPkg ] ''
               go test ./... -count=1 "$@"
@@ -182,17 +191,23 @@
               go tool cover -func=coverage.out
             '';
 
-            fmt = mkApp "fmt" "Format the tree via treefmt (gofumpt, goimports, golines, nixfmt)" [ config.treefmt.build.wrapper ] ''
-              treefmt "$@"
-            '';
+            fmt =
+              mkApp "fmt" "Format the tree via treefmt (gofumpt, goimports, golines, nixfmt)"
+                [ config.treefmt.build.wrapper ]
+                ''
+                  treefmt "$@"
+                '';
 
-            clean = mkApp "clean" "Remove coverage output and Go test cache" [
-              goPkg
-              pkgs.trash-cli
-            ] ''
-              trash-put coverage.out 2>/dev/null || true
-              go clean -testcache
-            '';
+            clean =
+              mkApp "clean" "Remove coverage output and Go test cache"
+                [
+                  goPkg
+                  pkgs.trash-cli
+                ]
+                ''
+                  trash-put coverage.out 2>/dev/null || true
+                  go clean -testcache
+                '';
           };
         };
     };
