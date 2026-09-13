@@ -46,7 +46,7 @@ func FuzzParseDocumentCreated(f *testing.F) {
 			return
 		}
 
-		if reparsed := parseDocumentCreated(parsed.Format(time.RFC3339)); reparsed != parsed {
+		if reparsed := parseDocumentCreated(parsed.Format(time.RFC3339)); !reparsed.Equal(parsed) {
 			t.Fatalf("parseDocumentCreated is not stable for %q: %v then %v", raw, parsed, reparsed)
 		}
 	})
@@ -97,7 +97,11 @@ func FuzzChecksumFrom(f *testing.F) {
 
 func FuzzClassifyTask(f *testing.F) {
 	f.Add([]byte(`{"task_id":"t1","status":"success","result_data":{"document_id":42}}`))
-	f.Add([]byte(`{"task_id":"t2","status":"failure","result_data":{"duplicate_of":7,"duplicate_in_trash":true}}`))
+	f.Add(
+		[]byte(
+			`{"task_id":"t2","status":"failure","result_data":{"duplicate_of":7,"duplicate_in_trash":true}}`,
+		),
+	)
 	f.Add([]byte(`{"task_id":"t3","status":"failure","result_data":{"error_message":"bad pdf"}}`))
 	f.Add([]byte(`{"task_id":"t4","status":"PENDING","related_document_ids":[9,8]}`))
 	f.Add([]byte(`{`))
@@ -114,13 +118,21 @@ func FuzzClassifyTask(f *testing.F) {
 		switch {
 		case payload.ResultData.DocumentID != nil:
 			if outcome.DuplicateRefused || outcome.DocumentID != *payload.ResultData.DocumentID {
-				t.Fatalf("document_id %d misclassified: %+v", *payload.ResultData.DocumentID, outcome)
+				t.Fatalf(
+					"document_id %d misclassified: %+v",
+					*payload.ResultData.DocumentID,
+					outcome,
+				)
 			}
 		case payload.ResultData.DuplicateOf != nil:
 			if !outcome.DuplicateRefused ||
 				outcome.DocumentID != *payload.ResultData.DuplicateOf ||
 				outcome.DuplicateInTrash != payload.ResultData.DuplicateInTrash {
-				t.Fatalf("duplicate_of %d misclassified: %+v", *payload.ResultData.DuplicateOf, outcome)
+				t.Fatalf(
+					"duplicate_of %d misclassified: %+v",
+					*payload.ResultData.DuplicateOf,
+					outcome,
+				)
 			}
 		case len(payload.RelatedDocumentIDs) > 0:
 			if outcome.DocumentID != payload.RelatedDocumentIDs[0] {

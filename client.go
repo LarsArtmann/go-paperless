@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -1816,7 +1817,10 @@ func (e *RetryAfterError) Unwrap() error { return e.Err }
 
 // parseRetryAfter reads a Retry-After header value: either delay-seconds
 // or an HTTP-date. Unparseable values return ok=false so callers fall
-// back to their own backoff policy.
+// back to their own backoff policy. Delay-seconds values too large to
+// represent as a non-negative duration are treated as unparseable
+// (multiplying them into a time.Duration would overflow and wrap
+// negative).
 func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -1824,7 +1828,7 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 	}
 
 	if seconds, err := strconv.Atoi(value); err == nil {
-		if seconds < 0 {
+		if seconds < 0 || int64(seconds) > int64(math.MaxInt64/int64(time.Second)) {
 			return 0, false
 		}
 

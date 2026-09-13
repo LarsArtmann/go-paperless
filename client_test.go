@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2266,7 +2267,9 @@ func TestEnsureStoragePathCreatesWhenMissing(t *testing.T) {
 			}
 
 			postBody = raw
-			_, _ = w.Write([]byte(`{"id":5,"slug":"invoices","name":"Invoices","path":"{created_year}/"}`))
+			_, _ = w.Write(
+				[]byte(`{"id":5,"slug":"invoices","name":"Invoices","path":"{created_year}/"}`),
+			)
 		default:
 			t.Errorf("unexpected method %s", r.Method)
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -2302,7 +2305,10 @@ func TestEnsureStoragePathCreatesWhenMissing(t *testing.T) {
 	}
 
 	if payload.Slug != nil {
-		t.Fatalf("POST payload must not send a slug (the server generates it), got %q", *payload.Slug)
+		t.Fatalf(
+			"POST payload must not send a slug (the server generates it), got %q",
+			*payload.Slug,
+		)
 	}
 }
 
@@ -2311,7 +2317,10 @@ func TestEnsureStoragePathKeepsExistingTemplateWithoutPOST(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			t.Errorf("unexpected %s: an existing storage path must be reused, not recreated", r.Method)
+			t.Errorf(
+				"unexpected %s: an existing storage path must be reused, not recreated",
+				r.Method,
+			)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 
 			return
@@ -2448,7 +2457,8 @@ func TestListStoragePathsPaginatesAndMaps(t *testing.T) {
 		t.Fatalf("paths = %d, want 101 across two pages", len(paths))
 	}
 
-	if paths[0].ID != 0 || paths[0].Name != "Path 0" || paths[0].Slug != "path-0" || paths[0].Path != "dir-0/" {
+	if paths[0].ID != 0 || paths[0].Name != "Path 0" || paths[0].Slug != "path-0" ||
+		paths[0].Path != "dir-0/" {
 		t.Fatalf("paths[0] = %+v, want the mapped first entry", paths[0])
 	}
 
@@ -2499,7 +2509,10 @@ func TestRequestHookObservesWithoutMutating(t *testing.T) {
 	}
 
 	if gotInfo.Header.Get("Authorization") != "Token token" {
-		t.Fatalf("hooked Authorization = %q, want the token (hooks must see it to redact it)", gotInfo.Header.Get("Authorization"))
+		t.Fatalf(
+			"hooked Authorization = %q, want the token (hooks must see it to redact it)",
+			gotInfo.Header.Get("Authorization"),
+		)
 	}
 
 	if gotInjected != "" {
@@ -2562,6 +2575,105 @@ func TestResponseHookSees2xxBodyAndCappedErrorBody(t *testing.T) {
 	}
 
 	if len(responses[1].Body) != maxErrorBodyBytes {
-		t.Fatalf("404 hook body = %d bytes, want the %d-byte cap", len(responses[1].Body), maxErrorBodyBytes)
+		t.Fatalf(
+			"404 hook body = %d bytes, want the %d-byte cap",
+			len(responses[1].Body),
+			maxErrorBodyBytes,
+		)
+	}
+}
+
+func TestListDocumentChecksumsCapStopsAtMaxPages(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		page := r.URL.Query().Get("page")
+
+		entries := make([]string, 0, documentListPageSize)
+		for i := range documentListPageSize {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"checksum":"sha256-page-%s-%03d"}`, i, page, i))
+		}
+
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(entries, ",") + `]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	checksums, err := client.ListDocumentChecksums(t.Context())
+	if err != nil {
+		t.Fatalf("ListDocumentChecksums: %v", err)
+	}
+
+	if len(checksums) != maxDocumentListPages*documentListPageSize {
+		t.Fatalf("checksums = %d, want exactly %d (100 full pages)", len(checksums),
+			maxDocumentListPages*documentListPageSize)
+	}
+
+	if requests != maxDocumentListPages {
+		t.Fatalf("requests = %d, want exactly %d (the cap must stop the scan, not hang)",
+			requests, maxDocumentListPages)
+	}
+}
+
+func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[` +
+			`{"id":1,"checksum":"sha256-aaa"},` +
+			`{"id":2,"versions":[{"id":10,"checksum":"sha256-bbb","is_root":true}]},` +
+			`{"id":3,"checksum":""}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	const callers = 8
+
+	results := make([]map[string]struct{}, callers)
+	errs := make([]error, callers)
+
+	var wg sync.WaitGroup
+	for i := range callers {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			results[i], errs[i] = client.ListDocumentChecksums(t.Context())
+		}()
+	}
+
+	wg.Wait()
+
+	for i := range callers {
+		if errs[i] != nil {
+			t.Fatalf("caller %d: %v", i, errs[i])
+		}
+
+		if len(results[i]) != 2 {
+			t.Fatalf(
+				"caller %d got %d checksums, want 2 (empty flat checksum skipped)",
+				i,
+				len(results[i]),
+			)
+		}
+
+		for checksum := range results[0] {
+			if _, ok := results[i][checksum]; !ok {
+				t.Fatalf("caller %d is missing checksum %q", i, checksum)
+			}
+		}
 	}
 }
