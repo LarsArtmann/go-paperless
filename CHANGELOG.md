@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `nix run .#fmt` (and `nix flake check` evaluation): the fmt app passed an
+  attrset of treefmt programs where a list of packages was required
+
 ## [0.1.0] - 2026-09-13
 
 ### Added
