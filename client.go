@@ -960,7 +960,7 @@ type StoragePath struct {
 // the SDK relies on.
 type storagePathPayload struct {
 	ID   int    `json:"id"`
-	Slug string `json:"slug"`
+	Slug string `json:"slug,omitempty"`
 	Name string `json:"name"`
 	Path string `json:"path"`
 }

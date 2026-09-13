@@ -1,6 +1,7 @@
 package paperless
 
 import (
+	"bytes"
 	"context"
 	"encoding/json/v2"
 	"errors"
