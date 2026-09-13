@@ -31,7 +31,7 @@
 | T22: ADR 0001 — API-version policy beyond v10                | 🔴 `TODO` | Med    | ~1h    | Probe-vs-negotiate-vs-break decision record the ROADMAP's confidence theme references (`docs/status/…15-39….md` f-20)                                        |
 | Coverage: 88.4% → ≥90%                                       | 🟢 `DONE` | Med    | ~1h    | 90.1% after the custom-fields round-trip + options/transport tests (2026-09-13); remaining gap is dominated by unreachable `bytes.Buffer` write-error branches |
 | Plan tasks T06–T08: UpdateDocument shape, Options/transport, error-surface tests | 🟢 `DONE` | Med | ~2h | All three named gaps closed: `TestWithTimeoutBoundsSlowResponses`, `TestWithHTTPClientRoutesRequestsThroughSuppliedClient`, `TestNegotiatedAPIVersionReadsContentType`, plus the existing ctx-deadline test |
-| Append a note to the v0.1.1 GitHub release body about the red gosec job | 🔵 `BLOCKED` | Med | ~5min | Pending the tag-posture answer (supersede vs leave) in `docs/status/…15-39….md` §g-1; the tag itself stays untouched either way                              |
+| Append a note to the v0.1.1 GitHub release body about the red gosec job | 🟢 `DONE` | Med | ~5min | Body appended via `gh release edit v0.1.1` (tag untouched; supersede ruled out by the Q1 answer) — visible on the release page |
 
 ## Low Impact
 

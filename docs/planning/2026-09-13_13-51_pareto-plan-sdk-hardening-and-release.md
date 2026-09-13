@@ -274,7 +274,7 @@
 | M23-04 | Decision record → ROADMAP/ADR | 12 |
 | M23-05 | File follow-up task or close idea | 12 |
 
-### T24 — Notes/share-links/saved-views slice (8 × 12min) — ⛔ Won't implement — parked per the D3 default (no consumer demand surfaced); stays in ROADMAP theme 2
+### T24 — Notes/share-links/saved-views slice (8 × 12min) — ✅ done at `d878c67`, `53c5373`, `fee9cc0` (the user's Q3 answer overrode the D3 park; wire shapes verified against the paperless-ngx source, 12 red-green tests)
 
 | ID | Micro task | Min |
 |---|---|---|
