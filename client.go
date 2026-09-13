@@ -2259,10 +2259,7 @@ func (p savedViewPayload) savedView() SavedView {
 	}
 
 	for _, rule := range p.FilterRules {
-		view.FilterRules = append(view.FilterRules, SavedViewFilterRule{
-			RuleType: rule.RuleType,
-			Value:    rule.Value,
-		})
+		view.FilterRules = append(view.FilterRules, SavedViewFilterRule(rule))
 	}
 
 	return view
