@@ -120,8 +120,9 @@ var ErrInvalidConfig = errors.New("paperless: base URL and token are required")
 // Option configures a Client at construction time.
 type Option func(*Client)
 
-// WithHTTPClient uses the given HTTP client instead of the default one. When
-// set, WithTimeout has no effect (the supplied client owns its own timeout).
+// WithHTTPClient uses the given HTTP client instead of the default one.
+// Note that a later WithTimeout option still sets Timeout on the supplied
+// client — options apply in order and the last writer wins.
 func WithHTTPClient(client *http.Client) Option {
 	return func(c *Client) {
 		if client != nil {
@@ -1567,12 +1568,10 @@ func (c *Client) DownloadDocument(ctx context.Context, documentID int) ([]byte, 
 	return raw, nil
 }
 
-// doRequest executes one authenticated API call and returns the response body.
-// rawQuery is appended verbatim when non-empty; contentType is only required
-// for requests with a body.
 // doRequest performs one authenticated API round-trip and returns the
-// response body. See doRequestDetail for the header-exposing variant used
-// by capability probing.
+// response body. rawQuery is appended verbatim when non-empty; contentType
+// is only required for requests with a body. See doRequestDetail for the
+// header-exposing variant used by capability probing.
 func (c *Client) doRequest(
 	ctx context.Context,
 	method string,
@@ -1679,16 +1678,15 @@ func (c *Client) doRequestDetail(
 
 	var data []byte
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	success := resp.StatusCode >= 200 && resp.StatusCode < 300
+	if success {
 		data, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, resp.Header, errorfamily.WrapInfrastructure(err, "paperless.read_response", "could not read response body").
 				WithContext("path", path)
-		}
+			}
 	} else {
-		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
-		resp.Body = io.NopCloser(bytes.NewReader(snippet))
-		data = snippet
+		data, _ = io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 	}
 
 	if c.responseHook != nil {
@@ -1699,8 +1697,8 @@ func (c *Client) doRequestDetail(
 		})
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, resp.Header, classifyStatus(resp, path)
+	if !success {
+		return nil, resp.Header, classifyStatus(resp, data, path)
 	}
 
 	return data, resp.Header, nil
@@ -1844,8 +1842,8 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 
 // classifyStatus converts a non-2xx response into an error-family error,
 // wrapping a Retry-After hint (429/503) in a RetryAfterError when present.
-func classifyStatus(resp *http.Response, path string) error {
-	snippet, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
+// snippet is the (already capped) error body the caller read.
+func classifyStatus(resp *http.Response, snippet []byte, path string) error {
 	statusCode := resp.StatusCode
 
 	wrapped := errorfamily.NewTransient("paperless.server_error", "Paperless-ngx returned a retryable error").
