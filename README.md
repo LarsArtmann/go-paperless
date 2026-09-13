@@ -52,10 +52,10 @@ func main() {
 
 ## Options
 
-| Option | Effect |
-|---|---|
+| Option                         | Effect                                                  |
+| ------------------------------ | ------------------------------------------------------- |
 | `WithHTTPClient(*http.Client)` | Use a custom HTTP client (transport, proxies, timeouts) |
-| `WithTimeout(time.Duration)` | Per-request timeout on the default client |
+| `WithTimeout(time.Duration)`   | Per-request timeout on the default client               |
 
 ## Development
 

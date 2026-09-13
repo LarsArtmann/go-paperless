@@ -2,7 +2,7 @@ package paperless
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -238,7 +238,7 @@ func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 			_, _ = w.Write([]byte(`{"results":[{"id":42,"name":"gmail","matching_algorithm":6}]}`))
 		case r.Method == http.MethodPatch && r.URL.Path == "/api/tags/42/":
 			var payload namedPayload
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
 				t.Errorf("decode patch body: %v", err)
 			}
 
@@ -321,7 +321,7 @@ func TestEnsureTagCreatesWhenMissing(t *testing.T) {
 			_, _ = w.Write([]byte(`{"results":[]}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/api/tags/":
 			var payload namedPayload
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
 				t.Errorf("decode create body: %v", err)
 			}
 
@@ -772,7 +772,7 @@ func TestEnsureCorrespondentCreatesWhenMissing(t *testing.T) {
 				MatchingAlgorithm int    `json:"matching_algorithm"` //nolint:tagliatelle // Paperless-ngx serves snake_case
 			}
 
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
 				t.Errorf("decode payload: %v", err)
 			}
 
@@ -1287,7 +1287,7 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 					DataType string `json:"data_type"`
 				}
 
-				_ = json.NewDecoder(r.Body).Decode(&payload)
+				_ = json.UnmarshalRead(r.Body, &payload)
 
 				if payload.DataType != "string" {
 					t.Errorf("created data_type = %q, want string", payload.DataType)
