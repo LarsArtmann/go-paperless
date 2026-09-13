@@ -900,7 +900,8 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 		t.Errorf("root version checksum = %q, want def", second.Checksum)
 	}
 
-	if len(second.CustomFields) != 1 || second.CustomFields[0] != (CustomFieldValue{Field: 4, Value: "msg-9"}) {
+	if len(second.CustomFields) != 1 ||
+		second.CustomFields[0] != (CustomFieldValue{Field: 4, Value: "msg-9"}) {
 		t.Errorf("custom fields = %v, want [{4 msg-9}]", second.CustomFields)
 	}
 }
