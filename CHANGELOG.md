@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
+  (`DocumentNote`, `DocumentNoteUser`) — the notes endpoint is a bare JSON
+  array; every mutation answers with the full updated list, newest first
+- Share links: `ListShareLinks`, `CreateShareLink`, `DeleteShareLink`
+  (`ShareLink`, `ShareLinkFileVersion`) — the slug is server-generated, the
+  create POST sends only document + optional file version + optional
+  expiration (default rendition: archive); expiration zero = never expires
+- Saved views: `ListSavedViews`, `CreateSavedView`, `DeleteSavedView`
+  (`SavedView`, `SavedViewFilterRule`) — models the stable serializer core
+  (name, visibility flags, sort, filter rules); unknown UI fields are ignored
 - Tests: `TestWithTimeoutBoundsSlowResponses`,
   `TestWithHTTPClientRoutesRequestsThroughSuppliedClient`, and
   `TestNegotiatedAPIVersionReadsContentType` close the Options/transport
