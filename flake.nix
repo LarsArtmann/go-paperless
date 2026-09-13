@@ -190,12 +190,15 @@
               go vet ./...
             '';
 
-            lint = mkApp "lint" "Run golangci-lint over all packages" [
-              goPkg
-              pkgs.golangci-lint
-            ] ''
-              golangci-lint run ./...
-            '';
+            lint =
+              mkApp "lint" "Run golangci-lint over all packages"
+                [
+                  goPkg
+                  pkgs.golangci-lint
+                ]
+                ''
+                  golangci-lint run ./...
+                '';
 
             coverage = mkApp "coverage" "Run tests with coverage report" [ goPkg ] ''
               go test ./... -coverprofile=coverage.out -covermode=atomic "$@"

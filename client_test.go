@@ -802,7 +802,7 @@ func TestEnsureCorrespondentCreatesWhenMissing(t *testing.T) {
 
 			var payload struct {
 				Name              string `json:"name"`
-				MatchingAlgorithm int    `json:"matching_algorithm"` //nolint:tagliatelle // Paperless-ngx serves snake_case
+				MatchingAlgorithm int    `json:"matching_algorithm"`
 			}
 
 			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
@@ -1315,8 +1315,7 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 				_, _ = w.Write([]byte(`{"results":[]}`))
 			case http.MethodPost:
 				var payload struct {
-					Name string `json:"name"`
-					//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
+					Name     string `json:"name"`
 					DataType string `json:"data_type"`
 				}
 

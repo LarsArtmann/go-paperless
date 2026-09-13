@@ -7,9 +7,6 @@
 # Nix build output
 /result
 
-# Override global ignore: go.work is required for multi-module workspace
-!go.work
-
 # >>> buildflow-managed (.gitignore) >>>
 # Auto-managed by buildflow. Edit outside these markers; this block is regenerated on `buildflow --fix`.
 

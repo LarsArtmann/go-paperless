@@ -315,8 +315,6 @@ type TaskOutcome struct {
 // (the postrun handler demotes such tasks to failure), and
 // {"error_type", "error_message"} for real failures. Pointers distinguish
 // absent keys from zero values.
-//
-//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
 type taskResultData struct {
 	DocumentID       *int64  `json:"document_id"`
 	DuplicateOf      *int64  `json:"duplicate_of"`
@@ -325,8 +323,6 @@ type taskResultData struct {
 }
 
 // taskPayload mirrors the Paperless-ngx v10 task object (TaskSerializerV10).
-//
-//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
 type taskPayload struct {
 	TaskID             string         `json:"task_id"`
 	Status             string         `json:"status"`
@@ -561,8 +557,6 @@ func (c *Client) updateMatchingAlgorithm(
 
 // namedPayload mirrors the create/list subset shared by Paperless-ngx's tag and
 // correspondent objects (id + name + matching algorithm).
-//
-//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
 type namedPayload struct {
 	ID                int    `json:"id"`
 	Name              string `json:"name"`
@@ -636,8 +630,6 @@ func (c *Client) EnsureDocumentType(ctx context.Context, name string) (int, erro
 }
 
 // customFieldPayload mirrors one custom field definition.
-//
-//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
 type customFieldPayload struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
@@ -941,25 +933,21 @@ func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}
 // correspondent decodes as 0. created stays a string so both the datetime
 // form Paperless-ngx serves and legacy date-only values parse.
 type documentMetaPayload struct {
-	ID            int    `json:"id"`
-	Title         string `json:"title"`
-	Correspondent int    `json:"correspondent"`
-	Created       string `json:"created"`
-	Tags          []int  `json:"tags"`
-	//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
-	DocumentType int `json:"document_type"`
-	//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
-	CustomFields []customFieldValuePayload `json:"custom_fields"`
-	Checksum     string                    `json:"checksum"`
-	Versions     []documentVersionPayload  `json:"versions"`
+	ID            int                       `json:"id"`
+	Title         string                    `json:"title"`
+	Correspondent int                       `json:"correspondent"`
+	Created       string                    `json:"created"`
+	Tags          []int                     `json:"tags"`
+	DocumentType  int                       `json:"document_type"`
+	CustomFields  []customFieldValuePayload `json:"custom_fields"`
+	Checksum      string                    `json:"checksum"`
+	Versions      []documentVersionPayload  `json:"versions"`
 }
 
 // documentVersionPayload mirrors one entry of Paperless-ngx's document
 // versions array. Since paperless-ngx 3.x the flat document checksum is no
 // longer part of the serializer fields; the checksum moved into the
 // versions array (is_root marks the current original).
-//
-//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
 type documentVersionPayload struct {
 	ID       int    `json:"id"`
 	Checksum string `json:"checksum"`
@@ -1104,14 +1092,12 @@ func (c *Client) UpdateDocument(
 // document serializer. Pointer fields are emitted only when set; an empty
 // TagIDs slice is omitted so other-field updates never touch tags.
 type documentUpdatePayload struct {
-	Title         *string `json:"title,omitempty"`
-	Created       *string `json:"created,omitempty"`
-	Correspondent *int    `json:"correspondent,omitempty"`
-	TagIDs        []int   `json:"tags,omitempty"`
-	//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
-	DocumentType *int `json:"document_type,omitempty"`
-	//nolint:tagliatelle // Paperless-ngx serves snake_case JSON keys
-	CustomFields []customFieldValuePayload `json:"custom_fields,omitempty"`
+	Title         *string                   `json:"title,omitempty"`
+	Created       *string                   `json:"created,omitempty"`
+	Correspondent *int                      `json:"correspondent,omitempty"`
+	TagIDs        []int                     `json:"tags,omitempty"`
+	DocumentType  *int                      `json:"document_type,omitempty"`
+	CustomFields  []customFieldValuePayload `json:"custom_fields,omitempty"`
 }
 
 // customFieldValuePayload is the wire shape of one document custom-field
