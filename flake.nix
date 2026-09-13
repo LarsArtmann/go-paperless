@@ -36,8 +36,8 @@
           ...
         }:
         let
-          goPkg = pkgs.go_1_26;
-          goExperiment = "jsonv2,goroutineleakprofile,simd";
+          goPkg = pkgs.go_1_27;
+          goExperiment = "jsonv2,simd";
           version = "0.1.0";
 
           # buildGoModule fetches Go modules into a fixed-output derivation
