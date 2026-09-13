@@ -38,18 +38,39 @@
         let
           goPkg = pkgs.go_1_26;
           goExperiment = "jsonv2,goroutineleakprofile,simd";
+          version = "0.1.0";
 
-          mkApp = name: runtimeInputs: text: {
-            type = "app";
-            program = "${
-              pkgs.writeShellApplication {
-                inherit name runtimeInputs;
-                text = ''
-                  ${text}
-                '';
-              }
-            }/bin/${name}";
+          # buildGoModule fetches Go modules into a fixed-output derivation
+          # (network access there) and materialises them as vendor/ inside the
+          # sandboxed build, so no check ever needs DNS.
+          goModule = pkgs.buildGoModule.override { go = goPkg; };
+
+          goModuleArgs = {
+            inherit version;
+            pname = "go-paperless";
+            src = self;
+            vendorHash = "sha256-MQ+cMXFKmVbiuu7nSVSHpFANEyTjNc1xKd0ixEXjA50=";
+            env = {
+              CGO_ENABLED = "0";
+              GOEXPERIMENT = goExperiment;
+            };
           };
+
+          mkApp =
+            name: description: runtimeInputs: text:
+            {
+              type = "app";
+              meta.description = description;
+              program = "${
+                pkgs.writeShellApplication {
+                  inherit name runtimeInputs;
+                  text = ''
+                    export GOEXPERIMENT=${goExperiment}
+                    ${text}
+                  '';
+                }
+              }/bin/${name}";
+            };
         in
         {
           treefmt = {
@@ -63,6 +84,7 @@
           };
 
           checks.format = config.treefmt.build.check self;
+
           devShells = {
             default = pkgs.mkShellNoCC {
               packages = [
@@ -93,76 +115,81 @@
           };
 
           checks = {
-            build = pkgs.runCommand "go-paperless-build" { nativeBuildInputs = [ goPkg ]; } ''
-              export HOME=$TMPDIR
-              export CGO_ENABLED=0
-              export GOEXPERIMENT=${goExperiment}
-              cp -r ${./.} src && chmod -R u+w src && cd src
-              ${goPkg}/bin/go build ./...
-              touch $out
-            '';
+            build = goModule (goModuleArgs // {
+              buildPhase = ''
+                runHook preBuild
+                go build ./...
+                runHook postBuild
+              '';
+              installPhase = ''touch "$out"'';
+            });
 
-            build-standalone =
-              pkgs.runCommand "go-paperless-build-standalone" { nativeBuildInputs = [ goPkg ]; }
-                ''
-                  export HOME=$TMPDIR
-                  export CGO_ENABLED=0
-                  export GOEXPERIMENT=${goExperiment}
-                  export GOWORK=off
-                  cp -r ${./.} src && chmod -R u+w src && cd src
-                  ${goPkg}/bin/go build ./...
-                  touch $out
-                '';
+            test = goModule (goModuleArgs // {
+              doCheck = true;
+              buildPhase = ''
+                runHook preBuild
+                go build ./...
+                runHook postBuild
+              '';
+              checkPhase = ''
+                runHook preCheck
+                go test ./... -count=1
+                runHook postCheck
+              '';
+              installPhase = ''touch "$out"'';
+            });
 
-            lint =
-              pkgs.runCommand "go-paperless-lint"
-                {
-                  nativeBuildInputs = [
-                    goPkg
-                    pkgs.golangci-lint
-                  ];
-                }
-                ''
-                  export HOME=$TMPDIR
-                  export CGO_ENABLED=0
-                  export GOEXPERIMENT=${goExperiment}
-                  cp -r ${./.} src && chmod -R u+w src && cd src
-                  ${pkgs.golangci-lint}/bin/golangci-lint run ./...
-                  touch $out
-                '';
+            lint = goModule (goModuleArgs // {
+              nativeBuildInputs = [ pkgs.golangci-lint ];
+              buildPhase = ''
+                runHook preBuild
+                export HOME=$TMPDIR
+                export GOLANGCI_LINT_CACHE=$TMPDIR/golangci-lint-cache
+                golangci-lint run ./...
+                runHook postBuild
+              '';
+              installPhase = ''touch "$out"'';
+            });
           };
 
           apps = {
-            test = mkApp "test" [ goPkg ] ''
+            check = mkApp "check" "Run every flake check (build, test, lint, format) — CI equivalent" [ pkgs.nix ] ''
+              exec nix --no-pager flake check "$@"
+            '';
+
+            test = mkApp "test" "Run the Go test suite" [ goPkg ] ''
               go test ./... -count=1 "$@"
             '';
 
-            test-race = mkApp "test-race" [ goPkg ] ''
+            test-race = mkApp "test-race" "Run the Go test suite with the race detector" [ goPkg ] ''
               go test ./... -race -count=1 "$@"
             '';
 
-            build = mkApp "build" [ goPkg ] ''
+            build = mkApp "build" "Compile all packages" [ goPkg ] ''
               go build ./...
             '';
 
-            vet = mkApp "vet" [ goPkg ] ''
+            vet = mkApp "vet" "Run go vet over all packages" [ goPkg ] ''
               go vet ./...
             '';
 
-            lint = mkApp "lint" [ pkgs.golangci-lint ] ''
+            lint = mkApp "lint" "Run golangci-lint over all packages" [ pkgs.golangci-lint ] ''
               golangci-lint run ./...
             '';
 
-            coverage = mkApp "coverage" [ goPkg ] ''
+            coverage = mkApp "coverage" "Run tests with coverage report" [ goPkg ] ''
               go test ./... -coverprofile=coverage.out -covermode=atomic "$@"
               go tool cover -func=coverage.out
             '';
 
-            fmt = mkApp "fmt" [ config.treefmt.build.wrapper ] ''
+            fmt = mkApp "fmt" "Format the tree via treefmt (gofumpt, goimports, golines, nixfmt)" [ config.treefmt.build.wrapper ] ''
               treefmt "$@"
             '';
 
-            clean = mkApp "clean" [ goPkg pkgs.trash-cli ] ''
+            clean = mkApp "clean" "Remove coverage output and Go test cache" [
+              goPkg
+              pkgs.trash-cli
+            ] ''
               trash-put coverage.out 2>/dev/null || true
               go clean -testcache
             '';
