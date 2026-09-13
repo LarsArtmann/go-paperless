@@ -1,0 +1,67 @@
+direction: down
+
+Consumers: "Consumers (external modules)" {
+  InboxClean: "InboxClean"
+  bank-sync: "bank-sync"
+}
+
+SDK: "go-paperless (single package: paperless)" {
+  Construction: "Construction & configuration" {
+    New: "New(baseURL, token, opts...)"
+    Options: "Options" {
+      WithHTTPClient: "WithHTTPClient"
+      WithTimeout: "WithTimeout"
+      WithRetry: "WithRetry(RetryPolicy)"
+      Hooks: "WithRequestHook / WithResponseHook"
+    }
+  }
+
+  Transport: "Transport core" {
+    doRequest: "doRequest (snapshot + retry loop)"
+    doRequestDetail: "doRequestDetail (headers exposed)"
+    classifyStatus: "classifyStatus -> error families"
+    RetryAfterError: "RetryAfterError / parseRetryAfter"
+    fetchAllPages: "fetchAllPages[T] (generic pagination)"
+  }
+
+  Operations: "Domain operations" {
+    Ingestion: "Ingestion & tasks" {
+      Upload: "Upload (multipart)"
+      GetTask: "GetTask"
+      WaitForTask: "WaitForTask"
+      classifyTask: "classifyTask"
+    }
+    NamedObjects: "Named objects (idempotent)" {
+      EnsureTag: "EnsureTag (self-heal auto tags)"
+      EnsureCorrespondent: "EnsureCorrespondent"
+      EnsureDocumentType: "EnsureDocumentType"
+      EnsureCustomField: "EnsureCustomField / FindCustomField"
+      EnsureStoragePath: "EnsureStoragePath / FindStoragePath / ListStoragePaths"
+    }
+    Documents: "Document management" {
+      ListChecksums: "ListDocumentChecksums"
+      ListMetas: "ListDocumentMetas"
+      UpdateDocument: "UpdateDocument"
+      DeleteDocument: "DeleteDocument"
+      DownloadDocument: "DownloadDocument"
+    }
+    Probes: "Compatibility probes" {
+      Ping: "Ping"
+      ProbeCapabilities: "ProbeCapabilities"
+      negotiatedAPIVersion: "negotiatedAPIVersion"
+    }
+  }
+}
+
+Server: "Paperless-ngx REST API v10 (Token auth)"
+goErrorFamily: "github.com/larsartmann/go-error-family"
+goRetry: "github.com/larsartmann/go-retry"
+
+Consumers.InboxClean -> SDK.Construction: "New(...) per config"
+Consumers.bank-sync -> SDK.Construction: "New(...) per config"
+SDK.Construction -> SDK.Transport: "configures"
+SDK.Operations -> SDK.Transport: "one call per API round-trip"
+SDK.Transport -> Server: "Accept: application/json; version=10"
+SDK.Transport -> goRetry: "RetryPolicy.retryConfig()"
+SDK.Transport -> goErrorFamily: "New*/Wrap* with codes"
+SDK.Operations -> goErrorFamily: "classified rejections/transients"

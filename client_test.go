@@ -861,8 +861,9 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 		_, _ = w.Write([]byte(`{"count":2,"results":[` +
 			// Legacy shape: flat top-level checksum (paperless-ngx 2.x).
 			`{"id":1,"title":"Statement","correspondent":5,"created":"2026-09-03T00:00:00Z","tags":[1],"checksum":"abc"},` +
-			// 3.x shape: checksum only inside versions[] (root wins).
-			`{"id":2,"title":"Other","correspondent":null,"created":"2026-09-04T00:00:00Z","tags":[],"versions":[{"id":2,"checksum":"def","is_root":true},{"id":1,"checksum":"older","is_root":false}]}]}`))
+			// 3.x shape: checksum only inside versions[] (root wins), plus
+			// custom fields that must round-trip into the public shape.
+			`{"id":2,"title":"Other","correspondent":null,"created":"2026-09-04T00:00:00Z","tags":[],"versions":[{"id":2,"checksum":"def","is_root":true},{"id":1,"checksum":"older","is_root":false}],"custom_fields":[{"field":4,"value":"msg-9"}]}]}`))
 	}))
 	defer server.Close()
 
@@ -893,6 +894,14 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 	second := metas[1]
 	if second.Correspondent != 0 {
 		t.Errorf("null correspondent should decode as 0, got %d", second.Correspondent)
+	}
+
+	if second.Checksum != "def" {
+		t.Errorf("root version checksum = %q, want def", second.Checksum)
+	}
+
+	if len(second.CustomFields) != 1 || second.CustomFields[0] != (CustomFieldValue{Field: 4, Value: "msg-9"}) {
+		t.Errorf("custom fields = %v, want [{4 msg-9}]", second.CustomFields)
 	}
 }
 

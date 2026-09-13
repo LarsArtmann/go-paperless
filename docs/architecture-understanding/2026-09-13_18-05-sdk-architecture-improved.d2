@@ -1,0 +1,47 @@
+direction: down
+
+Consumers: "Consumers (external modules)" {
+  InboxClean: "InboxClean"
+  bank-sync: "bank-sync"
+}
+
+SDK: "go-paperless (target state)" {
+  Construction: "Construction & configuration" {
+    New: "New(baseURL, token, opts...)"
+    Options: "Options (unchanged public surface)"
+  }
+
+  Transport: "Transport core" {
+    doRequest: "doRequest / doRequestDetail"
+    classifyStatus: "classifyStatus (snippet passed in, no double read)"
+    RetryAfterError: "RetryAfterError / parseRetryAfter"
+    fetchAllPages: "fetchAllPages[T] — single pagination policy"
+  }
+
+  Operations: "Domain operations (unchanged seams)" {
+    Ingestion: "Upload / GetTask / WaitForTask"
+    NamedObjects: "Ensure* / Find* idempotent lookups"
+    Documents: "List / Update / Delete / Download"
+    Probes: "Ping / ProbeCapabilities"
+  }
+
+  Testing: "Verification (target)" {
+    UnitContract: "httptest contract suite (90%+)"
+    Fuzz: "4 fuzz targets"
+    Integration: "//go:build integration e2e scaffold"
+    ErrGate: "erraudit gate in CI"
+  }
+}
+
+Server: "Paperless-ngx REST API v10"
+goErrorFamily: "go-error-family"
+goRetry: "go-retry"
+
+Consumers.InboxClean -> SDK.Construction: "New(...)"
+Consumers.bank-sync -> SDK.Construction: "New(...)"
+SDK.Construction -> SDK.Transport: "configures"
+SDK.Operations -> SDK.Transport: "one call per round-trip"
+SDK.Testing -> SDK.Operations: "gates every seam"
+SDK.Transport -> Server: "versioned JSON"
+SDK.Transport -> goRetry: "retry engine"
+SDK.Transport -> goErrorFamily: "error families"

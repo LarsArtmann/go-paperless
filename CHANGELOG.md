@@ -8,11 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Nothing yet.
+- Tests: `TestWithTimeoutBoundsSlowResponses`,
+  `TestWithHTTPClientRoutesRequestsThroughSuppliedClient`, and
+  `TestNegotiatedAPIVersionReadsContentType` close the Options/transport
+  test gaps; `ListDocumentMetas` now asserts the custom-fields round-trip.
+  Coverage 88.4% → 90.1%
+
+### Changed
+
+- `go.mod` floors `go 1.27` (major.minor) instead of the `1.27.1` patch
+  floor, so environments trailing the newest 1.27 patch release build again
+- The three paginated listings (`ListDocumentChecksums`,
+  `ListDocumentMetas`, `ListStoragePaths`) share one generic
+  `fetchAllPages` helper; pagination policy lives in a single place
+- `FindCustomField` sends `page_size=1` like every other exact-name lookup
+- CI pins `govulncheck@v1.8.0` (was `@latest`); dev shells set
+  `GOTOOLCHAIN=local` so the flake's Go toolchain is authoritative
 
 ### Fixed
 
-- Nothing yet.
+- Removed a stale duplicated doc comment on `doRequest`; `WithHTTPClient`'s
+  doc no longer claims `WithTimeout` has no effect (the last option wins)
+- Error classification no longer reads the response body twice (the capped
+  snippet is passed to `classifyStatus` directly)
 
 ## [0.2.0] - 2026-09-13
 
