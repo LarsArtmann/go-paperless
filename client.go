@@ -6,6 +6,12 @@
 // (`Authorization: Token <token>`), which users generate in the Paperless-ngx
 // web UI under "My Profile".
 //
+// # Requirements
+//
+// Go 1.27 or newer. The module decodes with `encoding/json/v2`, which is
+// part of the standard library there. On a Go 1.26 or older toolchain it
+// only exists behind `GOEXPERIMENT=jsonv2` and builds fail without it.
+//
 // # Options
 //
 //	WithHTTPClient(*http.Client) — use a custom HTTP client (transport, proxies, timeouts)
@@ -359,6 +365,10 @@ func classifyTask(payload taskPayload) TaskOutcome {
 // GetTask fetches one consumption task by ID (the UUID Upload returns).
 // found is false when the server has no such task — the record may not be
 // persisted yet (polling callers retry) or was pruned.
+//
+// The response is expected in the v10 paginated envelope
+// (`{"results": [...]}`); a bare JSON array is tolerated defensively for
+// deployments that predate pagination.
 func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool, error) {
 	query := url.Values{}
 	query.Set("task_id", taskID)
@@ -963,8 +973,9 @@ func (p documentMetaPayload) effectiveChecksum() string {
 
 // parseDocumentCreated parses the created value a stored document serves
 // back: full RFC 3339 datetimes, timezone-less datetimes, and bare dates
-// (uploads send date-only created fields). Unparseable values yield the
-// zero time.
+// (uploads send date-only created fields). Timezone-less values are read
+// as UTC (time.Parse's zero-offset default); Paperless-ngx stores its
+// dates in UTC. Unparseable values yield the zero time.
 func parseDocumentCreated(raw string) time.Time {
 	layouts := []string{
 		time.RFC3339,

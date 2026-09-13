@@ -2,12 +2,21 @@ package paperless_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/larsartmann/go-paperless"
 )
+
+func ExampleNew_invalidConfig() {
+	_, err := paperless.New("", "token-from-web-ui")
+	if errors.Is(err, paperless.ErrInvalidConfig) {
+		fmt.Println("configure the base URL before retrying")
+	}
+	// Output: configure the base URL before retrying
+}
 
 func ExampleNew() {
 	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
