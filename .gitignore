@@ -1,0 +1,11 @@
+# Build artifacts
+/go-paperless
+# Copy/paste detection reports
+/report/
+# Test coverage
+/coverage*
+# Nix build output
+/result
+
+# Override global ignore: go.work is required for multi-module workspace
+!go.work
