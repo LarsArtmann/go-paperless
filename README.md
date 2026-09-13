@@ -34,7 +34,7 @@ import (
 )
 
 func main() {
-    client, err := paperless.NewClient("http://paperless.local:8000", "my-token")
+    client, err := paperless.New("http://paperless.local:8000", "my-token")
     if err != nil {
         panic(err)
     }
