@@ -1076,12 +1076,7 @@ func (c *Client) ListStoragePaths(ctx context.Context) ([]StoragePath, error) {
 		}
 
 		for _, entry := range list.Results {
-			paths = append(paths, StoragePath{
-				ID:   entry.ID,
-				Slug: entry.Slug,
-				Name: entry.Name,
-				Path: entry.Path,
-			})
+			paths = append(paths, StoragePath(entry))
 		}
 
 		if len(list.Results) < documentListPageSize {
