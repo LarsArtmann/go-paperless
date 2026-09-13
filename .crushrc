@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# go-paperless requires Go >= 1.27 (encoding/json/v2 became the default
+# there). The host default `go` can be older with GOTOOLCHAIN=local, which
+# makes `go list` hard-fail inside the LSP servers. Auto-switching to the
+# module's toolchain is a module concern, so it is pinned here; the host
+# deliberately keeps cache/env pinning out of the global config.
+lsp add gopls --command gopls --timeout 60 --env GOTOOLCHAIN auto
+lsp add golangci_lint_ls --command "$HOME/.local/bin/golangci-lint-lsp-wrapper" --env GOTOOLCHAIN auto
