@@ -17,7 +17,7 @@
 
 | Task                                            | Status    | Impact | Effort | Evidence                                                                                                                              |
 | ----------------------------------------------- | --------- | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Add GitHub Actions CI running `nix flake check` | 🔴 `TODO` | High   | ~1h    | `.github/` holds only `dependabot.yml`; `flake.nix:95` defines `checks.build/lint/format` that nothing schedules; `README.md:69` calls `nix flake check` the "CI equivalent" |
+| Add GitHub Actions CI running `nix flake check` | 🔴 `TODO` | High   | ~1h    | `.github/` holds only `dependabot.yml`; `flake.nix:95` defines `checks.build/lint/format` that nothing schedules; `README.md:78` calls `nix flake check` the "CI equivalent" |
 
 ## Medium Impact
 

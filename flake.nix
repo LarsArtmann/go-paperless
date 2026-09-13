@@ -158,7 +158,7 @@
               go tool cover -func=coverage.out
             '';
 
-            fmt = mkApp "fmt" [ config.treefmt.build.programs ] ''
+            fmt = mkApp "fmt" [ config.treefmt.build.wrapper ] ''
               treefmt "$@"
             '';
 
