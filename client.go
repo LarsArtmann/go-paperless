@@ -93,6 +93,18 @@ const (
 	// bytes (the decrypt-repair scan reads them to detect encryption).
 	pathDocumentDownload = "/api/documents/%d/download/"
 
+	// pathDocumentNotes reads, adds, and deletes a document's notes.
+	// Not paginated: the response is a bare JSON array.
+	pathDocumentNotes = "/api/documents/%d/notes/"
+
+	// pathShareLinks lists, creates, and deletes share links. The slug is
+	// server-generated; create sends only document, file_version, and the
+	// optional expiration.
+	pathShareLinks = "/api/share_links/"
+
+	// pathSavedViews lists, creates, and deletes saved views.
+	pathSavedViews = "/api/saved_views/"
+
 	// pathDocuments lists documents; used for ledger reconciliation.
 	pathDocuments = "/api/documents/"
 

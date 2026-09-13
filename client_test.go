@@ -2790,3 +2790,510 @@ func TestNegotiatedAPIVersionReadsContentType(t *testing.T) {
 		})
 	}
 }
+
+func TestListDocumentNotesReturnsBareArray(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/documents/7/notes/" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`[` +
+			`{"id":1,"note":"first","created":"2026-09-13T10:00:00Z",` +
+			`"user":{"id":2,"username":"lars","first_name":"Lars","last_name":"A"}},` +
+			`{"id":2,"note":"second","created":"2026-09-13T11:00:00Z","user":null}]`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	notes, err := client.ListDocumentNotes(t.Context(), 7)
+	if err != nil {
+		t.Fatalf("ListDocumentNotes: %v", err)
+	}
+
+	if len(notes) != 2 {
+		t.Fatalf("notes = %d, want 2", len(notes))
+	}
+
+	if notes[0].ID != 1 || notes[0].Note != "first" {
+		t.Fatalf("notes[0] = %+v", notes[0])
+	}
+
+	if notes[0].User == nil || notes[0].User.Username != "lars" {
+		t.Fatalf("notes[0].User = %+v, want the decoded user", notes[0].User)
+	}
+
+	if !notes[0].Created.Equal(time.Date(2026, 9, 13, 10, 0, 0, 0, time.UTC)) {
+		t.Fatalf("notes[0].Created = %v", notes[0].Created)
+	}
+
+	if notes[1].User != nil {
+		t.Fatalf("notes[1].User = %+v, want nil for a null user", notes[1].User)
+	}
+}
+
+func TestAddDocumentNoteSendsNoteFieldAndReturnsUpdated(t *testing.T) {
+	t.Parallel()
+
+	var postBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %s, want POST", r.Method)
+		}
+
+		raw, _ := io.ReadAll(r.Body)
+		postBody = raw
+
+		_, _ = w.Write([]byte(`[{"id":1,"note":"hello","created":"2026-09-13T12:00:00Z"}]`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	notes, err := client.AddDocumentNote(t.Context(), 7, "hello")
+	if err != nil {
+		t.Fatalf("AddDocumentNote: %v", err)
+	}
+
+	if len(notes) != 1 || notes[0].Note != "hello" {
+		t.Fatalf("notes = %+v, want the server's updated list", notes)
+	}
+
+	var payload struct {
+		Note string `json:"note"`
+	}
+	if err := json.Unmarshal(postBody, &payload); err != nil {
+		t.Fatalf("decode POST body %q: %v", postBody, err)
+	}
+
+	if payload.Note != "hello" {
+		t.Fatalf("POST note = %q", payload.Note)
+	}
+}
+
+func TestAddDocumentNoteRejectsEmptyNote(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, err := client.AddDocumentNote(t.Context(), 0, "x"); err == nil {
+		t.Fatal("expected an error for the zero document ID")
+	}
+
+	_, err = client.AddDocumentNote(t.Context(), 7, "")
+	if err == nil {
+		t.Fatal("expected an error for the empty note")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	}
+}
+
+func TestDeleteDocumentNoteSendsIDParam(t *testing.T) {
+	t.Parallel()
+
+	var gotID string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("method = %s, want DELETE", r.Method)
+		}
+
+		gotID = r.URL.Query().Get("id")
+
+		_, _ = w.Write([]byte(`[{"id":2,"note":"remaining","created":"2026-09-13T12:00:00Z"}]`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	notes, err := client.DeleteDocumentNote(t.Context(), 7, 3)
+	if err != nil {
+		t.Fatalf("DeleteDocumentNote: %v", err)
+	}
+
+	if gotID != "3" {
+		t.Fatalf("delete id param = %q, want 3", gotID)
+	}
+
+	if len(notes) != 1 || notes[0].Note != "remaining" {
+		t.Fatalf("notes = %+v, want the server's updated list", notes)
+	}
+}
+
+func TestListShareLinksPaginates(t *testing.T) {
+	t.Parallel()
+
+	var requestedPages []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPages = append(requestedPages, r.URL.Query().Get("page"))
+
+		switch r.URL.Query().Get("page") {
+		case "1":
+			_, _ = w.Write([]byte(`{"count":2,"next":"?page=2","previous":null,"results":[` +
+				`{"id":1,"created":"2026-09-13T09:00:00Z","expiration":null,"slug":"abc",` +
+				`"document":7,"file_version":"archive"}]}`))
+		case "2":
+			_, _ = w.Write([]byte(`{"count":2,"next":null,"previous":null,"results":[` +
+				`{"id":2,"created":"2026-09-13T09:30:00Z",` +
+				`"expiration":"2026-12-31T23:59:59Z","slug":"def",` +
+				`"document":8,"file_version":"original"}]}`))
+		default:
+			t.Errorf("unexpected page %q", r.URL.Query().Get("page"))
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	links, err := client.ListShareLinks(t.Context())
+	if err != nil {
+		t.Fatalf("ListShareLinks: %v", err)
+	}
+
+	if len(links) != 2 {
+		t.Fatalf("links = %d, want 2 across two pages", len(links))
+	}
+
+	if links[0].ID != 1 || links[0].DocumentID != 7 || links[0].FileVersion != ShareLinkFileVersionArchive {
+		t.Fatalf("links[0] = %+v", links[0])
+	}
+
+	if !links[0].Expiration.IsZero() {
+		t.Fatalf("links[0].Expiration = %v, want zero for null", links[0].Expiration)
+	}
+
+	if links[1].FileVersion != ShareLinkFileVersionOriginal {
+		t.Fatalf("links[1].FileVersion = %q", links[1].FileVersion)
+	}
+
+	if links[1].Expiration.IsZero() {
+		t.Fatal("links[1].Expiration must decode the server value")
+	}
+
+	if len(requestedPages) != 2 {
+		t.Fatalf("requested pages = %v, want [1 2]", requestedPages)
+	}
+}
+
+func TestCreateShareLinkSendsDocumentAndFileVersion(t *testing.T) {
+	t.Parallel()
+
+	var postBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		postBody = raw
+
+		_, _ = w.Write([]byte(`{"id":9,"created":"2026-09-13T09:00:00Z","expiration":null,` +
+			`"slug":"server-slug","document":7,"file_version":"original"}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	link, err := client.CreateShareLink(t.Context(), CreateShareLinkRequest{
+		DocumentID:  7,
+		FileVersion: ShareLinkFileVersionOriginal,
+	})
+	if err != nil {
+		t.Fatalf("CreateShareLink: %v", err)
+	}
+
+	if link.ID != 9 || link.Slug != "server-slug" || link.DocumentID != 7 {
+		t.Fatalf("link = %+v", link)
+	}
+
+	if !link.Expiration.IsZero() {
+		t.Fatalf("link.Expiration = %v, want zero for null", link.Expiration)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(postBody, &payload); err != nil {
+		t.Fatalf("decode POST body %q: %v", postBody, err)
+	}
+
+	if payload["document"].(float64) != 7 || payload["file_version"] != "original" {
+		t.Fatalf("POST payload = %v", payload)
+	}
+
+	if _, hasSlug := payload["slug"]; hasSlug {
+		t.Fatal("POST payload must not send a slug (the server generates it)")
+	}
+}
+
+func TestCreateShareLinkDefaultsFileVersionAndCarriesExpiration(t *testing.T) {
+	t.Parallel()
+
+	var postBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		postBody = raw
+
+		_, _ = w.Write([]byte(`{"id":10,"created":"2026-09-13T09:00:00Z",` +
+			`"expiration":"2026-12-31T23:59:59Z","slug":"s","document":7,` +
+			`"file_version":"archive"}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	expiration := time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC)
+	if _, err := client.CreateShareLink(t.Context(), CreateShareLinkRequest{
+		DocumentID: 7,
+		Expiration: &expiration,
+	}); err != nil {
+		t.Fatalf("CreateShareLink: %v", err)
+	}
+
+	var payload struct {
+		Document    int        `json:"document"`
+		FileVersion string     `json:"file_version"`
+		Expiration  *time.Time `json:"expiration"`
+	}
+	if err := json.Unmarshal(postBody, &payload); err != nil {
+		t.Fatalf("decode POST body %q: %v", postBody, err)
+	}
+
+	if payload.FileVersion != "" {
+		t.Fatalf("zero FileVersion must be omitted (server defaults to archive), got %q", payload.FileVersion)
+	}
+
+	if payload.Expiration == nil || !payload.Expiration.Equal(expiration) {
+		t.Fatalf("POST expiration = %v, want %v", payload.Expiration, expiration)
+	}
+}
+
+func TestCreateShareLinkRejectsZeroDocument(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, err := client.CreateShareLink(t.Context(), CreateShareLinkRequest{}); err == nil {
+		t.Fatal("expected an error for the zero document ID")
+	}
+
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0", requests)
+	}
+}
+
+func TestDeleteShareLinkSendsDelete(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/api/share_links/4/" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if err := client.DeleteShareLink(t.Context(), 4); err != nil {
+		t.Fatalf("DeleteShareLink: %v", err)
+	}
+}
+
+func TestListSavedViewsMapsFilterRules(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[` +
+			`{"id":5,"name":"Inbox","show_on_dashboard":true,"show_in_sidebar":false,` +
+			`"sort_field":"created","sort_reverse":true,` +
+			`"filter_rules":[{"rule_type":6,"value":"has_tag:1"},` +
+			`{"rule_type":19,"value":"invoice"}]}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	views, err := client.ListSavedViews(t.Context())
+	if err != nil {
+		t.Fatalf("ListSavedViews: %v", err)
+	}
+
+	if len(views) != 1 {
+		t.Fatalf("views = %d, want 1", len(views))
+	}
+
+	view := views[0]
+	if view.ID != 5 || view.Name != "Inbox" || !view.ShowOnDashboard || view.ShowInSidebar {
+		t.Fatalf("view = %+v", view)
+	}
+
+	if view.SortField != "created" || !view.SortReverse {
+		t.Fatalf("sort = %q reverse=%t", view.SortField, view.SortReverse)
+	}
+
+	if len(view.FilterRules) != 2 || view.FilterRules[0].RuleType != 6 || view.FilterRules[0].Value != "has_tag:1" {
+		t.Fatalf("filter rules = %+v", view.FilterRules)
+	}
+}
+
+func TestCreateSavedViewSendsStableFields(t *testing.T) {
+	t.Parallel()
+
+	var postBody []byte
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		postBody = raw
+
+		_, _ = w.Write([]byte(`{"id":6,"name":"Inbox","show_on_dashboard":true,` +
+			`"show_in_sidebar":false,"sort_field":"created","sort_reverse":true,` +
+			`"filter_rules":[{"rule_type":6,"value":"has_tag:1"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	id, err := client.CreateSavedView(t.Context(), CreateSavedViewRequest{
+		Name:            "Inbox",
+		ShowOnDashboard: true,
+		SortField:       "created",
+		SortReverse:     true,
+		FilterRules:     []SavedViewFilterRule{{RuleType: 6, Value: "has_tag:1"}},
+	})
+	if err != nil {
+		t.Fatalf("CreateSavedView: %v", err)
+	}
+
+	if id != 6 {
+		t.Fatalf("id = %d, want 6", id)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(postBody, &payload); err != nil {
+		t.Fatalf("decode POST body %q: %v", postBody, err)
+	}
+
+	if payload["name"] != "Inbox" || payload["sort_field"] != "created" {
+		t.Fatalf("POST payload = %v", payload)
+	}
+
+	if payload["show_on_dashboard"] != true || payload["sort_reverse"] != true {
+		t.Fatalf("POST payload = %v", payload)
+	}
+}
+
+func TestCreateSavedViewRejectsEmptyName(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		requests++
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.CreateSavedView(t.Context(), CreateSavedViewRequest{})
+	if err == nil {
+		t.Fatal("expected an error for the empty name")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+
+	if requests != 0 {
+		t.Fatalf("requests = %d, want 0", requests)
+	}
+}
+
+func TestDeleteSavedViewSendsDelete(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/api/saved_views/5/" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if err := client.DeleteSavedView(t.Context(), 5); err != nil {
+		t.Fatalf("DeleteSavedView: %v", err)
+	}
+}
