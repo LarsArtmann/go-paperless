@@ -38,7 +38,7 @@
         let
           goPkg = pkgs.go_1_27;
           goExperiment = "jsonv2,simd";
-          version = "0.1.1";
+          version = "0.2.0";
 
           # buildGoModule fetches Go modules into a fixed-output derivation
           # (network access there) and materialises them as vendor/ inside the

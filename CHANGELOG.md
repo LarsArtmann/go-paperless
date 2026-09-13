@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Nothing yet.
+
+### Fixed
+
+- Nothing yet.
+
+## [0.2.0] - 2026-09-13
+
+### Added
+
 - `WaitForTask` (plus `DefaultTaskPollInterval`): polls one consumption task
   to a terminal state — immediate first poll, not-found and transient-error
   tolerance, duplicate refusals are honest outcomes (not errors), a context
@@ -104,5 +114,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.2.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.2.0
 [0.1.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.0
