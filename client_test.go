@@ -2677,3 +2677,106 @@ func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
 		}
 	}
 }
+
+func TestWithTimeoutBoundsSlowResponses(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithTimeout(20*time.Millisecond))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	started := time.Now()
+
+	pingErr := client.Ping(t.Context())
+	if pingErr == nil {
+		t.Fatal("expected the ping to fail against a server that never answers")
+	}
+
+	if elapsed := time.Since(started); elapsed > 5*time.Second {
+		t.Fatalf("ping returned after %s, want the ~20ms deadline to cut it off", elapsed)
+	}
+
+	if family := errorfamily.Classify(pingErr); family != errorfamily.Transient {
+		t.Fatalf("expected Transient family for a timeout, got %v (%v)", family, pingErr)
+	}
+}
+
+type recordingTransport struct {
+	gotAuth   string
+	gotCalled int
+}
+
+func (r *recordingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.gotCalled++
+	r.gotAuth = req.Header.Get("Authorization")
+
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"results":[]}`)),
+		Request:    req,
+	}, nil
+}
+
+func TestWithHTTPClientRoutesRequestsThroughSuppliedClient(t *testing.T) {
+	t.Parallel()
+
+	transport := &recordingTransport{}
+
+	client, err := New("https://paperless.example.com", "secret-token",
+		WithHTTPClient(&http.Client{Transport: transport}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if err := client.Ping(t.Context()); err != nil {
+		t.Fatalf("Ping: %v", err)
+	}
+
+	if transport.gotCalled != 1 {
+		t.Fatalf(
+			"round trips = %d, want exactly 1 through the supplied client",
+			transport.gotCalled,
+		)
+	}
+
+	if transport.gotAuth != "Token secret-token" {
+		t.Fatalf("Authorization seen by the supplied transport = %q", transport.gotAuth)
+	}
+}
+
+func TestNegotiatedAPIVersionReadsContentType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		contentType string
+		want        string
+	}{
+		{"echoed version", "application/json; version=10", "10"},
+		{"version with charset", "application/json; version=9; charset=utf-8", "9"},
+		{"no version parameter", "application/json", ""},
+		{"empty header", "", ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			header := http.Header{}
+			if tc.contentType != "" {
+				header.Set("Content-Type", tc.contentType)
+			}
+
+			if got := negotiatedAPIVersion(header); got != tc.want {
+				t.Fatalf("negotiatedAPIVersion(%q) = %q, want %q", tc.contentType, got, tc.want)
+			}
+		})
+	}
+}

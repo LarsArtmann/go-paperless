@@ -875,6 +875,7 @@ type customFieldPayload struct {
 func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, error) {
 	query := url.Values{}
 	query.Set("name__iexact", name)
+	query.Set("page_size", "1")
 
 	raw, err := c.doRequest(ctx, http.MethodGet, pathCustomFields, query.Encode(), nil, "")
 	if err != nil {
@@ -1054,35 +1055,14 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 // ListStoragePaths returns every storage path definition on the server,
 // paginating the same bounded way as the document listings.
 func (c *Client) ListStoragePaths(ctx context.Context) ([]StoragePath, error) {
-	paths := []StoragePath{}
+	payloads, listErr := fetchAllPages[storagePathPayload](ctx, c, pathStoragePaths, "storage path")
+	if listErr != nil {
+		return nil, listErr
+	}
 
-	for page := 1; page <= maxDocumentListPages; page++ {
-		query := url.Values{}
-		query.Set("page", strconv.Itoa(page))
-		query.Set("page_size", strconv.Itoa(documentListPageSize))
-
-		raw, err := c.doRequest(ctx, http.MethodGet, pathStoragePaths, query.Encode(), nil, "")
-		if err != nil {
-			return nil, fmt.Errorf("list storage paths (page %d): %w", page, err)
-		}
-
-		list := struct {
-			Results []storagePathPayload `json:"results"`
-		}{}
-
-		if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
-			return nil, errorfamily.WrapCorruption(unmarshalErr, "paperless.decode_storage_paths",
-				"could not decode storage path list").
-				WithContext("page", strconv.Itoa(page))
-		}
-
-		for _, entry := range list.Results {
-			paths = append(paths, StoragePath(entry))
-		}
-
-		if len(list.Results) < documentListPageSize {
-			break
-		}
+	paths := make([]StoragePath, 0, len(payloads))
+	for _, payload := range payloads {
+		paths = append(paths, StoragePath(payload))
 	}
 
 	return paths, nil
@@ -1263,38 +1243,63 @@ type documentListPage struct {
 	Results []documentListEntry `json:"results"`
 }
 
-// ListDocumentChecksums returns the SHA-256 checksum of every document
-// currently stored in Paperless-ngx. Used to reconcile the local upload
-// ledger against reality: ledger entries whose checksum disappeared from
-// Paperless-ngx (documents deleted there) are candidates for re-upload.
-func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}, error) {
-	checksums := map[string]struct{}{}
+// fetchAllPages walks a paginated DRF list endpoint (page/page_size query
+// parameters, `{"results": [...]}` envelope) up to maxDocumentListPages and
+// returns the concatenated entries. A short page ends the scan; the page cap
+// bounds it defensively so a server serving full pages forever cannot hang
+// callers. resource is the singular object name, used to build error messages
+// and error codes ("storage path" → "list storage paths (page 2)").
+func fetchAllPages[T any](
+	ctx context.Context,
+	c *Client,
+	path, resource string,
+) ([]T, error) {
+	items := []T{}
 
 	for page := 1; page <= maxDocumentListPages; page++ {
 		query := url.Values{}
 		query.Set("page", strconv.Itoa(page))
 		query.Set("page_size", strconv.Itoa(documentListPageSize))
 
-		raw, err := c.doRequest(ctx, http.MethodGet, pathDocuments, query.Encode(), nil, "")
+		raw, err := c.doRequest(ctx, http.MethodGet, path, query.Encode(), nil, "")
 		if err != nil {
-			return nil, fmt.Errorf("list documents (page %d): %w", page, err)
+			return nil, fmt.Errorf("list %ss (page %d): %w", resource, page, err)
 		}
 
-		list := documentListPage{}
-		if err := json.Unmarshal(raw, &list); err != nil {
-			return nil, errorfamily.WrapCorruption(err, "paperless.decode_documents",
-				"could not decode document list").
+		list := struct {
+			Results []T `json:"results"`
+		}{}
+
+		if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
+			return nil, errorfamily.WrapCorruption(unmarshalErr, "paperless.decode_"+resource+"s",
+				"could not decode "+resource+"s list").
 				WithContext("page", strconv.Itoa(page))
 		}
 
-		for _, entry := range list.Results {
-			if checksum := entry.effectiveChecksum(); checksum != "" {
-				checksums[checksum] = struct{}{}
-			}
-		}
+		items = append(items, list.Results...)
 
 		if len(list.Results) < documentListPageSize {
 			break
+		}
+	}
+
+	return items, nil
+}
+
+// ListDocumentChecksums returns the SHA-256 checksum of every document
+// currently stored in Paperless-ngx. Used to reconcile the local upload
+// ledger against reality: ledger entries whose checksum disappeared from
+// Paperless-ngx (documents deleted there) are candidates for re-upload.
+func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}, error) {
+	entries, err := fetchAllPages[documentListEntry](ctx, c, pathDocuments, "document")
+	if err != nil {
+		return nil, err
+	}
+
+	checksums := map[string]struct{}{}
+	for _, entry := range entries {
+		if checksum := entry.effectiveChecksum(); checksum != "" {
+			checksums[checksum] = struct{}{}
 		}
 	}
 
@@ -1372,46 +1377,25 @@ type DocumentMeta struct {
 // records against server documents (by checksum) and detects duplicates
 // (same checksum stored more than once).
 func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) {
-	var metas []DocumentMeta
+	entries, err := fetchAllPages[documentMetaPayload](ctx, c, pathDocuments, "document meta")
+	if err != nil {
+		return nil, err
+	}
 
-	for page := 1; page <= maxDocumentListPages; page++ {
-		query := url.Values{}
-		query.Set("page", strconv.Itoa(page))
-		query.Set("page_size", strconv.Itoa(documentListPageSize))
+	metas := make([]DocumentMeta, 0, len(entries))
+	for i := range entries {
+		entry := &entries[i]
 
-		raw, err := c.doRequest(ctx, http.MethodGet, pathDocuments, query.Encode(), nil, "")
-		if err != nil {
-			return nil, fmt.Errorf("list document metas (page %d): %w", page, err)
-		}
-
-		list := struct {
-			Results []documentMetaPayload `json:"results"`
-		}{}
-
-		if err := json.Unmarshal(raw, &list); err != nil {
-			return nil, errorfamily.WrapCorruption(err, "paperless.decode_document_metas",
-				"could not decode document list").
-				WithContext("page", strconv.Itoa(page))
-		}
-
-		for i := range list.Results {
-			entry := &list.Results[i]
-
-			metas = append(metas, DocumentMeta{
-				ID:             entry.ID,
-				Title:          entry.Title,
-				Correspondent:  entry.Correspondent,
-				Created:        parseDocumentCreated(entry.Created),
-				TagIDs:         entry.Tags,
-				DocumentTypeID: entry.DocumentType,
-				CustomFields:   customFieldsFromPayload(entry.CustomFields),
-				Checksum:       entry.effectiveChecksum(),
-			})
-		}
-
-		if len(list.Results) < documentListPageSize {
-			break
-		}
+		metas = append(metas, DocumentMeta{
+			ID:             entry.ID,
+			Title:          entry.Title,
+			Correspondent:  entry.Correspondent,
+			Created:        parseDocumentCreated(entry.Created),
+			TagIDs:         entry.Tags,
+			DocumentTypeID: entry.DocumentType,
+			CustomFields:   customFieldsFromPayload(entry.CustomFields),
+			Checksum:       entry.effectiveChecksum(),
+		})
 	}
 
 	return metas, nil
@@ -1684,7 +1668,7 @@ func (c *Client) doRequestDetail(
 		if err != nil {
 			return nil, resp.Header, errorfamily.WrapInfrastructure(err, "paperless.read_response", "could not read response body").
 				WithContext("path", path)
-			}
+		}
 	} else {
 		data, _ = io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 	}

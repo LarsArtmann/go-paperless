@@ -102,6 +102,7 @@
 
               env = {
                 GOEXPERIMENT = goExperiment;
+                GOTOOLCHAIN = "local";
               };
 
               shellHook = ''
@@ -116,6 +117,7 @@
               ];
               env = {
                 GOEXPERIMENT = goExperiment;
+                GOTOOLCHAIN = "local";
               };
             };
           };
