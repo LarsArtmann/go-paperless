@@ -11,10 +11,16 @@ Thanks for your interest in contributing!
 
 ## Development Setup
 
-Run the following commands to set up your development environment:
+Use the Nix flake for everything — bare `go` invocations fail on this module
+(it uses `encoding/json/v2` and needs `GOEXPERIMENT=jsonv2`, see AGENTS.md):
 
-    go test ./... -race
-    golangci-lint run ./...
+    nix develop          # dev shell with the right environment
+    nix run .#build      # build
+    nix run .#test       # tests
+    nix run .#test-race  # tests with the race detector
+    nix run .#lint       # golangci-lint
+    nix fmt              # format
+    nix flake check      # all checks (what CI runs)
 
 ## Reporting Issues
 

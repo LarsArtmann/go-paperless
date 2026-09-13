@@ -23,5 +23,14 @@ replacement for its trimmed fork.
 
 - Go 1.26+, functional patterns, early returns, descriptive names.
 - Tests are httptest-based (no live server needed).
-- `nolint` in block form with a reason.
+- `nolint` single-line with a reason: `//nolint:<linter> // reason`.
+- `// art-dupl:<scope>` comments mark accepted duplication for the clone
+  scanner (e.g. `client.go:839`) — don't "fix" them away without checking
+  the paired site named in the comment.
 - Errors: `github.com/larsartmann/go-error-family` (`New*`/`Wrap*` with dot-notation codes).
+
+## Docs
+
+Feature inventory: `FEATURES.md` · Open work: `TODO_LIST.md` · Long-term
+ideas: `ROADMAP.md` · Release history: `CHANGELOG.md` · Contributor setup:
+`CONTRIBUTING.md`.

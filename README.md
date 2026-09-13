@@ -10,16 +10,25 @@ pipelines are domain-coupled and stay in the consuming repos.
 ## Features
 
 - Upload documents (content-hash friendly metadata: tags, correspondents, document types, custom fields)
-- `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`
-- Task polling (`GetTask`, `classifyStatus`) for Paperless' async consumption pipeline
-- Document management: list by checksum, update matching algorithm, download, delete
+- `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField` (tags self-heal legacy auto-matching)
+- Task polling (`GetTask`, `TaskOutcome`) for Paperless' async consumption pipeline, including duplicate-refusal detection
+- Document management: list checksums/metadata, update metadata, download, delete
+- Name resolution: `GetCorrespondentName`, `GetDocumentTypeName`
 - Capability probing (`ProbeCapabilities`) for version differences
 - Respectful retry: `RetryAfterError` carries `Retry-After` hints
 - Typed errors via [go-error-family](https://github.com/LarsArtmann/go-error-family)
 
+## Installation
+
+```bash
+go get github.com/larsartmann/go-paperless
+```
+
 ## Requirements
 
-Go 1.26+. The module builds with `GOEXPERIMENT=jsonv2` (it uses `encoding/json/v2`).
+Go 1.26+. The module uses `encoding/json/v2`, so **building anything that
+imports it — including your own project — needs `GOEXPERIMENT=jsonv2`** in
+the environment.
 
 ## Getting started
 

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   consumption-task polling (`GetTask`, `TaskOutcome`, `TaskStatus`)
 - Idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`,
   `EnsureCustomField`, `FindCustomField`
+- Name resolution: `GetCorrespondentName`, `GetDocumentTypeName`
 - Document management: `ListDocumentChecksums`, `ListDocumentMetas`,
   `UpdateDocument`, `DeleteDocument`, `DownloadDocument`
 - Version tolerance: `ProbeCapabilities`, `Capabilities.ChecksumShape`
