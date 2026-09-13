@@ -17,7 +17,10 @@ pipelines are domain-coupled and stay in the consuming repos.
 - `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`, `EnsureStoragePath` (tags self-heal legacy auto-matching; storage paths keep their existing directory template)
 - Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate`)
 - Document management: list checksums/metadata, update metadata, download, delete
-- Storage paths: `FindStoragePath`, `ListStoragePaths`
+- Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
+- Share links: `CreateShareLink` (server-generated slug), `ListShareLinks`, `DeleteShareLink`
+- Saved views: `ListSavedViews`, `CreateSavedView`, `DeleteSavedView`
+- Storage paths: `FindStoragePath`, `EnsureStoragePath`, `ListStoragePaths`
 - Name resolution: `GetCorrespondentName`, `GetDocumentTypeName`
 - Capability probing (`ProbeCapabilities`) for version differences
 - Respectful retry: `RetryAfterError` carries `Retry-After` hints; opt-in automatic retries via `WithRetry(RetryPolicy)` (transient-only, bodies replay, hints override backoff)

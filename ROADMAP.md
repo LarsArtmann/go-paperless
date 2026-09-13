@@ -29,8 +29,10 @@ The client targets API v10 and the endpoints its two consumers need
 
 Raw ideas:
 
-- Notes, share links, and saved-view endpoints (parked per the D3 default —
-  no consumer demand surfaced yet)
+- ~~Notes, share links, and saved-view endpoints~~ → shipped (built on
+  the user's go: `ListDocumentNotes`/`AddDocumentNote`/`DeleteDocumentNote`,
+  `CreateShareLink`/`ListShareLinks`/`DeleteShareLink`,
+  `ListSavedViews`/`CreateSavedView`/`DeleteSavedView`; `client.go:1944`)
 - ~~Storage-path management alongside tags/correspondents/document types~~ →
   shipped: `FindStoragePath` / `EnsureStoragePath` / `ListStoragePaths`
   (`client.go:971`)

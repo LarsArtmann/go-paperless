@@ -90,6 +90,14 @@
 | ---------------------- | --------------------- | ----- |
 | Request/response hooks | 🟢 `FULLY_FUNCTIONAL` | `WithRequestHook`/`WithResponseHook` receive value snapshots with cloned headers — they include the Authorization token / Set-Cookie, redact before logging; non-2xx bodies capped at 512 bytes (`client.go:194`, `client.go:223`); mutation-no-leak + capped-body tests (`client_test.go:2474`, `client_test.go:2527`) |
 
+
+## Document notes, share links, and saved views
+
+| Feature | Status | Notes |
+| ------- | ------ | ----- |
+| Document notes (list/add/delete) | 🟢 `FULLY_FUNCTIONAL` | Bare-array endpoint; every mutation answers with the updated list, delete via `?id=` (`client.go:1944`, `client.go:1963`, `client.go:2004`); wire-shape tests (`client_test.go:2794`–`2952`) |
+| Share links (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Server generates the slug (never sent); string `file_version` (archive/original, zero value omitted); optional expiration (`client.go:2102`, `client.go:2140`, `client.go:2189`); full-page pagination test (`client_test.go:2954`) |
+| Saved views (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Stable-core fields incl. `filter_rules` (rule_type + value); newer/older server UI fields are ignored (`client.go:2281`, `client.go:2317`, `client.go:2375`); tests (`client_test.go:3174`–`3312`) |
 ## Planned
 
 None. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).
