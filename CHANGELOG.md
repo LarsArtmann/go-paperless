@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Test coverage gaps: `DownloadDocument` (happy path + 404 error wrap) and
+  the 503 `Retry-After` branch now have dedicated tests — every public
+  method is exercised by the suite
 - `nix run .#fmt` (and `nix flake check` evaluation): the fmt app passed an
   attrset of treefmt programs where a list of packages was required
 

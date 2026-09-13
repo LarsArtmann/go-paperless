@@ -1,0 +1,14 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - nolintlint
+    - tagliatelle
+  settings:
+    nolintlint:
+      require-explanation: true
+    tagliatelle:
+      case:
+        rules:
+          json: snake

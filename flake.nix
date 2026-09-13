@@ -190,7 +190,10 @@
               go vet ./...
             '';
 
-            lint = mkApp "lint" "Run golangci-lint over all packages" [ pkgs.golangci-lint ] ''
+            lint = mkApp "lint" "Run golangci-lint over all packages" [
+              goPkg
+              pkgs.golangci-lint
+            ] ''
               golangci-lint run ./...
             '';
 
