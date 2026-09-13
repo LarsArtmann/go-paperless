@@ -56,6 +56,11 @@
             };
           };
 
+          # goimports shells out to a `go` binary (gotools appends one to
+          # PATH); pin it to the module toolchain so a newer `go` directive
+          # in go.mod can never trigger an in-sandbox toolchain download.
+          gotoolsForModule = pkgs.gotools.override { go = goPkg; };
+
           mkApp = name: description: runtimeInputs: text: {
             type = "app";
             meta.description = description;
@@ -75,7 +80,10 @@
             projectRootFile = "go.mod";
             programs = {
               gofumpt.enable = true;
-              goimports.enable = true;
+              goimports = {
+                enable = true;
+                package = gotoolsForModule;
+              };
               golines.enable = true;
               nixfmt.enable = true;
             };
