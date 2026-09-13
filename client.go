@@ -33,6 +33,7 @@ import (
 	"time"
 
 	errorfamily "github.com/larsartmann/go-error-family"
+	"github.com/larsartmann/go-retry"
 )
 
 // Default transport tuning shared by every consumer of this SDK. The default
@@ -132,12 +133,101 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
+// Default retry tuning for WithRetry, mirroring go-retry's defaults.
+const (
+	// DefaultRetryMaxAttempts is the total attempt count including the first
+	// call when a RetryPolicy leaves MaxAttempts unset.
+	DefaultRetryMaxAttempts = 3
+	// DefaultRetryInitialDelay is the pause before the second attempt when a
+	// RetryPolicy leaves InitialDelay unset.
+	DefaultRetryInitialDelay = 100 * time.Millisecond
+	// DefaultRetryMaxDelay caps the exponential backoff when a RetryPolicy
+	// leaves MaxDelay unset.
+	DefaultRetryMaxDelay = 5 * time.Second
+	// DefaultRetryMultiplier is the backoff growth factor when a RetryPolicy
+	// leaves Multiplier unset.
+	DefaultRetryMultiplier = 2.0
+)
+
+// RetryPolicy configures opt-in automatic retries. The zero value means
+// "use the defaults" (DefaultRetryMaxAttempts attempts, 100ms initial
+// delay, 5s cap, 2x growth).
+//
+// Retries apply to every API round-trip of the client: transient failures
+// (network errors, 429/503 with Retry-After, 5xx) are retried with
+// exponential backoff + jitter, server-provided Retry-After hints take
+// precedence, and rejections (4xx) fail immediately. Without WithRetry the
+// client makes exactly one attempt per call.
+type RetryPolicy struct {
+	// MaxAttempts is the total number of attempts including the first call.
+	// Zero selects DefaultRetryMaxAttempts; negative values are rejected by
+	// New with ErrInvalidConfig.
+	MaxAttempts int
+	// InitialDelay is the pause before the second attempt. Zero selects
+	// DefaultRetryInitialDelay.
+	InitialDelay time.Duration
+	// MaxDelay caps the backoff between attempts. Zero selects
+	// DefaultRetryMaxDelay.
+	MaxDelay time.Duration
+	// Multiplier is the exponential backoff factor. Zero selects
+	// DefaultRetryMultiplier.
+	Multiplier float64
+}
+
+// WithRetry turns on automatic retries for transient failures according to
+// the given policy. The fail-fast single-attempt behavior is unchanged
+// unless this option is passed.
+func WithRetry(policy RetryPolicy) Option {
+	return func(c *Client) {
+		c.retry = &policy
+	}
+}
+
+// retryConfig maps the policy onto go-retry's engine, bridging server
+// Retry-After hints into the delay computation.
+func (p RetryPolicy) retryConfig() retry.Config {
+	maxAttempts := p.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = DefaultRetryMaxAttempts
+	}
+
+	initialDelay := p.InitialDelay
+	if initialDelay <= 0 {
+		initialDelay = DefaultRetryInitialDelay
+	}
+
+	maxDelay := p.MaxDelay
+	if maxDelay <= 0 {
+		maxDelay = DefaultRetryMaxDelay
+	}
+
+	multiplier := p.Multiplier
+	if multiplier <= 0 {
+		multiplier = DefaultRetryMultiplier
+	}
+
+	return retry.Config{
+		MaxAttempts:  maxAttempts,
+		InitialDelay: initialDelay,
+		MaxDelay:     maxDelay,
+		Multiplier:   multiplier,
+		DelayFunc: func(_ int, err error) time.Duration {
+			if hint, ok := errors.AsType[*RetryAfterError](err); ok {
+				return hint.After
+			}
+
+			return 0
+		},
+	}
+}
+
 // Client talks to a single Paperless-ngx instance. The zero value is not
 // usable — construct via New.
 type Client struct {
 	baseURL    *url.URL
 	token      string
 	httpClient *http.Client
+	retry      *RetryPolicy
 }
 
 // New creates a client for the given base URL (e.g. "https://paperless.example.com")
@@ -315,6 +405,19 @@ type TaskOutcome struct {
 	ErrorMessage string
 }
 
+// Duplicate reports the duplicate-refusal details of an outcome. refused is
+// true when the consumer rejected the upload because an identical document
+// already exists (checksum dedup); documentID is that pre-existing duplicate
+// and inTrash says whether it sits in the trash (the server treats trash
+// duplicates as re-consumable). For non-refusals all returns are zero.
+func (o TaskOutcome) Duplicate() (documentID int64, inTrash, refused bool) {
+	if !o.DuplicateRefused {
+		return 0, false, false
+	}
+
+	return o.DocumentID, o.DuplicateInTrash, true
+}
+
 // taskResultData mirrors the free-form result_data dict Paperless-ngx stores
 // on a finished task: {"document_id": N} after a successful consumption,
 // {"duplicate_of": N, "duplicate_in_trash": bool} for refused duplicates
@@ -401,6 +504,69 @@ func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool,
 	}
 
 	return classifyTask(envelope.Results[0]), true, nil
+}
+
+// DefaultTaskPollInterval is the pause between polls used by WaitForTask when
+// the caller passes a non-positive interval.
+const DefaultTaskPollInterval = 2 * time.Second
+
+// WaitForTask polls one consumption task until it reaches a terminal state
+// (success or failure), the context is done, or the server stops answering.
+//
+// Polling starts immediately; interval is the pause between polls (a
+// non-positive interval means DefaultTaskPollInterval). Bounds come from the
+// context: pass ctx with a deadline/timeout to cap total wait time.
+//
+// The task may not be visible yet right after Upload returns (the server
+// persists it asynchronously) — that case keeps polling. Transient poll
+// failures (network blips, decode hiccups) also keep polling; the most
+// recent error surfaces only when the context expires.
+//
+// On a terminal outcome the outcome is fully populated. err is non-nil only
+// for a real terminal failure (status failure without a duplicate refusal —
+// duplicate refusals are honest outcomes, not errors).
+func (c *Client) WaitForTask(ctx context.Context, taskID string, interval time.Duration) (TaskOutcome, error) {
+	if taskID == "" {
+		return TaskOutcome{}, errorfamily.NewRejection("paperless.empty_task_id",
+			"task ID is required to poll a consumption task")
+	}
+
+	if interval <= 0 {
+		interval = DefaultTaskPollInterval
+	}
+
+	var lastErr error
+
+	for {
+		outcome, found, err := c.GetTask(ctx, taskID)
+		if err != nil {
+			lastErr = err
+		} else if found && outcome.Status.Terminal() {
+			if outcome.Status == TaskStatusFailure && !outcome.DuplicateRefused {
+				return outcome, errorfamily.NewRejection("paperless.task_failed",
+					"Paperless-ngx consumption task failed").
+					WithContext("task_id", taskID).
+					WithContextAny("error_message", outcome.ErrorMessage)
+			}
+
+			return outcome, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			reason := errorfamily.WrapInfrastructure(ctx.Err(),
+				"paperless.task_poll_abandoned",
+				"gave up waiting for the consumption task",
+			).WithContext("task_id", taskID)
+
+			if lastErr != nil {
+				return TaskOutcome{}, fmt.Errorf("%w (last poll error: %v)", reason, lastErr)
+			}
+
+			return TaskOutcome{}, reason
+		case <-time.After(interval):
+		}
+	}
 }
 
 // writeUploadMetadata adds the optional metadata form fields shared by all uploads.
@@ -1219,7 +1385,38 @@ func (c *Client) doRequest(
 	body io.Reader,
 	contentType string,
 ) ([]byte, error) {
-	data, _, err := c.doRequestDetail(ctx, method, path, rawQuery, body, contentType)
+	if c.retry == nil {
+		data, _, err := c.doRequestDetail(ctx, method, path, rawQuery, body, contentType)
+
+		return data, err
+	}
+
+	// Retries replay the body per attempt, so it must be re-readable:
+	// snapshot it once up front (uploads already buffer fully in memory).
+	var snapshot []byte
+
+	if body != nil {
+		var readErr error
+
+		snapshot, readErr = io.ReadAll(body)
+		if readErr != nil {
+			return nil, errorfamily.WrapInfrastructure(readErr,
+				"paperless.buffer_request_body",
+				"could not buffer the request body for retries",
+			).WithContext("path", path)
+		}
+	}
+
+	data, err := retry.DoWithValue(ctx, c.retry.retryConfig(), func(_ context.Context, _ int) ([]byte, error) {
+		var attemptBody io.Reader
+		if body != nil {
+			attemptBody = bytes.NewReader(snapshot)
+		}
+
+		attemptData, _, attemptErr := c.doRequestDetail(ctx, method, path, rawQuery, attemptBody, contentType)
+
+		return attemptData, attemptErr
+	})
 
 	return data, err
 }
