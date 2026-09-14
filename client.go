@@ -117,14 +117,20 @@ const (
 	// maxDocumentListPages bounds reconciliation scans (100 pages x 100
 	// documents = 10,000 documents).
 	maxDocumentListPages = 100
+)
 
+// matchingAlgorithm is Paperless-ngx's matching_algorithm enum. A distinct
+// type keeps the self-heal path from PATCHing an arbitrary int into the tag
+// payload.
+type matchingAlgorithm int
+
+const (
 	// matchingAlgorithmNone is Paperless-ngx's "none" matching algorithm:
 	// the object never participates in automatic (machine-learning) matching.
-	matchingAlgorithmNone = 0
+	matchingAlgorithmNone matchingAlgorithm = 0
 
 	// matchingAlgorithmAuto is Paperless-ngx's "auto" matching algorithm.
-	matchingAlgorithmAuto = 6 // Paperless-ngx matching_algorithm enum value
-
+	matchingAlgorithmAuto matchingAlgorithm = 6
 )
 
 // ErrInvalidConfig is returned when the client is constructed with a missing
@@ -555,7 +561,12 @@ func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool,
 
 	if unmarshalErr := json.Unmarshal(raw, &envelope); unmarshalErr != nil {
 		// Tolerate a bare JSON array too (defensive, mirrors checksumFrom):
-		// the v10 endpoint paginates, but older deployments may not.
+		// the v10 endpoint paginates, but older deployments may not. The
+		// reported error wraps the ENVELOPE failure, not the array attempt,
+		// because the envelope shape is what v10 promises — the array shape
+		// is a fallback, and its failure adds no diagnostic value. The
+		// second Unmarshal reallocates envelope.Results; negligible at a
+		// one-element payload.
 		envelope.Results = nil
 
 		if arrayErr := json.Unmarshal(raw, &envelope.Results); arrayErr != nil {
@@ -751,7 +762,7 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
 	}
 
 	if found {
-		if existing.MatchingAlgorithm == matchingAlgorithmAuto {
+		if existing.MatchingAlgorithm == int(matchingAlgorithmAuto) {
 			if err := c.updateMatchingAlgorithm(
 				ctx,
 				pathTags,
@@ -777,10 +788,10 @@ func (c *Client) updateMatchingAlgorithm(
 	endpoint,
 	kind,
 	name string,
-	id,
-	algorithm int,
+	id int,
+	algorithm matchingAlgorithm,
 ) error {
-	payload, err := json.Marshal(namedPayload{MatchingAlgorithm: algorithm})
+	payload, err := json.Marshal(namedPayload{MatchingAlgorithm: int(algorithm)})
 	if err != nil {
 		return errorfamily.WrapInfrastructure(
 			err,
@@ -1153,9 +1164,9 @@ func (c *Client) createNamed(
 	endpoint,
 	kind,
 	name string,
-	algorithm int,
+	algorithm matchingAlgorithm,
 ) (int, error) {
-	payload, err := json.Marshal(namedPayload{Name: name, MatchingAlgorithm: algorithm})
+	payload, err := json.Marshal(namedPayload{Name: name, MatchingAlgorithm: int(algorithm)})
 	if err != nil {
 		return 0, errorfamily.WrapInfrastructure(
 			err,

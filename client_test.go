@@ -1200,7 +1200,7 @@ func TestGetCorrespondentName(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	name, err := client.GetCorrespondentName(context.Background(), 7)
+	name, err := client.GetCorrespondentName(t.Context(), 7)
 	if err != nil {
 		t.Fatalf("GetCorrespondentName(7): %v", err)
 	}
@@ -1213,7 +1213,7 @@ func TestGetCorrespondentName(t *testing.T) {
 		t.Fatalf("request path = %q, want the detail endpoint", requestedPath)
 	}
 
-	if _, err := client.GetCorrespondentName(context.Background(), 99); err == nil {
+	if _, err := client.GetCorrespondentName(t.Context(), 99); err == nil {
 		t.Fatal("expected an error for a missing correspondent")
 	}
 }
@@ -1273,7 +1273,7 @@ func TestEnsureDocumentTypeFindsAndCreates(t *testing.T) {
 		},
 	})
 
-	id, err := client.EnsureDocumentType(context.Background(), "Email")
+	id, err := client.EnsureDocumentType(t.Context(), "Email")
 	if err != nil {
 		t.Fatalf("EnsureDocumentType: %v", err)
 	}
@@ -1295,7 +1295,7 @@ func TestGetDocumentTypeName(t *testing.T) {
 		},
 	})
 
-	name, err := client.GetDocumentTypeName(context.Background(), 5)
+	name, err := client.GetDocumentTypeName(t.Context(), 5)
 	if err != nil {
 		t.Fatalf("GetDocumentTypeName(5): %v", err)
 	}
@@ -1304,7 +1304,7 @@ func TestGetDocumentTypeName(t *testing.T) {
 		t.Fatalf("name = %q, want Invoice", name)
 	}
 
-	if _, err := client.GetDocumentTypeName(context.Background(), 9); err == nil {
+	if _, err := client.GetDocumentTypeName(t.Context(), 9); err == nil {
 		t.Fatal("expected an error for a missing document type")
 	}
 }
@@ -1360,7 +1360,7 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 		},
 	})
 
-	id, err := client.EnsureCustomField(context.Background(), "gmail_message_id")
+	id, err := client.EnsureCustomField(t.Context(), "gmail_message_id")
 	if err != nil {
 		t.Fatalf("EnsureCustomField: %v", err)
 	}
@@ -1369,7 +1369,7 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 		t.Fatalf("first ensure id = %d, want 1", id)
 	}
 
-	id, err = client.EnsureCustomField(context.Background(), "gmail_message_id")
+	id, err = client.EnsureCustomField(t.Context(), "gmail_message_id")
 	if err != nil {
 		t.Fatalf("second EnsureCustomField: %v", err)
 	}
@@ -1378,12 +1378,12 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 		t.Fatalf("second ensure id = %d, want the same field 1", id)
 	}
 
-	found, exists, err := client.FindCustomField(context.Background(), "gmail_message_id")
+	found, exists, err := client.FindCustomField(t.Context(), "gmail_message_id")
 	if err != nil || !exists || found != 1 {
 		t.Fatalf("FindCustomField = (%d, %v, %v), want (1, true, nil)", found, exists, err)
 	}
 
-	_, exists, err = client.FindCustomField(context.Background(), "missing_field")
+	_, exists, err = client.FindCustomField(t.Context(), "missing_field")
 	if err != nil || exists {
 		t.Fatalf("FindCustomField missing = (%d, %v, %v), want (0, false, nil)", 0, exists, err)
 	}
@@ -1417,7 +1417,7 @@ func TestUploadSendsDocumentTypeAndCustomFields(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, err = client.Upload(context.Background(), UploadRequest{
+	_, err = client.Upload(t.Context(), UploadRequest{
 		Filename:       "invoice.pdf",
 		Content:        []byte("%PDF-1.4"),
 		DocumentTypeID: 3,
@@ -2810,6 +2810,32 @@ func TestWithTimeoutBoundsSlowResponses(t *testing.T) {
 
 	if family := errorfamily.Classify(pingErr); family != errorfamily.Transient {
 		t.Fatalf("expected Transient family for a timeout, got %v (%v)", family, pingErr)
+	}
+}
+
+func TestPlainRequestHonorsContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	pingErr := client.Ping(ctx)
+	if pingErr == nil {
+		t.Fatal("expected the ping to fail against an already-cancelled context")
+	}
+
+	if !errors.Is(pingErr, context.Canceled) {
+		t.Fatalf("pingErr = %v, want it to wrap context.Canceled", pingErr)
 	}
 }
 
