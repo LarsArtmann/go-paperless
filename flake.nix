@@ -38,7 +38,7 @@
         let
           goPkg = pkgs.go_1_27;
           goExperiment = "jsonv2,simd";
-          version = "0.2.0";
+          version = "0.3.0";
 
           # buildGoModule fetches Go modules into a fixed-output derivation
           # (network access there) and materialises them as vendor/ inside the
@@ -55,6 +55,21 @@
               GOEXPERIMENT = goExperiment;
             };
           };
+
+          # Library-only module: there are no binaries to install, so the
+          # build compiles every package and leaves a marker output. Shared
+          # by checks.build and packages.default so bare `nix build` works.
+          moduleBuild = goModule (
+            goModuleArgs
+            // {
+              buildPhase = ''
+                runHook preBuild
+                go build ./...
+                runHook postBuild
+              '';
+              installPhase = ''touch "$out"'';
+            }
+          );
 
           # goimports shells out to a `go` binary (gotools appends one to
           # PATH); pin it to the module toolchain so a newer `go` directive
@@ -122,18 +137,13 @@
             };
           };
 
+          packages = {
+            go-paperless = moduleBuild;
+            default = moduleBuild;
+          };
+
           checks = {
-            build = goModule (
-              goModuleArgs
-              // {
-                buildPhase = ''
-                  runHook preBuild
-                  go build ./...
-                  runHook postBuild
-                '';
-                installPhase = ''touch "$out"'';
-              }
-            );
+            build = moduleBuild;
 
             test = goModule (
               goModuleArgs
