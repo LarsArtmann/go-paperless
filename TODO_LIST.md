@@ -18,7 +18,6 @@
 
 | Task                                                            | Status       | Impact | Effort | Evidence                                                                                                                                               |
 | --------------------------------------------------------------- | ------------ | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cut v0.4.0 with the hardening tail once `[Unreleased]` is happy | 🔴 `TODO`    | High   | ~30min | `[Unreleased]` holds race-in-flake-check, integration scaffold, error catalog, ADR 0001, typed `matchingAlgorithm`, benchmarks, SHA-pinned actions (`CHANGELOG.md`); `v0.3.0` shipped without them (`docs/status/…05-24….md` d-1) |
 | Push bank-sync + InboxClean consumer bumps (go 1.27 + v0.3.0)   | 🔵 `BLOCKED` | High   | ~10min | Both bumped and green locally, not pushed — the v0.3.0 rollout exists on one machine until then (`docs/status/…05-24….md` b-4, g-1)                     |
 | Decide: retire bank-sync's trimmed fork in favor of this module | 🔵 `BLOCKED` | High   | ~2h    | `AGENTS.md` scope note calls this module a drop-in replacement for the fork; decision + migration belongs to bank-sync (`docs/status/…05-24….md` c-2)   |
 

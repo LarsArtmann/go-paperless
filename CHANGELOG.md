@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Nothing yet.
+
+### Changed
+
+- Nothing yet.
+
+### Fixed
+
+- Nothing yet.
+
+## [0.3.1] - 2026-09-14
+
+A hardening patch: no public API changes, no dependency changes — the module
+content consumers build against is identical to v0.3.0. What ships is
+confidence: race-detector coverage in CI, a real-server test scaffold, the
+error-code catalog, and supply-chain/tooling cleanup.
+
+### Added
+
 - Real-server integration tests behind the `integration` build tag
   (`integration_test.go`), env-driven via `PAPERLESS_INTEGRATION_URL` /
   `PAPERLESS_INTEGRATION_TOKEN`
@@ -181,6 +200,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.3.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.1
 [0.3.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.0
 [0.2.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.2.0
 [0.1.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.1
