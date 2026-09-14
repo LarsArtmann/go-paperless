@@ -428,7 +428,11 @@ func (c *Client) Upload(ctx context.Context, req UploadRequest) (string, error) 
 		writer.FormDataContentType(),
 	)
 	if err != nil {
-		return "", fmt.Errorf("upload %q: %w", req.Filename, err)
+		return "", fmt.Errorf(
+			"upload %q: %w",
+			req.Filename,
+			err,
+		) //nolint:erraudit // uncoded context wrap keeps the inner coded error's code+family
 	}
 
 	taskID := strings.Trim(strings.TrimSpace(string(taskIDBytes)), `"'`)
@@ -1969,7 +1973,11 @@ func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]Docum
 		"",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list document notes (document %d): %w", documentID, err)
+		return nil, fmt.Errorf(
+			"list document notes (document %d): %w",
+			documentID,
+			err,
+		) //nolint:erraudit // uncoded context wrap keeps the inner coded error's code+family
 	}
 
 	return decodeDocumentNotes(raw)
