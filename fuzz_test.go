@@ -2,6 +2,7 @@ package paperless
 
 import (
 	"encoding/json/v2"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -63,6 +64,7 @@ func FuzzChecksumFrom(f *testing.F) {
 	f.Fuzz(func(t *testing.T, flat string, rootFlags []byte, checksumBlob []byte) {
 		rawChecksums := strings.Split(string(checksumBlob), "\x00")
 		versions := make([]documentVersionPayload, 0, len(rootFlags))
+
 		for i := 0; i < len(rootFlags) && i < len(rawChecksums); i++ {
 			versions = append(versions, documentVersionPayload{
 				Checksum: rawChecksums[i],
@@ -84,10 +86,8 @@ func FuzzChecksumFrom(f *testing.F) {
 			return
 		}
 
-		for _, checksum := range rawChecksums {
-			if checksum == got {
-				return
-			}
+		if slices.Contains(rawChecksums, got) {
+			return
 		}
 
 		t.Fatalf("checksumFrom(\"\", ...) = %q, which no version carries (roots=%v checksums=%q)",

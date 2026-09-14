@@ -865,7 +865,9 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 			`{"id":1,"title":"Statement","correspondent":5,"created":"2026-09-03T00:00:00Z","tags":[1],"checksum":"abc"},` +
 			// 3.x shape: checksum only inside versions[] (root wins), plus
 			// custom fields that must round-trip into the public shape.
-			`{"id":2,"title":"Other","correspondent":null,"created":"2026-09-04T00:00:00Z","tags":[],"versions":[{"id":2,"checksum":"def","is_root":true},{"id":1,"checksum":"older","is_root":false}],"custom_fields":[{"field":4,"value":"msg-9"}]}]}`))
+			`{"id":2,"title":"Other","correspondent":null,"created":"2026-09-04T00:00:00Z","tags":[],` +
+			`"versions":[{"id":2,"checksum":"def","is_root":true},{"id":1,"checksum":"older","is_root":false}],` +
+			`"custom_fields":[{"field":4,"value":"msg-9"}]}]}`))
 	}))
 	defer server.Close()
 
@@ -1052,7 +1054,7 @@ func TestProbeCapabilitiesDetectsChecksumShapes(t *testing.T) {
 			wantSample: 1,
 		},
 		{
-			name:       "both shapes",
+			name: "both shapes",
 			body: `{"results":[{"id":3,"checksum":"a","versions":[` +
 				`{"id":3,"checksum":"b","is_root":true}]},` +
 				`{"id":4,"versions":[{"id":4,"checksum":"c","is_root":true}]}]}`,
@@ -1868,6 +1870,8 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	}
 }
 
+var errUnrelatedFailure = errors.New("boom")
+
 func TestRetryPolicyDelayFuncBridgesRetryAfterHint(t *testing.T) {
 	t.Parallel()
 
@@ -1877,7 +1881,7 @@ func TestRetryPolicyDelayFuncBridgesRetryAfterHint(t *testing.T) {
 		t.Fatalf("DelayFunc = %s, want the server hint 7s", got)
 	}
 
-	if got := delayFunc(1, errors.New("boom")); got != 0 { //nolint:err113,goerr113 // inline test sentinel
+	if got := delayFunc(1, errUnrelatedFailure); got != 0 {
 		t.Fatalf("DelayFunc = %s, want 0 (fall back to exponential backoff)", got)
 	}
 }
@@ -2747,7 +2751,7 @@ func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
 	const callers = 8
 
 	results := make([]map[string]struct{}, callers) //nolint:makezero // pre-sized result slots
-	errs := make([]error, callers)                 //nolint:makezero // pre-sized result slots
+	errs := make([]error, callers)                  //nolint:makezero // pre-sized result slots
 
 	var wg sync.WaitGroup
 

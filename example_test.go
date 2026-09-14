@@ -18,14 +18,17 @@ func ExampleNew_invalidConfig() {
 	// Output: configure the base URL before retrying
 }
 
+//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleNew() {
 	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = client
+
+	_ = client // reference the client so the example compiles
 }
 
+//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleNew_withOptions() {
 	client, err := paperless.New(
 		"https://paperless.example.com",
@@ -35,9 +38,11 @@ func ExampleNew_withOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = client
+
+	_ = client // reference the client so the example compiles
 }
 
+//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_Upload() {
 	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
@@ -65,11 +70,13 @@ func ExampleClient_Upload() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if found && outcome.Status.Terminal() {
 		fmt.Println("consumed:", outcome.Status)
 	}
 }
 
+//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_GetTask() {
 	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
@@ -82,6 +89,7 @@ func ExampleClient_GetTask() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if found {
 		fmt.Println(outcome.Status, outcome.DocumentID)
 	}
@@ -89,6 +97,8 @@ func ExampleClient_GetTask() {
 
 // ExampleClient_EnsureTag mirrors the README quick start so signature
 // drift between README and code breaks the build.
+//
+//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_EnsureTag() {
 	client, err := paperless.New("http://paperless.local:8000", "my-token")
 	if err != nil {
@@ -101,5 +111,6 @@ func ExampleClient_EnsureTag() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fmt.Println(tagID)
 }

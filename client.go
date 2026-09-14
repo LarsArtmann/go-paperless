@@ -57,6 +57,9 @@ const (
 	// apiVersion is the Accept-header API version this client targets.
 	apiVersion = "10"
 
+	// maxSuccessStatusCode is the inclusive upper bound of the 2xx range.
+	maxSuccessStatusCode = 299
+
 	// requestTimeout bounds every API call.
 	requestTimeout = 60 * time.Second
 
@@ -1680,7 +1683,7 @@ func (c *Client) doRequestDetail(
 
 	var data []byte
 
-	success := resp.StatusCode >= http.StatusOK && resp.StatusCode < 300
+	success := resp.StatusCode >= http.StatusOK && resp.StatusCode < maxSuccessStatusCode
 	if success {
 		data, err = io.ReadAll(resp.Body)
 		if err != nil {
