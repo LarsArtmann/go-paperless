@@ -136,7 +136,9 @@ const (
 // ErrInvalidConfig is returned when the client is constructed with a missing
 // base URL or token. The integration is optional; callers that have not
 // configured Paperless should never construct a client.
-var ErrInvalidConfig = errors.New("paperless: base URL and token are required")
+var ErrInvalidConfig = errors.New(
+	"paperless: base URL and token are required",
+) //nolint:erraudit // documented errors.Is sentinel (ERROR_CODES.md), uncoded by design
 
 // Option configures a Client at construction time.
 type Option func(*Client)
@@ -333,7 +335,12 @@ func New(baseURL, token string, opts ...Option) (*Client, error) {
 	}
 
 	if client.retry != nil && client.retry.MaxAttempts < 0 {
-		return nil, fmt.Errorf("%w: retry MaxAttempts must be >= 0", ErrInvalidConfig)
+		return nil, errorfamily.WrapRejectionf(
+			ErrInvalidConfig,
+			"paperless.invalid_retry", //nolint:erraudit // MaxAttempts value is in the message; baseURL is irrelevant to retry policy
+			"retry MaxAttempts must be >= 0, got %d",
+			client.retry.MaxAttempts,
+		)
 	}
 
 	return client, nil
@@ -432,12 +439,12 @@ func (c *Client) Upload(ctx context.Context, req UploadRequest) (string, error) 
 			"upload %q: %w",
 			req.Filename,
 			err,
-		) //nolint:erraudit // uncoded context wrap keeps the inner coded error's code+family
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	taskID := strings.Trim(strings.TrimSpace(string(taskIDBytes)), `"'`)
 	if taskID == "" {
-		return "", errorfamily.NewCorruption("paperless.empty_task_id",
+		return "", errorfamily.NewCorruption("paperless.missing_task_id",
 			"Paperless-ngx accepted the upload but returned no task ID").
 			WithContext("filename", req.Filename)
 	}
@@ -556,7 +563,11 @@ func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool,
 
 	raw, reqErr := c.doRequest(ctx, http.MethodGet, pathTasks, query.Encode(), nil, "")
 	if reqErr != nil {
-		return TaskOutcome{}, false, fmt.Errorf("get task %s: %w", taskID, reqErr)
+		return TaskOutcome{}, false, fmt.Errorf(
+			"get task %s: %w",
+			taskID,
+			reqErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	var envelope struct {
@@ -614,8 +625,8 @@ func (c *Client) WaitForTask(
 	interval time.Duration,
 ) (TaskOutcome, error) {
 	if taskID == "" {
-		return TaskOutcome{}, errorfamily.NewRejection("paperless.empty_task_id",
-			"task ID is required to poll a consumption task")
+		return TaskOutcome{}, errorfamily.Newf(errorfamily.Rejection, "paperless.empty_task_id",
+			"task ID is required to poll a consumption task, got %q", taskID)
 	}
 
 	if interval <= 0 {
@@ -647,7 +658,12 @@ func (c *Client) WaitForTask(
 			).WithContext("task_id", taskID)
 
 			if lastErr != nil {
-				return TaskOutcome{}, fmt.Errorf("%w (last poll error: %w)", reason, lastErr)
+				return TaskOutcome{}, fmt.Errorf(
+					"wait for task %s: %w (last poll error: %w)",
+					taskID,
+					reason,
+					lastErr,
+				) //nolint:erraudit // dual %w keeps both coded chains reachable
 			}
 
 			return TaskOutcome{}, reason
@@ -697,7 +713,7 @@ func writeUploadMetadata(writer *multipart.Writer, req UploadRequest) error {
 				err,
 				"paperless.write_tags",
 				"could not write tags field",
-			)
+			).WithContext("tag_id", strconv.Itoa(tagID))
 		}
 	}
 
@@ -762,7 +778,11 @@ func writeCustomFieldsField(writer *multipart.Writer, fields []CustomFieldValue)
 func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
 	existing, found, findErr := c.findNamed(ctx, pathTags, "tag", name)
 	if findErr != nil {
-		return 0, fmt.Errorf("find tag %q: %w", name, findErr)
+		return 0, fmt.Errorf(
+			"find tag %q: %w",
+			name,
+			findErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	if found {
@@ -775,7 +795,11 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
 				existing.ID,
 				matchingAlgorithmNone,
 			); err != nil {
-				return 0, fmt.Errorf("demote auto tag %q: %w", name, err)
+				return 0, fmt.Errorf(
+					"demote auto tag %q: %w",
+					name,
+					err,
+				) //nolint:erraudit // keeps inner code+family
 			}
 		}
 
@@ -812,7 +836,12 @@ func (c *Client) updateMatchingAlgorithm(
 		bytes.NewReader(payload),
 		"application/json",
 	); reqErr != nil {
-		return fmt.Errorf("update %s %q: %w", kind, name, reqErr)
+		return fmt.Errorf(
+			"update %s %q: %w",
+			kind,
+			name,
+			reqErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
@@ -882,7 +911,11 @@ func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (int, err
 func (c *Client) EnsureDocumentType(ctx context.Context, name string) (int, error) {
 	existing, found, findErr := c.findNamed(ctx, pathDocumentTypes, "document type", name)
 	if findErr != nil {
-		return 0, fmt.Errorf("find document type %q: %w", name, findErr)
+		return 0, fmt.Errorf(
+			"find document type %q: %w",
+			name,
+			findErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	if found {
@@ -909,7 +942,11 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 
 	raw, err := c.doRequest(ctx, http.MethodGet, pathCustomFields, query.Encode(), nil, "")
 	if err != nil {
-		return 0, false, fmt.Errorf("find custom field %q: %w", name, err)
+		return 0, false, fmt.Errorf(
+			"find custom field %q: %w",
+			name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	list := struct {
@@ -964,7 +1001,11 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf("create custom field %q: %w", name, err)
+		return 0, fmt.Errorf(
+			"create custom field %q: %w",
+			name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	created := customFieldPayload{}
@@ -1042,7 +1083,11 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 
 	existing, found, findErr := c.FindStoragePath(ctx, name)
 	if findErr != nil {
-		return 0, fmt.Errorf("find storage path %q: %w", name, findErr)
+		return 0, fmt.Errorf(
+			"find storage path %q: %w",
+			name,
+			findErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	if found {
@@ -1067,7 +1112,11 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf("create storage path %q: %w", name, err)
+		return 0, fmt.Errorf(
+			"create storage path %q: %w",
+			name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	created := storagePathPayload{}
@@ -1129,7 +1178,12 @@ func (c *Client) getNamedDetail(
 		"",
 	)
 	if err != nil {
-		return "", fmt.Errorf("get %s %d: %w", kind, id, err)
+		return "", fmt.Errorf(
+			"get %s %d: %w",
+			kind,
+			id,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	detail := namedPayload{}
@@ -1151,7 +1205,12 @@ func (c *Client) getNamedDetail(
 func (c *Client) ensureNamed(ctx context.Context, endpoint, kind, name string) (int, error) {
 	existing, found, findErr := c.findNamed(ctx, endpoint, kind, name)
 	if findErr != nil {
-		return 0, fmt.Errorf("find %s %q: %w", kind, name, findErr)
+		return 0, fmt.Errorf(
+			"find %s %q: %w",
+			kind,
+			name,
+			findErr,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	if found {
@@ -1188,7 +1247,12 @@ func (c *Client) createNamed(
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf("create %s %q: %w", kind, name, err)
+		return 0, fmt.Errorf(
+			"create %s %q: %w",
+			kind,
+			name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	created := namedPayload{}
@@ -1224,7 +1288,11 @@ func (c *Client) Ping(ctx context.Context) error {
 		nil,
 		"",
 	); err != nil {
-		return fmt.Errorf("ping %s: %w", c.baseURL, err)
+		return fmt.Errorf(
+			"ping %s: %w",
+			c.baseURL,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
@@ -1288,7 +1356,12 @@ func fetchAllPages[T any](
 
 		raw, err := c.doRequest(ctx, http.MethodGet, path, query.Encode(), nil, "")
 		if err != nil {
-			return nil, fmt.Errorf("list %ss (page %d): %w", resource, page, err)
+			return nil, fmt.Errorf(
+				"list %ss (page %d): %w",
+				resource,
+				page,
+				err,
+			) //nolint:erraudit // keeps inner code+family
 		}
 
 		list := struct {
@@ -1468,7 +1541,11 @@ func (c *Client) UpdateDocument(
 		bytes.NewReader(body),
 		"application/json",
 	); err != nil {
-		return fmt.Errorf("update document %d: %w", documentID, err)
+		return fmt.Errorf(
+			"update document %d: %w",
+			documentID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
@@ -1555,7 +1632,11 @@ func (c *Client) DeleteDocument(ctx context.Context, documentID int) error {
 		nil,
 		"",
 	); err != nil {
-		return fmt.Errorf("delete document %d: %w", documentID, err)
+		return fmt.Errorf(
+			"delete document %d: %w",
+			documentID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
@@ -1574,7 +1655,11 @@ func (c *Client) DownloadDocument(ctx context.Context, documentID int) ([]byte, 
 		"",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("download document %d: %w", documentID, err)
+		return nil, fmt.Errorf(
+			"download document %d: %w",
+			documentID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return raw, nil
@@ -1595,7 +1680,7 @@ func (c *Client) doRequest(
 	if c.retry == nil {
 		data, _, err := c.doRequestDetail(ctx, method, path, rawQuery, body, contentType)
 
-		return data, err
+		return data, err //nolint:erraudit // passthrough: inner error already carries method+path
 	}
 
 	// Retries replay the body per attempt, so it must be re-readable:
@@ -1636,7 +1721,10 @@ func (c *Client) doRequest(
 		},
 	)
 	if err != nil {
-		return data, fmt.Errorf("request failed after retries: %w", err)
+		return data, fmt.Errorf(
+			"request failed after retries: %w",
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return data, nil
@@ -1689,9 +1777,11 @@ func (c *Client) doRequestDetail(
 			WithContext("path", path)
 	}
 
-	defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }() //nolint:erraudit // cleanup only: body fully read or error already returned
 
 	var data []byte
+
+	var bodyReadErr error
 
 	success := resp.StatusCode >= http.StatusOK && resp.StatusCode < maxSuccessStatusCode
 	if success {
@@ -1702,7 +1792,11 @@ func (c *Client) doRequestDetail(
 			).WithContext("path", path)
 		}
 	} else {
-		data, _ = io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
+		// Best-effort diagnostics: keep whatever body arrived even when the
+		// read fails midway (a partial snippet still narrows the failure);
+		// classifyStatus attaches the read failure so a missing or truncated
+		// snippet is explained rather than silent.
+		data, bodyReadErr = io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
 	}
 
 	if c.responseHook != nil {
@@ -1714,7 +1808,7 @@ func (c *Client) doRequestDetail(
 	}
 
 	if !success {
-		return nil, resp.Header, classifyStatus(resp, data, path)
+		return nil, resp.Header, classifyStatus(resp, data, path, bodyReadErr)
 	}
 
 	return data, resp.Header, nil
@@ -1765,7 +1859,10 @@ func (c *Client) ProbeCapabilities(ctx context.Context) (Capabilities, error) {
 		ctx, http.MethodGet, pathDocuments, query.Encode(), nil, "",
 	)
 	if err != nil {
-		return Capabilities{}, fmt.Errorf("probe capabilities: %w", err)
+		return Capabilities{}, fmt.Errorf(
+			"probe capabilities: %w",
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	caps := Capabilities{AcceptAPIVersion: negotiatedAPIVersion(header)}
@@ -1860,8 +1957,10 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 
 // classifyStatus converts a non-2xx response into an error-family error,
 // wrapping a Retry-After hint (429/503) in a RetryAfterError when present.
-// snippet is the (already capped) error body the caller read.
-func classifyStatus(resp *http.Response, snippet []byte, path string) error {
+// snippet is the (already capped) error body the caller read; bodyReadErr,
+// when non-nil, says that read failed and the snippet may be truncated or
+// empty, and is attached as context so the gap is explained, not silent.
+func classifyStatus(resp *http.Response, snippet []byte, path string, bodyReadErr error) error {
 	statusCode := resp.StatusCode
 
 	wrapped := errorfamily.NewTransient("paperless.server_error", "Paperless-ngx returned a retryable error").
@@ -1882,6 +1981,10 @@ func classifyStatus(resp *http.Response, snippet []byte, path string) error {
 			WithContext("status", strconv.Itoa(statusCode)).
 			WithContext("path", path).
 			WithContext("body", string(snippet))
+	}
+
+	if bodyReadErr != nil {
+		wrapped = wrapped.WithContext("body_read_error", bodyReadErr.Error())
 	}
 
 	if statusCode == http.StatusTooManyRequests || statusCode == http.StatusServiceUnavailable {
@@ -1977,7 +2080,7 @@ func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]Docum
 			"list document notes (document %d): %w",
 			documentID,
 			err,
-		) //nolint:erraudit // uncoded context wrap keeps the inner coded error's code+family
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return decodeDocumentNotes(raw)
@@ -2018,7 +2121,11 @@ func (c *Client) AddDocumentNote(
 		"application/json",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("add document note (document %d): %w", documentID, err)
+		return nil, fmt.Errorf(
+			"add document note (document %d): %w",
+			documentID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return decodeDocumentNotes(raw)
@@ -2053,8 +2160,12 @@ func (c *Client) DeleteDocumentNote(
 		"",
 	)
 	if err != nil {
-		return nil, fmt.Errorf("delete document note (document %d, note %d): %w",
-			documentID, noteID, err)
+		return nil, fmt.Errorf(
+			"delete document note (document %d, note %d): %w", //nolint:erraudit // keeps inner code+family
+			documentID,
+			noteID,
+			err,
+		)
 	}
 
 	return decodeDocumentNotes(raw)
@@ -2176,8 +2287,11 @@ func (c *Client) CreateShareLink(
 		"application/json",
 	)
 	if err != nil {
-		return ShareLink{}, fmt.Errorf("create share link (document %d): %w",
-			req.DocumentID, err)
+		return ShareLink{}, fmt.Errorf(
+			"create share link (document %d): %w", //nolint:erraudit // keeps inner code+family
+			req.DocumentID,
+			err,
+		)
 	}
 
 	var created shareLinkPayload
@@ -2206,7 +2320,11 @@ func (c *Client) DeleteShareLink(ctx context.Context, linkID int) error {
 		nil,
 		"",
 	); err != nil {
-		return fmt.Errorf("delete share link %d: %w", linkID, err)
+		return fmt.Errorf(
+			"delete share link %d: %w",
+			linkID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
@@ -2344,7 +2462,11 @@ func (c *Client) CreateSavedView(
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf("create saved view %q: %w", req.Name, err)
+		return 0, fmt.Errorf(
+			"create saved view %q: %w",
+			req.Name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	var created savedViewPayload
@@ -2372,7 +2494,11 @@ func (c *Client) DeleteSavedView(ctx context.Context, viewID int) error {
 		nil,
 		"",
 	); err != nil {
-		return fmt.Errorf("delete saved view %d: %w", viewID, err)
+		return fmt.Errorf(
+			"delete saved view %d: %w",
+			viewID,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	return nil
