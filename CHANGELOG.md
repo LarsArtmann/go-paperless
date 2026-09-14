@@ -6,7 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-None yet. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).
+### Added
+
+- Real-server integration tests behind the `integration` build tag
+  (`integration_test.go`), env-driven via `PAPERLESS_INTEGRATION_URL` /
+  `PAPERLESS_INTEGRATION_TOKEN`
+- Error-code catalog: [docs/ERROR_CODES.md](docs/ERROR_CODES.md) documents
+  every `paperless.*` code by family and retryability
+- `BenchmarkUpload` (multipart cost visibility); a request-hook and
+  response-hook assertion test for `ProbeCapabilities`; a plain-request
+  context-cancellation test
+- CI runs the race detector hermetically (`checks.test-race` via
+  `nix flake check`); PR template and maintainer release checklist added
+
+### Changed
+
+- Matching-algorithm constants are now a distinct unexported type
+  (`matchingAlgorithm`), so the tag self-heal path cannot PATCH an
+  arbitrary int
+- Test suite harmonized on `t.Context()`; ADR 0001 records the
+  API-version policy (pin one, tolerate decoding, never emulate)
 
 ## [0.3.0] - 2026-09-14
 
