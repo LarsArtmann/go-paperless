@@ -271,7 +271,7 @@ func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 
 	select {
 	case payload := <-patched:
-		if payload.MatchingAlgorithm != matchingAlgorithmNone {
+		if payload.MatchingAlgorithm != int(matchingAlgorithmNone) {
 			t.Fatalf("patched matching_algorithm = %d, want none (0)", payload.MatchingAlgorithm)
 		}
 	default:
@@ -334,7 +334,7 @@ func TestEnsureTagCreatesWhenMissing(t *testing.T) {
 			// Tags are provenance metadata: they must never join the
 			// classifier's training set (auto matching would leak the tag onto
 			// similar-looking manual scans).
-			if payload.MatchingAlgorithm != matchingAlgorithmNone {
+			if payload.MatchingAlgorithm != int(matchingAlgorithmNone) {
 				t.Errorf("matching_algorithm = %d, want none (0)", payload.MatchingAlgorithm)
 			}
 
@@ -817,7 +817,7 @@ func TestEnsureCorrespondentCreatesWhenMissing(t *testing.T) {
 				t.Errorf("created name = %q", payload.Name)
 			}
 
-			if payload.MatchingAlgorithm != matchingAlgorithmAuto {
+			if payload.MatchingAlgorithm != int(matchingAlgorithmAuto) {
 				t.Errorf(
 					"matching_algorithm = %d, want auto (%d)",
 					payload.MatchingAlgorithm,
@@ -2836,6 +2836,77 @@ func TestPlainRequestHonorsContextCancellation(t *testing.T) {
 
 	if !errors.Is(pingErr, context.Canceled) {
 		t.Fatalf("pingErr = %v, want it to wrap context.Canceled", pingErr)
+	}
+}
+
+func TestProbeCapabilitiesFiresHooks(t *testing.T) {
+	t.Parallel()
+
+	var (
+		requests  int
+		responses int
+		gotPath   string
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+
+		_, _ = w.Write([]byte(`{"results":[{"id":1,"checksum":"sha-probe"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token",
+		WithRequestHook(func(RequestInfo) { requests++ }),
+		WithResponseHook(func(ResponseInfo) { responses++ }),
+	)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	caps, err := client.ProbeCapabilities(t.Context())
+	if err != nil {
+		t.Fatalf("ProbeCapabilities: %v", err)
+	}
+
+	if gotPath != "/api/documents/" {
+		t.Errorf("probe path = %q, want /api/documents/", gotPath)
+	}
+
+	if !caps.FlatChecksum || caps.VersionedChecksum {
+		t.Errorf("checksum shapes = flat:%v versioned:%v, want flat-only",
+			caps.FlatChecksum, caps.VersionedChecksum)
+	}
+
+	if requests != 1 || responses != 1 {
+		t.Fatalf("hooks fired request=%d response=%d, want 1/1", requests, responses)
+	}
+}
+
+func BenchmarkUpload(b *testing.B) {
+	body := bytes.Repeat([]byte("%PDF-1.4 payload "), 4096) // ~64 KiB
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[{"task_id":"bench-task","status":"pending"}]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
+
+	ctx := b.Context()
+
+	b.ResetTimer()
+
+	for b.Loop() {
+		if _, err := client.Upload(ctx, UploadRequest{
+			Filename: "bench.pdf",
+			Content:  body,
+			Title:    "Benchmark",
+		}); err != nil {
+			b.Fatalf("Upload: %v", err)
+		}
 	}
 }
 

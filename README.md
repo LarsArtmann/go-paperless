@@ -79,6 +79,27 @@ func main() {
 | `WithRequestHook(func(RequestInfo))`   | Observe every outgoing request (headers include the token — redact)  |
 | `WithResponseHook(func(ResponseInfo))` | Observe every response (2xx full body; errors capped at 512 bytes)   |
 
+## Retries
+
+Retries are opt-in and cover transient failures only (network errors, 429,
+5xx). Rejections (401/403, other 4xx) fail fast. Request bodies replay
+byte-for-byte per attempt; a server `Retry-After` hint overrides the
+exponential backoff.
+
+```go
+client, err := paperless.New(url, token, paperless.WithRetry(paperless.RetryPolicy{
+    MaxAttempts: 4,
+}))
+```
+
+## Lookup verbs
+
+| Verb   | Contract                                                       |
+| ------ | -------------------------------------------------------------- |
+| `Get*` | Read by ID; not found is an error or a `false` flag            |
+| `Find*`| Read-only exact-name lookup; returns `exists=false` when absent |
+| `Ensure*` | Find-or-create; never mutates an existing object's config    |
+
 ## Development
 
 ```bash

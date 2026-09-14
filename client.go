@@ -1264,11 +1264,6 @@ func checksumFrom(flat string, versions []documentVersionPayload) string {
 	return ""
 }
 
-// documentListPage mirrors one page of a paginated DRF list response.
-type documentListPage struct {
-	Results []documentListEntry `json:"results"`
-}
-
 // fetchAllPages walks a paginated DRF list endpoint (page/page_size query
 // parameters, `{"results": [...]}` envelope) up to maxDocumentListPages and
 // returns the concatenated entries. A short page ends the scan; the page cap
@@ -1771,7 +1766,9 @@ func (c *Client) ProbeCapabilities(ctx context.Context) (Capabilities, error) {
 
 	caps := Capabilities{AcceptAPIVersion: negotiatedAPIVersion(header)}
 
-	list := documentListPage{}
+	list := struct {
+		Results []documentListEntry `json:"results"`
+	}{}
 	if err := json.Unmarshal(raw, &list); err != nil {
 		return caps, errorfamily.WrapCorruption(err, "paperless.decode_documents",
 			"could not decode document list while probing capabilities")

@@ -33,6 +33,11 @@ holds, and what matters:
   (`https://…`) for anything beyond localhost; `New` accepts plain HTTP
   for self-hosted LAN deployments by design.
 - **No credentials are persisted** by the SDK — no config files, no caches.
+- **Response hooks see raw `Set-Cookie` headers.** `WithResponseHook`
+  receives a value snapshot with cloned headers, including any cookies the
+  server sets. If your hook logs, redact the `Set-Cookie` (and
+  `Authorization`) headers first — see the redaction example in the hook
+  test suite.
 - Uploads are multipart bodies read fully into memory; size them
   accordingly for very large documents.
 
