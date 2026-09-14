@@ -582,6 +582,7 @@ func TestListDocumentChecksumsRejectsBadToken(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the 429 and 503 tests are intentionally parallel wire-shape checks
 func TestUpload429CarriesRetryAfterHint(t *testing.T) {
 	t.Parallel()
 
@@ -615,6 +616,7 @@ func TestUpload429CarriesRetryAfterHint(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the 429 and 503 tests are intentionally parallel wire-shape checks
 func TestUpload503CarriesRetryAfterHint(t *testing.T) {
 	t.Parallel()
 
@@ -1051,7 +1053,9 @@ func TestProbeCapabilitiesDetectsChecksumShapes(t *testing.T) {
 		},
 		{
 			name:       "both shapes",
-			body:       `{"results":[{"id":3,"checksum":"a","versions":[{"id":3,"checksum":"b","is_root":true}]},{"id":4,"versions":[{"id":4,"checksum":"c","is_root":true}]}]}`,
+			body: `{"results":[{"id":3,"checksum":"a","versions":[` +
+				`{"id":3,"checksum":"b","is_root":true}]},` +
+				`{"id":4,"versions":[{"id":4,"checksum":"c","is_root":true}]}]}`,
 			wantShape:  "flat+versions[]",
 			wantFlat:   true,
 			wantVers:   true,
@@ -1659,6 +1663,7 @@ func TestDownloadDocumentReturnsOriginalBytes(t *testing.T) {
 	t.Parallel()
 
 	want := []byte("%PDF-1.7 original bytes")
+
 	var gotPath string
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1720,6 +1725,7 @@ func TestWithRetryDefaultOffMakesSingleAttempt(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests++
+
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	defer server.Close()
@@ -1790,6 +1796,7 @@ func TestWithRetryNeverRetriesRejections(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests++
+
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
@@ -1847,6 +1854,7 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	started := time.Now()
 	_, err = client.ListStoragePaths(t.Context())
 	elapsed := time.Since(started)
+
 	if err != nil {
 		t.Fatalf("ListStoragePaths: %v", err)
 	}
@@ -1869,7 +1877,7 @@ func TestRetryPolicyDelayFuncBridgesRetryAfterHint(t *testing.T) {
 		t.Fatalf("DelayFunc = %s, want the server hint 7s", got)
 	}
 
-	if got := delayFunc(1, errors.New("boom")); got != 0 {
+	if got := delayFunc(1, errors.New("boom")); got != 0 { //nolint:err113,goerr113 // inline test sentinel
 		t.Fatalf("DelayFunc = %s, want 0 (fall back to exponential backoff)", got)
 	}
 }
@@ -2371,16 +2379,17 @@ func TestEnsureStoragePathRejectsEmptyArgs(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if _, err := client.EnsureStoragePath(t.Context(), "", "path"); err == nil {
+	_, emptyNameErr := client.EnsureStoragePath(t.Context(), "", "path")
+	if emptyNameErr == nil {
 		t.Fatal("expected an error for the empty name")
+	}
+
+	if family := errorfamily.Classify(emptyNameErr); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, emptyNameErr)
 	}
 
 	if _, err := client.EnsureStoragePath(t.Context(), "Name", ""); err == nil {
 		t.Fatal("expected an error for the empty directory template")
-	}
-
-	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
-		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
 	}
 
 	if requests != 0 {
@@ -2593,6 +2602,7 @@ func TestResponseHookSees2xxBodyAndCappedErrorBody(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
 func TestListDocumentChecksumsCapStopsAtMaxPages(t *testing.T) {
 	t.Parallel()
 
@@ -2634,6 +2644,7 @@ func TestListDocumentChecksumsCapStopsAtMaxPages(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
 func TestListShareLinksCapStopsAtMaxPages(t *testing.T) {
 	t.Parallel()
 
@@ -2675,6 +2686,7 @@ func TestListShareLinksCapStopsAtMaxPages(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
 func TestListSavedViewsCapStopsAtMaxPages(t *testing.T) {
 	t.Parallel()
 
@@ -2734,17 +2746,15 @@ func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
 
 	const callers = 8
 
-	results := make([]map[string]struct{}, callers)
-	errs := make([]error, callers)
+	results := make([]map[string]struct{}, callers) //nolint:makezero // pre-sized result slots
+	errs := make([]error, callers)                 //nolint:makezero // pre-sized result slots
 
 	var wg sync.WaitGroup
-	for i := range callers {
-		wg.Add(1)
 
-		go func() {
-			defer wg.Done()
+	for i := range callers {
+		wg.Go(func() {
 			results[i], errs[i] = client.ListDocumentChecksums(t.Context())
-		}()
+		})
 	}
 
 	wg.Wait()

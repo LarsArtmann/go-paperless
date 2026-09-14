@@ -475,7 +475,7 @@ type TaskOutcome struct {
 // already exists (checksum dedup); documentID is that pre-existing duplicate
 // and inTrash says whether it sits in the trash (the server treats trash
 // duplicates as re-consumable). For non-refusals all returns are zero.
-func (o TaskOutcome) Duplicate() (documentID int64, inTrash, refused bool) {
+func (o TaskOutcome) Duplicate() (int64, bool, bool) {
 	if !o.DuplicateRefused {
 		return 0, false, false
 	}
@@ -629,7 +629,7 @@ func (c *Client) WaitForTask(
 			).WithContext("task_id", taskID)
 
 			if lastErr != nil {
-				return TaskOutcome{}, fmt.Errorf("%w (last poll error: %v)", reason, lastErr)
+				return TaskOutcome{}, fmt.Errorf("%w (last poll error: %w)", reason, lastErr)
 			}
 
 			return TaskOutcome{}, reason
@@ -1311,6 +1311,7 @@ func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}
 	}
 
 	checksums := map[string]struct{}{}
+
 	for _, entry := range entries {
 		if checksum := entry.effectiveChecksum(); checksum != "" {
 			checksums[checksum] = struct{}{}
@@ -1621,8 +1622,11 @@ func (c *Client) doRequest(
 			return attemptData, attemptErr
 		},
 	)
+	if err != nil {
+		return data, fmt.Errorf("request failed after retries: %w", err)
+	}
 
-	return data, err
+	return data, nil
 }
 
 // doRequestDetail is doRequest plus the response headers, so probes can
@@ -1676,12 +1680,13 @@ func (c *Client) doRequestDetail(
 
 	var data []byte
 
-	success := resp.StatusCode >= 200 && resp.StatusCode < 300
+	success := resp.StatusCode >= http.StatusOK && resp.StatusCode < 300
 	if success {
 		data, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, resp.Header, errorfamily.WrapInfrastructure(err, "paperless.read_response", "could not read response body").
-				WithContext("path", path)
+			return nil, resp.Header, errorfamily.WrapInfrastructure(err,
+				"paperless.read_response", "could not read response body",
+			).WithContext("path", path)
 		}
 	} else {
 		data, _ = io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
@@ -1819,7 +1824,7 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 	}
 
 	if seconds, err := strconv.Atoi(value); err == nil {
-		if seconds < 0 || int64(seconds) > int64(math.MaxInt64/int64(time.Second)) {
+		if seconds < 0 || int64(seconds) > math.MaxInt64/int64(time.Second) {
 			return 0, false
 		}
 
