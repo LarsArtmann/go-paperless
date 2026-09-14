@@ -112,6 +112,9 @@
             goModuleArgs
             // {
               pname = "go-paperless-race";
+              env = goModuleArgs.env // {
+                CGO_ENABLED = "1";
+              };
               checkFlags = [ "-race" ];
               installPhase = ''touch "$out"'';
             }
