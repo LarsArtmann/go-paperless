@@ -39,18 +39,29 @@ Raw ideas:
 - ~~Hook points for request/response logging so operators can trace sync
   runs~~ → shipped: `WithRequestHook` / `WithResponseHook` (`client.go:194`)
 - Streaming multipart upload for sources larger than the memory-safe
-  envelope the current in-memory buffering assumes (`client.go:372`)
+  envelope the current in-memory buffering assumes (`Upload`)
+- Share-link conveniences, demand-gated: a full-URL helper
+  (`<base>/share/<slug>`) and a document-scoped listing
+  (`GET /api/documents/{id}/share_links/`)
+- Saved-view Update/Retrieve methods (Create/List/Delete ship today) if a
+  consumer needs editing
+- Capability-probe caching — `ProbeCapabilities` performs a full documents
+  request per call today; probe once per client lifetime if consumers feel it
 
 ### 3. Confidence
 
 Version tolerance is probed (`ProbeCapabilities`), and the tolerant parsers
-now have property-based scrutiny — but the suite still only speaks to
-synthetic httptest servers.
+now have property-based scrutiny. A real-server tier exists in scaffold form
+(`integration_test.go`); what httptest still cannot prove is server-side
+timing and reconciliation against live data.
 
 Raw ideas:
 
-- An integration test tier against a real paperless-ngx (containers)
-  exercising upload → poll → reconcile end to end
+- ~~An integration test tier against a real paperless-ngx (containers)
+  exercising upload → poll → reconcile end to end~~ → scaffold shipped:
+  `integration_test.go` behind the `integration` build tag (ping + the five
+  listings, env-driven); the upload → poll → reconcile loop itself is still
+  open, tracked in TODO_LIST
 - ~~Fuzz or property tests for the checksum/status/date parsers~~ → shipped:
   `FuzzParseRetryAfter`, `FuzzParseDocumentCreated`, `FuzzChecksumFrom`,
   `FuzzClassifyTask` (`fuzz_test.go`; the retry-after fuzzer found and fixed

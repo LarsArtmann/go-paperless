@@ -26,6 +26,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   arbitrary int
 - Test suite harmonized on `t.Context()`; ADR 0001 records the
   API-version policy (pin one, tolerate decoding, never emulate)
+- The flake provides `packages.default` / `packages.go-paperless`, so bare
+  `nix build` works, and its version attribute tracks the release tag
+  (previously stuck at 0.2.0 after the v0.3.0 tag)
+
+### Fixed
+
+- `.golangci.yml` now analyzes the Go 1.27 language version (`run.go` was
+  pinned to the host's older 1.26.7 — a drift trap against the module's
+  `go 1.27` floor)
 
 ## [0.3.0] - 2026-09-14
 
@@ -172,6 +181,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.3.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.0
 [0.2.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.2.0
 [0.1.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.1.0

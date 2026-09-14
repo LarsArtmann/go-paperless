@@ -13,9 +13,11 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   gopls/golangci-lint so they switch to the module's toolchain. If LSP
   diagnostics still cite go 1.26.7, the LSP process predates the pin (needs
   a Crush restart, startup-only lifecycle).
-- Use `flake.nix` apps for everything: `nix run .#check|build|test|test-race|vet|lint|coverage|clean`, `nix fmt`.
+- Use `flake.nix` apps for everything: `nix run .#check|build|test|test-race|vet|lint|coverage|clean`, `nix fmt`. Bare `nix build` also works (`packages.default`).
 - Machine `go env` (GOCACHE/GOMODCACHE/GOLANGCI_LINT_CACHE) is read-only and may
   point at a dead mount — bare golangci-lint needs fresh temp dirs for all three.
+- Host `erraudit`/`go` invocations run the machine's Go 1.26.7 and hard-fail on
+  this module — run them inside `nix develop`.
 
 ## Scope
 
@@ -38,4 +40,6 @@ replacement for its trimmed fork.
 
 Feature inventory: `FEATURES.md` · Open work: `TODO_LIST.md` · Long-term
 ideas: `ROADMAP.md` · Release history: `CHANGELOG.md` · Contributor setup:
-`CONTRIBUTING.md`.
+`CONTRIBUTING.md` · Error-code catalog: `docs/ERROR_CODES.md` · Decision
+records: `docs/adr/` · Point-in-time reports: `docs/status/` (annotated,
+some archived under `docs/status/archived/`).
