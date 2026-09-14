@@ -106,6 +106,17 @@
 
           checks.format = config.treefmt.build.check self;
 
+          # Race detector in CI-identical hermetic conditions: reuse the
+          # vendored module build and force -race in its test phase.
+          checks.test-race = goModule (
+            goModuleArgs
+            // {
+              pname = "go-paperless-race";
+              checkFlags = [ "-race" ];
+              installPhase = ''touch "$out"'';
+            }
+          );
+
           devShells = {
             default = pkgs.mkShellNoCC {
               packages = [
