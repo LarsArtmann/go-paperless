@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+None yet. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).
+
+## [0.3.0] - 2026-09-14
+
 ### Added
 
 - Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
@@ -41,6 +45,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   doc no longer claims `WithTimeout` has no effect (the last option wins)
 - Error classification no longer reads the response body twice (the capped
   snippet is passed to `classifyStatus` directly)
+- `ListShareLinks` and `ListSavedViews` reuse the same shared pagination
+  helper as the document listings (one bounded-walk policy everywhere);
+  each listing gained a cap-parity test proving the 100-page stop
+- CI hardening: workflow actions pinned to commit SHAs, a grouped weekly
+  github-actions Dependabot source, and a tightened golangci-lint set
+  (37 findings cleared, including a wrong-error classification in a
+  storage-path rejection test)
 
 ## [0.2.0] - 2026-09-13
 
