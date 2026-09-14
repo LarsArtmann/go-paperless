@@ -109,7 +109,7 @@
 | M06-02 | Assert empty `TagIDs` omitted while other fields set              | 12  |
 | M06-03 | Assert explicit `TagIDs: []int{}` replaces (documented semantics) | 12  |
 
-### T07 — Options/transport tests (4 × 12min)
+### T07 — Options/transport tests (4 × 12min) — ✅ done at `2c4726b` (TestWithTimeoutBoundsSlowResponses, TestWithHTTPClientRoutesRequestsThroughSuppliedClient; M07-03/M07-04 still open in TODO_LIST)
 
 | ID     | Micro task                                                            | Min |
 | ------ | --------------------------------------------------------------------- | --- |
@@ -118,7 +118,7 @@
 | M07-03 | `WithHTTPClient(nil)` keeps default client                            | 12  |
 | M07-04 | `defaultTransport`: 100/8/90s constants honored                       | 12  |
 
-### T08 — Error-surface tests (5 × 12min)
+### T08 — Error-surface tests (5 × 12min) — ✅ done at `2c4726b` (TestNegotiatedAPIVersionReadsContentType + plain-request ctx-cancel test; error-code snapshot folded into the catalog CI test)
 
 | ID     | Micro task                                                                       | Min |
 | ------ | -------------------------------------------------------------------------------- | --- |
@@ -213,7 +213,7 @@
 | M17-04 | `FuzzClassifyTask` + seeds                                                 | 12  |
 | M17-05 | Run seeds × time-boxed fuzzing; file findings; wire into CI (optional job) | 12  |
 
-### T18 — Integration tier (8 × 12min)
+### T18 — Integration tier (8 × 12min) — ✅ done at `35c019b` — scaffold (`integration_test.go`, ping + five listings); the upload → poll → reconcile e2e is still open (TODO_LIST)
 
 | ID     | Micro task                                                   | Min |
 | ------ | ------------------------------------------------------------ | --- |
@@ -256,7 +256,7 @@
 | M21-03 | Doc comment on the cap                                            | 12  |
 | M21-04 | Full `-race` gate                                                 | 12  |
 
-### T22 — ADR 0001: API-version policy (3 × 12min)
+### T22 — ADR 0001: API-version policy (3 × 12min) — ✅ done at `35c019b` (`docs/adr/0001-api-version-policy.md`)
 
 | ID     | Micro task                                                                  | Min |
 | ------ | --------------------------------------------------------------------------- | --- |
