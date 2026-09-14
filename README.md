@@ -71,13 +71,13 @@ func main() {
 
 ## Options
 
-| Option                                 | Effect                                                             |
-| -------------------------------------- | ------------------------------------------------------------------ |
-| `WithHTTPClient(*http.Client)`         | Use a custom HTTP client (transport, proxies, timeouts)            |
-| `WithTimeout(time.Duration)`           | Per-request timeout on the default client                          |
+| Option                                 | Effect                                                               |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `WithHTTPClient(*http.Client)`         | Use a custom HTTP client (transport, proxies, timeouts)              |
+| `WithTimeout(time.Duration)`           | Per-request timeout on the default client                            |
 | `WithRetry(RetryPolicy)`               | Opt-in automatic retries for transient failures (default: fail fast) |
-| `WithRequestHook(func(RequestInfo))`   | Observe every outgoing request (headers include the token — redact) |
-| `WithResponseHook(func(ResponseInfo))` | Observe every response (2xx full body; errors capped at 512 bytes)  |
+| `WithRequestHook(func(RequestInfo))`   | Observe every outgoing request (headers include the token — redact)  |
+| `WithResponseHook(func(ResponseInfo))` | Observe every response (2xx full body; errors capped at 512 bytes)   |
 
 ## Development
 

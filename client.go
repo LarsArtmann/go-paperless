@@ -1283,7 +1283,9 @@ func fetchAllPages[T any](
 		}{}
 
 		if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
-			return nil, errorfamily.WrapCorruption(unmarshalErr, "paperless.decode_"+resource+"s",
+			code := "paperless.decode_" + strings.ReplaceAll(resource, " ", "_") + "s"
+
+			return nil, errorfamily.WrapCorruption(unmarshalErr, code,
 				"could not decode "+resource+"s list").
 				WithContext("page", strconv.Itoa(page))
 		}
@@ -2100,35 +2102,15 @@ type CreateShareLinkRequest struct {
 // ListShareLinks returns every share link on the server, paginating the
 // same bounded way as the document listings.
 func (c *Client) ListShareLinks(ctx context.Context) ([]ShareLink, error) {
-	links := []ShareLink{}
+	payloads, listErr := fetchAllPages[shareLinkPayload](ctx, c, pathShareLinks, "share link")
+	if listErr != nil {
+		return nil, listErr
+	}
 
-	for page := 1; page <= maxDocumentListPages; page++ {
-		query := url.Values{}
-		query.Set("page", strconv.Itoa(page))
-		query.Set("page_size", strconv.Itoa(documentListPageSize))
+	links := make([]ShareLink, 0, len(payloads))
 
-		raw, err := c.doRequest(ctx, http.MethodGet, pathShareLinks, query.Encode(), nil, "")
-		if err != nil {
-			return nil, fmt.Errorf("list share links (page %d): %w", page, err)
-		}
-
-		list := struct {
-			Results []shareLinkPayload `json:"results"`
-		}{}
-
-		if err := json.Unmarshal(raw, &list); err != nil {
-			return nil, errorfamily.WrapCorruption(err, "paperless.decode_share_links",
-				"could not decode share link list").
-				WithContext("page", strconv.Itoa(page))
-		}
-
-		for _, payload := range list.Results {
-			links = append(links, payload.shareLink())
-		}
-
-		if len(list.Results) < documentListPageSize {
-			break
-		}
+	for _, payload := range payloads {
+		links = append(links, payload.shareLink())
 	}
 
 	return links, nil
@@ -2279,35 +2261,15 @@ type CreateSavedViewRequest struct {
 // ListSavedViews returns every saved view on the server, paginating the
 // same bounded way as the document listings.
 func (c *Client) ListSavedViews(ctx context.Context) ([]SavedView, error) {
-	views := []SavedView{}
+	payloads, listErr := fetchAllPages[savedViewPayload](ctx, c, pathSavedViews, "saved view")
+	if listErr != nil {
+		return nil, listErr
+	}
 
-	for page := 1; page <= maxDocumentListPages; page++ {
-		query := url.Values{}
-		query.Set("page", strconv.Itoa(page))
-		query.Set("page_size", strconv.Itoa(documentListPageSize))
+	views := make([]SavedView, 0, len(payloads))
 
-		raw, err := c.doRequest(ctx, http.MethodGet, pathSavedViews, query.Encode(), nil, "")
-		if err != nil {
-			return nil, fmt.Errorf("list saved views (page %d): %w", page, err)
-		}
-
-		list := struct {
-			Results []savedViewPayload `json:"results"`
-		}{}
-
-		if err := json.Unmarshal(raw, &list); err != nil {
-			return nil, errorfamily.WrapCorruption(err, "paperless.decode_saved_views",
-				"could not decode saved view list").
-				WithContext("page", strconv.Itoa(page))
-		}
-
-		for _, payload := range list.Results {
-			views = append(views, payload.savedView())
-		}
-
-		if len(list.Results) < documentListPageSize {
-			break
-		}
+	for _, payload := range payloads {
+		views = append(views, payload.savedView())
 	}
 
 	return views, nil

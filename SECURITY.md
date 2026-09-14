@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-| Version  | Supported |
-| -------- | --------- |
-| latest on `main` | yes |
+| Version          | Supported |
+| ---------------- | --------- |
+| latest on `main` | yes       |
 
 The SDK is consumed as a Go module (v0.x); security fixes land on `main`
 and ship in the next tagged release. Pin versions via `go get` and update

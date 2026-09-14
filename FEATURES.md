@@ -33,71 +33,71 @@
 
 ## Async consumption tracking
 
-| Feature                     | Status                | Notes                                                                                                                                                                                                                        |
-| --------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task polling by ID          | 🟢 `FULLY_FUNCTIONAL` | `GetTask` filters `/api/tasks/` by task_id, `found=false` for empty results (`client.go:527`); `TestGetTaskNotFound`                                                                                                         |
-| Outcome classification      | 🟢 `FULLY_FUNCTIONAL` | `classifyTask` prefers `result_data.document_id`, falls back to `duplicate_of`, then `related_document_ids` (`client.go:498`); consumed/duplicate/failure/pending/malformed/bare-array tests at `client_test.go:1389`–`1612` |
-| Duplicate-refusal detection | 🟢 `FULLY_FUNCTIONAL` | `TaskOutcome.DuplicateRefused`/`DuplicateInTrash` separate checksum-dedup refusals from real failures (`client.go:443`); `TestGetTaskClassifiesDuplicateRefusal`                                                             |
-| Terminal-state model        | 🟢 `FULLY_FUNCTIONAL` | `TaskStatus.Terminal` treats unknown future statuses as non-terminal, the safe default for retry decisions (`client.go:438`)                                                                                                 |
-| `WaitForTask` (poll until terminal) | 🟢 `FULLY_FUNCTIONAL` | Immediate first poll, not-found/transient tolerance, duplicate refusal is not an error, ctx deadline → `paperless.task_poll_abandoned` (`client.go:580`); seven dedicated tests (`client_test.go:1960`–`2203`) |
-| `TaskOutcome.Duplicate()` accessor | 🟢 `FULLY_FUNCTIONAL` | Returns `(documentID, inTrash, refused)`, zero values for non-refusals (`client.go:465`); table test `client_test.go:2204` |
+| Feature                             | Status                | Notes                                                                                                                                                                                                                        |
+| ----------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task polling by ID                  | 🟢 `FULLY_FUNCTIONAL` | `GetTask` filters `/api/tasks/` by task_id, `found=false` for empty results (`client.go:527`); `TestGetTaskNotFound`                                                                                                         |
+| Outcome classification              | 🟢 `FULLY_FUNCTIONAL` | `classifyTask` prefers `result_data.document_id`, falls back to `duplicate_of`, then `related_document_ids` (`client.go:498`); consumed/duplicate/failure/pending/malformed/bare-array tests at `client_test.go:1389`–`1612` |
+| Duplicate-refusal detection         | 🟢 `FULLY_FUNCTIONAL` | `TaskOutcome.DuplicateRefused`/`DuplicateInTrash` separate checksum-dedup refusals from real failures (`client.go:443`); `TestGetTaskClassifiesDuplicateRefusal`                                                             |
+| Terminal-state model                | 🟢 `FULLY_FUNCTIONAL` | `TaskStatus.Terminal` treats unknown future statuses as non-terminal, the safe default for retry decisions (`client.go:438`)                                                                                                 |
+| `WaitForTask` (poll until terminal) | 🟢 `FULLY_FUNCTIONAL` | Immediate first poll, not-found/transient tolerance, duplicate refusal is not an error, ctx deadline → `paperless.task_poll_abandoned` (`client.go:580`); seven dedicated tests (`client_test.go:1960`–`2203`)               |
+| `TaskOutcome.Duplicate()` accessor  | 🟢 `FULLY_FUNCTIONAL` | Returns `(documentID, inTrash, refused)`, zero values for non-refusals (`client.go:465`); table test `client_test.go:2204`                                                                                                   |
 
 ## Metadata lookups (idempotent)
 
-| Feature                                  | Status                | Notes                                                                                                                                               |
-| ---------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EnsureTag` (never joins the classifier) | 🟢 `FULLY_FUNCTIONAL` | Creates with matching_algorithm "none" and self-heals legacy auto tags via PATCH (`client.go:731`); four dedicated tests `client_test.go:191`–`361` |
-| `EnsureCorrespondent` (keeps "auto")     | 🟢 `FULLY_FUNCTIONAL` | Auto matching kept deliberately for correspondents (`client.go:840`); find/create tests `client_test.go:721`, `client_test.go:758`                  |
-| `EnsureDocumentType` (find or create)    | 🟢 `FULLY_FUNCTIONAL` | An existing type keeps its configured algorithm, no self-heal (`client.go:851`); `TestEnsureDocumentTypeFindsAndCreates`                            |
-| `EnsureCustomField` / `FindCustomField`  | 🟢 `FULLY_FUNCTIONAL` | Read-only lookup plus create-as-string when missing (`client.go:907`, `client.go:874`); `TestEnsureAndFindCustomField`                              |
+| Feature                                       | Status                | Notes                                                                                                                                                                       |
+| --------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EnsureTag` (never joins the classifier)      | 🟢 `FULLY_FUNCTIONAL` | Creates with matching_algorithm "none" and self-heals legacy auto tags via PATCH (`client.go:731`); four dedicated tests `client_test.go:191`–`361`                         |
+| `EnsureCorrespondent` (keeps "auto")          | 🟢 `FULLY_FUNCTIONAL` | Auto matching kept deliberately for correspondents (`client.go:840`); find/create tests `client_test.go:721`, `client_test.go:758`                                          |
+| `EnsureDocumentType` (find or create)         | 🟢 `FULLY_FUNCTIONAL` | An existing type keeps its configured algorithm, no self-heal (`client.go:851`); `TestEnsureDocumentTypeFindsAndCreates`                                                    |
+| `EnsureCustomField` / `FindCustomField`       | 🟢 `FULLY_FUNCTIONAL` | Read-only lookup plus create-as-string when missing (`client.go:907`, `client.go:874`); `TestEnsureAndFindCustomField`                                                      |
 | `EnsureStoragePath` (keeps existing template) | 🟢 `FULLY_FUNCTIONAL` | POSTs only `{name, path}` (slug is server-generated); an existing path is returned untouched (`client.go:1005`); create/find/empty-arg tests (`client_test.go:2246`–`2380`) |
-| `FindStoragePath` / `ListStoragePaths` | 🟢 `FULLY_FUNCTIONAL` | Case-insensitive name lookup plus bounded (≤100 pages) full listing (`client.go:971`, `client.go:1055`); `client_test.go:2381`, `client_test.go:2412` |
+| `FindStoragePath` / `ListStoragePaths`        | 🟢 `FULLY_FUNCTIONAL` | Case-insensitive name lookup plus bounded (≤100 pages) full listing (`client.go:971`, `client.go:1055`); `client_test.go:2381`, `client_test.go:2412`                       |
 
 ## Name resolution
 
-| Feature            | Status                | Notes                                                                                                                                                      |
-| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feature            | Status                | Notes                                                                                                                                                        |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ID to display name | 🟢 `FULLY_FUNCTIONAL` | `GetCorrespondentName` and `GetDocumentTypeName` via the detail endpoints (`client.go:1094`, `client.go:1101`); `client_test.go:1128`, `client_test.go:1235` |
 
 ## Document management
 
-| Feature               | Status                    | Notes                                                                                                                                                                     |
-| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Checksum listing      | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentChecksums` paginates (100/page, ≤100 pages) and reads both flat and 3.x `versions[]` checksums (`client.go:1269`); pagination (`client_test.go:472`), page-cap (`client_test.go:2586`), concurrent-caller (`client_test.go:2627`) tests |
-| Full metadata listing | 🟢 `FULLY_FUNCTIONAL`     | `ListDocumentMetas` returns `DocumentMeta` incl. custom fields and effective checksum (`client.go:1373`); `TestListDocumentMetasReturnsFields`                            |
-| Metadata update       | 🟢 `FULLY_FUNCTIONAL`     | `UpdateDocument` PATCHes only set fields and rejects empty requests before the round trip (`client.go:1433`); `client_test.go:864`, `client_test.go:930`                  |
-| Delete document       | 🟢 `FULLY_FUNCTIONAL`     | `DeleteDocument` (`client.go:1536`); `TestDeleteDocumentSendsDelete`                                                                                                      |
-| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1554`); happy path + 404 error-wrap tests (`client_test.go:1646`–`1703`)                                                     |
+| Feature               | Status                | Notes                                                                                                                                                                                                                                                |
+| --------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checksum listing      | 🟢 `FULLY_FUNCTIONAL` | `ListDocumentChecksums` paginates (100/page, ≤100 pages) and reads both flat and 3.x `versions[]` checksums (`client.go:1269`); pagination (`client_test.go:472`), page-cap (`client_test.go:2586`), concurrent-caller (`client_test.go:2627`) tests |
+| Full metadata listing | 🟢 `FULLY_FUNCTIONAL` | `ListDocumentMetas` returns `DocumentMeta` incl. custom fields and effective checksum (`client.go:1373`); `TestListDocumentMetasReturnsFields`                                                                                                       |
+| Metadata update       | 🟢 `FULLY_FUNCTIONAL` | `UpdateDocument` PATCHes only set fields and rejects empty requests before the round trip (`client.go:1433`); `client_test.go:864`, `client_test.go:930`                                                                                             |
+| Delete document       | 🟢 `FULLY_FUNCTIONAL` | `DeleteDocument` (`client.go:1536`); `TestDeleteDocumentSendsDelete`                                                                                                                                                                                 |
+| Download document     | 🟢 `FULLY_FUNCTIONAL` | `DownloadDocument` fetches the original file bytes (`client.go:1554`); happy path + 404 error-wrap tests (`client_test.go:1646`–`1703`)                                                                                                              |
 
 ## Server compatibility
 
 | Feature            | Status                | Notes                                                                                                                                                      |
 | ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ping               | 🟢 `FULLY_FUNCTIONAL` | Targets the documents list, not the HTML-only API root that 406s JSON (`client.go:1202`); contract test `TestPingAgainstHtmlOnlyApiRoot`                    |
+| Ping               | 🟢 `FULLY_FUNCTIONAL` | Targets the documents list, not the HTML-only API root that 406s JSON (`client.go:1202`); contract test `TestPingAgainstHtmlOnlyApiRoot`                   |
 | Capability probing | 🟢 `FULLY_FUNCTIONAL` | `ProbeCapabilities` samples one page and reports checksum shape plus negotiated API version (`client.go:1744`); four-shape table test `client_test.go:982` |
 
 ## Error handling and retries
 
-| Feature                     | Status                    | Notes                                                                                                                                                                                                                              |
-| --------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Error-family classification | 🟢 `FULLY_FUNCTIONAL`     | 401/403 → Rejection, 429/5xx → Transient, other 4xx → Rejection with body snippet (`classifyStatus`, `client.go:1847`); asserted across upload/ping/list tests                                                                     |
-| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date; delay-seconds too large for `time.Duration` are unparseable (fuzz-found overflow, `client.go:1800`, `client.go:1819`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:616`) paths are tested |
+| Feature                     | Status                | Notes                                                                                                                                                                                                                                                                                                                            |
+| --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Error-family classification | 🟢 `FULLY_FUNCTIONAL` | 401/403 → Rejection, 429/5xx → Transient, other 4xx → Rejection with body snippet (`classifyStatus`, `client.go:1847`); asserted across upload/ping/list tests                                                                                                                                                                   |
+| `Retry-After` hints         | 🟢 `FULLY_FUNCTIONAL` | `RetryAfterError` wraps 429/503 with a parsed delay, seconds or HTTP-date; delay-seconds too large for `time.Duration` are unparseable (fuzz-found overflow, `client.go:1800`, `client.go:1819`); `TestParseRetryAfter` plus the 429 (`client_test.go:583`) and 503 (`client_test.go:616`) paths are tested                      |
 | Opt-in automatic retries    | 🟢 `FULLY_FUNCTIONAL` | `WithRetry(RetryPolicy)` retries transient failures only (network/429/5xx), rejections fail fast, request bodies replay byte-for-byte per attempt, server `Retry-After` overrides backoff, negative `MaxAttempts` rejected via `ErrInvalidConfig` (`client.go:184`, `client.go:165`); eight tests (`client_test.go:1706`–`1959`) |
 
 ## Observability hooks
 
-| Feature                | Status                | Notes |
-| ---------------------- | --------------------- | ----- |
+| Feature                | Status                | Notes                                                                                                                                                                                                                                                                                                                   |
+| ---------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Request/response hooks | 🟢 `FULLY_FUNCTIONAL` | `WithRequestHook`/`WithResponseHook` receive value snapshots with cloned headers — they include the Authorization token / Set-Cookie, redact before logging; non-2xx bodies capped at 512 bytes (`client.go:194`, `client.go:223`); mutation-no-leak + capped-body tests (`client_test.go:2474`, `client_test.go:2527`) |
-
 
 ## Document notes, share links, and saved views
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Document notes (list/add/delete) | 🟢 `FULLY_FUNCTIONAL` | Bare-array endpoint; every mutation answers with the updated list, delete via `?id=` (`client.go:1944`, `client.go:1963`, `client.go:2004`); wire-shape tests (`client_test.go:2794`–`2952`) |
+| Feature                          | Status                | Notes                                                                                                                                                                                                                               |
+| -------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Document notes (list/add/delete) | 🟢 `FULLY_FUNCTIONAL` | Bare-array endpoint; every mutation answers with the updated list, delete via `?id=` (`client.go:1944`, `client.go:1963`, `client.go:2004`); wire-shape tests (`client_test.go:2794`–`2952`)                                        |
 | Share links (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Server generates the slug (never sent); string `file_version` (archive/original, zero value omitted); optional expiration (`client.go:2102`, `client.go:2140`, `client.go:2189`); full-page pagination test (`client_test.go:2954`) |
-| Saved views (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Stable-core fields incl. `filter_rules` (rule_type + value); newer/older server UI fields are ignored (`client.go:2281`, `client.go:2317`, `client.go:2375`); tests (`client_test.go:3174`–`3312`) |
+| Saved views (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Stable-core fields incl. `filter_rules` (rule_type + value); newer/older server UI fields are ignored (`client.go:2281`, `client.go:2317`, `client.go:2375`); tests (`client_test.go:3174`–`3312`)                                  |
+
 ## Planned
 
 None. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).

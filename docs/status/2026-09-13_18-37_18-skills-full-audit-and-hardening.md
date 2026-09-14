@@ -17,17 +17,17 @@ intent was covered by architecture-review + go-modularize.)
 
 ## Verification snapshot (all re-run at 18:33, exit codes checked not output tails)
 
-| Gate                          | Result                                   |
-| ----------------------------- | ---------------------------------------- |
-| `nix flake check`             | **all checks passed** (build/test/lint/fmt) |
-| `nix run .#test-race`         | ok                                       |
-| `nix run .#vet`               | 0 findings                               |
-| `nix run .#lint`              | 0 issues                                 |
-| `nix run .#coverage`          | **90.1%** (was 88.4%)                    |
-| `art-dupl -t 5`               | 10 groups, 10 suppressed, **0 actionable** (all reviewed: test scaffolding) |
-| `erraudit lint --type-aware`  | **0 findings** (Go 1.27 dev shell)       |
-| `go mod verify`               | all modules verified                     |
-| LSP (gopls/golangci-lint-ls)  | **still broken in-session** (see §e-7)   |
+| Gate                         | Result                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `nix flake check`            | **all checks passed** (build/test/lint/fmt)                                 |
+| `nix run .#test-race`        | ok                                                                          |
+| `nix run .#vet`              | 0 findings                                                                  |
+| `nix run .#lint`             | 0 issues                                                                    |
+| `nix run .#coverage`         | **90.1%** (was 88.4%)                                                       |
+| `art-dupl -t 5`              | 10 groups, 10 suppressed, **0 actionable** (all reviewed: test scaffolding) |
+| `erraudit lint --type-aware` | **0 findings** (Go 1.27 dev shell)                                          |
+| `go mod verify`              | all modules verified                                                        |
+| LSP (gopls/golangci-lint-ls) | **still broken in-session** (see §e-7)                                      |
 
 ---
 
@@ -196,6 +196,7 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 ## f) UP TO 50 THINGS TO GET DONE NEXT (impact-ordered, evidence-backed)
 
 **High impact**
+
 1. Bump bank-sync flake to `go_1_27` (blocks all `go get` of v0.1.1+)
 2. Bump InboxClean flake to `go_1_27`
 3. Decide: retire bank-sync's trimmed fork in favor of this module
@@ -215,7 +216,7 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 15. Context-cancellation test for a plain request (non-`WaitForTask` path)
 16. Timed fuzz sessions on all four targets (`-fuzztime=30s` each)
 17. ProbeCapabilities hook-coverage assertion (probes go through
-    `doRequestDetail`, so hooks fire — assert it)
+`doRequestDetail`, so hooks fire — assert it)
 18. Comment or fix the `GetTask` bare-array error-wrap choice
 19. Avoid the double allocation in `GetTask`'s array fallback
 20. Typed `MatchingAlgorithm` (unexported enum)
@@ -244,16 +245,16 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 41. Fuzz corpus: commit any interesting crashers found in f-16
 42. `ExampleNew_withOptions` — extend to show hooks (redaction reminder)
 43. Consider `t.Chdir`-free lint? N/A — skip; replace with: review
-    `.golangci.yml` linter set against how-to-golang defaults (e.g. add
-    `gochecksumtype`, `err113`-style rules if desired)
+`.golangci.yml` linter set against how-to-golang defaults (e.g. add
+`gochecksumtype`, `err113`-style rules if desired)
 44. flake.nix: `version` is hardcoded "0.2.0" — either derive from a release
-    file or document the accepted deviation in a comment
+file or document the accepted deviation in a comment
 45. Add `checks.test-race` to flake.nix so `nix flake check` runs race in CI
 46. Docs: explain the Find/Get/Ensure verb contract in FEATURES or README
 47. Consider publishing the report series as a docs site (website-launch skill)
 48. `client.go` file split (transport/tasks/named/documents) at ~3k lines
 49. Post-restart: confirm `.crushrc` clears the LSP failures, then close the
-    TODO row
+TODO row
 50. After 3–5: re-run this session's full gate battery as the regression check
 
 ## g) QUESTIONS I CANNOT ANSWER MYSELF
@@ -272,5 +273,5 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 
 ---
 
-*Everything above is from this session's runs; no claims copied from older
-reports without re-verification. Point-in-time snapshot: 2026-09-13 18:37 CEST.*
+_Everything above is from this session's runs; no claims copied from older
+reports without re-verification. Point-in-time snapshot: 2026-09-13 18:37 CEST._

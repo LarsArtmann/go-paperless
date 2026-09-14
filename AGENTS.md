@@ -8,7 +8,7 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   there). The flake sets `GOEXPERIMENT=jsonv2,simd` for the SIMD work; on a
   Go ≤ 1.26 toolchain json/v2 additionally needs `GOEXPERIMENT=jsonv2`, and
   bare older invocations fail with "build constraints exclude all Go files".
-- Editor LSPs run the *machine's* `go` (older, and `go env -w GOTOOLCHAIN=local`
+- Editor LSPs run the _machine's_ `go` (older, and `go env -w GOTOOLCHAIN=local`
   is set host-wide) — the committed `.crushrc` pins `GOTOOLCHAIN=auto` for
   gopls/golangci-lint so they switch to the module's toolchain. If LSP
   diagnostics still cite go 1.26.7, the LSP process predates the pin (needs

@@ -2634,6 +2634,88 @@ func TestListDocumentChecksumsCapStopsAtMaxPages(t *testing.T) {
 	}
 }
 
+func TestListShareLinksCapStopsAtMaxPages(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		page := r.URL.Query().Get("page")
+
+		entries := make([]string, 0, documentListPageSize)
+		for i := range documentListPageSize {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"slug":"page-%s-%03d","document":7}`, i, page, i))
+		}
+
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(entries, ",") + `]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	links, err := client.ListShareLinks(t.Context())
+	if err != nil {
+		t.Fatalf("ListShareLinks: %v", err)
+	}
+
+	if len(links) != maxDocumentListPages*documentListPageSize {
+		t.Fatalf("links = %d, want exactly %d (100 full pages)", len(links),
+			maxDocumentListPages*documentListPageSize)
+	}
+
+	if requests != maxDocumentListPages {
+		t.Fatalf("requests = %d, want exactly %d (the cap must stop the scan, not hang)",
+			requests, maxDocumentListPages)
+	}
+}
+
+func TestListSavedViewsCapStopsAtMaxPages(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		page := r.URL.Query().Get("page")
+
+		entries := make([]string, 0, documentListPageSize)
+		for i := range documentListPageSize {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"name":"view-%s-%03d","filter_rules":[]}`, i, page, i))
+		}
+
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(entries, ",") + `]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	views, err := client.ListSavedViews(t.Context())
+	if err != nil {
+		t.Fatalf("ListSavedViews: %v", err)
+	}
+
+	if len(views) != maxDocumentListPages*documentListPageSize {
+		t.Fatalf("views = %d, want exactly %d (100 full pages)", len(views),
+			maxDocumentListPages*documentListPageSize)
+	}
+
+	if requests != maxDocumentListPages {
+		t.Fatalf("requests = %d, want exactly %d (the cap must stop the scan, not hang)",
+			requests, maxDocumentListPages)
+	}
+}
+
 func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
 	t.Parallel()
 
