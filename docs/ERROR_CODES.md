@@ -2,9 +2,14 @@
 
 Every error this SDK returns carries a `paperless.*` dot-notation code (via
 [go-error-family](https://github.com/larsartmann/go-error-family)). Consumers
-can switch on codes with `errorfamily.CodeOf(err)` (or `errors.AsType`) without
+can switch on codes with `errorfamily.Code(err)` (or `errors.AsType`) without
 reading SDK source. Codes are a compatibility contract: new codes may appear,
 existing codes never change meaning.
+
+The error model is [ADR 0002](adr/0002-error-model.md): codes and families
+are assigned at the source of failure; call-site wraps add human message
+context without a competing code, so `Code`/`Classify` always surface the
+inner classification.
 
 ## Validation (family: Rejection — fail fast, never retry)
 
@@ -20,6 +25,7 @@ existing codes never change meaning.
 | `paperless.empty_saved_view_id` | Saved view ID argument was zero |
 | `paperless.empty_storage_path` | Storage path name or directory template was empty |
 | `paperless.empty_update` | `UpdateDocument` called with no fields set |
+| `paperless.invalid_retry` | `WithRetry` passed a negative `MaxAttempts` (wraps `ErrInvalidConfig`, so `errors.Is` still matches; the offending value is in the message) |
 
 ## HTTP classification (family depends on status)
 
@@ -36,6 +42,7 @@ existing codes never change meaning.
 | Code | Meaning |
 | --- | --- |
 | `paperless.task_failed` | Consumption task reached a failed terminal state |
+| `paperless.missing_task_id` | Upload accepted (2xx) but the response carried no task ID (family: Corruption — the server misbehaved, not the caller) |
 | `paperless.task_poll_abandoned` | `WaitForTask` context deadline expired (wraps `context.DeadlineExceeded`; last poll error attached) |
 
 ## Wire/encoding (family: Corruption or Infrastructure)
@@ -57,6 +64,7 @@ existing codes never change meaning.
 | `paperless.build_multipart` / `paperless.close_multipart` / `paperless.buffer_request_body` | Multipart/body preparation failed |
 | `paperless.write_correspondent` / `paperless.write_created` / `paperless.write_custom_fields` / `paperless.write_document` / `paperless.write_document_type` / `paperless.write_tags` / `paperless.write_title` | A multipart form part could not be written |
 | `paperless.read_response` | 2xx response body could not be read |
+| `body_read_error` context key | Not a code: when the best-effort read of an error-response body fails mid-body, HTTP-classification errors attach the read failure under this context key so a missing/truncated snippet is explained, not silent |
 
 ## Sentinel
 

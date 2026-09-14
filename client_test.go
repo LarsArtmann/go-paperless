@@ -190,6 +190,80 @@ func TestUploadClassifiesServerErrorAsTransient(t *testing.T) {
 	}
 }
 
+func TestUploadMissingTaskIDClassifiedAsCorruption(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`""`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.Upload(t.Context(), UploadRequest{Filename: "x.pdf", Content: []byte("x")})
+	if err == nil {
+		t.Fatal("expected error when the server returns no task ID")
+	}
+
+	coded, ok := errors.AsType[*errorfamily.Error](err)
+	if !ok {
+		t.Fatalf("expected *errorfamily.Error, got %T (%v)", err, err)
+	}
+
+	if coded.Code() != "paperless.missing_task_id" {
+		t.Fatalf("code = %q, want paperless.missing_task_id", coded.Code())
+	}
+
+	if coded.Family() != errorfamily.Corruption {
+		t.Fatalf(
+			"family = %v, want Corruption (the server misbehaved, not the caller)",
+			coded.Family(),
+		)
+	}
+}
+
+func TestStatusErrorExplainsFailedErrorBodyRead(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Promise 1024 bytes of error body but deliver only a fragment:
+		// the server cannot fulfill the declared length and closes the
+		// connection, so the client's best-effort diagnostic read fails
+		// mid-body.
+		w.Header().Set("Content-Length", "1024")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"detail": "boom`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	pingErr := client.Ping(t.Context())
+	if pingErr == nil {
+		t.Fatal("expected error for 500 response")
+	}
+
+	coded, ok := errors.AsType[*errorfamily.Error](pingErr)
+	if !ok {
+		t.Fatalf("expected *errorfamily.Error, got %T (%v)", pingErr, pingErr)
+	}
+
+	readErr, explained := coded.ErrorContext()["body_read_error"]
+	if !explained || readErr == "" {
+		t.Fatalf(
+			"expected body_read_error context explaining the truncated snippet, got %v",
+			coded.ErrorContext(),
+		)
+	}
+}
+
 func TestEnsureTagFindsExisting(t *testing.T) {
 	t.Parallel()
 
@@ -1976,6 +2050,14 @@ func TestNewRejectsNegativeRetryMaxAttempts(t *testing.T) {
 	_, err := New("https://paperless.example.com", "token", WithRetry(RetryPolicy{MaxAttempts: -1}))
 	if !errors.Is(err, ErrInvalidConfig) {
 		t.Fatalf("expected ErrInvalidConfig for negative MaxAttempts, got %v", err)
+	}
+
+	if code := errorfamily.Code(err); code != "paperless.invalid_retry" {
+		t.Fatalf("code = %q, want paperless.invalid_retry (%v)", code, err)
+	}
+
+	if !strings.Contains(err.Error(), "got -1") {
+		t.Fatalf("error must name the offending value, got %v", err)
 	}
 }
 

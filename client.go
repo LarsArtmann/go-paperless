@@ -337,7 +337,7 @@ func New(baseURL, token string, opts ...Option) (*Client, error) {
 	if client.retry != nil && client.retry.MaxAttempts < 0 {
 		return nil, errorfamily.WrapRejectionf(
 			ErrInvalidConfig,
-			"paperless.invalid_retry", //nolint:erraudit // MaxAttempts value is in the message; baseURL is irrelevant to retry policy
+			"paperless.invalid_retry", //nolint:erraudit // MaxAttempts value is in the message; baseURL is irrelevant
 			"retry MaxAttempts must be >= 0, got %d",
 			client.retry.MaxAttempts,
 		)

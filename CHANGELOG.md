@@ -8,11 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Nothing yet.
+- `paperless.invalid_retry` code: `New` with a negative retry `MaxAttempts`
+  now returns a coded Rejection naming the offending value (still wraps
+  `ErrInvalidConfig`, so `errors.Is` matching is unchanged)
+- `paperless.missing_task_id` code: an upload the server accepts (2xx) but
+  answers without a task ID is now Corruption with its own code (it previously
+  reused `paperless.empty_task_id`, which is the caller-validation Rejection —
+  one code, one meaning; see ADR 0002)
+- Failed reads of an error-response body now surface as `body_read_error`
+  context on the HTTP-classification error, so a missing or truncated body
+  snippet is explained instead of silent
+- ADR 0002 (error model: coded at source, uncoded context wraps) and an
+  erraudit gate: `erraudit ./... --type-aware --enforce-go-error-family
+  --disable-extensions` exits 0
 
 ### Changed
 
-- Nothing yet.
+- `WaitForTask` timeout errors that carry a last poll error now name the
+  task ID in the message; the multipart tags-field failure attaches the
+  offending `tag_id` as structured context
 
 ### Fixed
 

@@ -31,6 +31,19 @@ replacement for its trimmed fork.
 - Go 1.27+, functional patterns, early returns, descriptive names.
 - Tests are httptest-based (no live server needed).
 - `nolint` single-line with a reason: `//nolint:<linter> // reason`.
+- **erraudit gate** (inside `nix develop`): `erraudit ./... --type-aware
+  --enforce-go-error-family --disable-extensions` exits 0. Deliberate
+  stdlib-constructor sites carry `//nolint:erraudit // reason` ON the anchor
+  line (`nix fmt` may move it to the closing paren — suppression still
+  anchors). golangci's "Found unknown linters: erraudit" warning is
+  unavoidable noise. `--no-suppress` is audit mode: suppressed findings
+  reappearing there is by design.
+- **Error model = ADR 0002** (`docs/adr/0002-error-model.md`): codes+family
+  live at the failure source; call-site wraps are uncoded `fmt.Errorf`
+  context wraps (an outer code would shadow the inner HTTP classification —
+  a tested contract). One code, one meaning, one family.
+  `--enforce-generic-return` stays off: bare `error` returns are the SDK
+  contract.
 - `// art-dupl:<scope>` comments mark accepted duplication for the clone
   scanner (e.g. the Ping/`ProbeCapabilities` first-page query pair) — don't
   "fix" them away without checking the paired site named in the comment.
