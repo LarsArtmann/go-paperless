@@ -56,6 +56,13 @@ Raw ideas:
   `FuzzClassifyTask` (`fuzz_test.go`; the retry-after fuzzer found and fixed
   a real overflow)
 
+## Testing infrastructure
+
+- Real-server integration tests exist behind the `integration` build tag
+  (`integration_test.go`, env-driven). Growing that suite is the cheapest
+  path to confidence in behaviors httptest cannot fake (server-side
+  pagination quirks, negotiated versions, task timing).
+
 ## Non-goals
 
 - **Pipeline abstractions** (ledgers, projections, sync orchestration):

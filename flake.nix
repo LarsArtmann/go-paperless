@@ -38,6 +38,7 @@
         let
           goPkg = pkgs.go_1_27;
           goExperiment = "jsonv2,simd";
+          # Release version — bump together with CHANGELOG.md and the git tag.
           version = "0.3.0";
 
           # buildGoModule fetches Go modules into a fixed-output derivation

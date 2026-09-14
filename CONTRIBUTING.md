@@ -30,6 +30,17 @@ toolchains (the module uses `encoding/json/v2`, see AGENTS.md):
     nix fmt              # format
     nix flake check      # all checks (what CI runs)
 
+## Release Checklist (maintainers)
+
+1. Curate `CHANGELOG.md`: `[Unreleased]` → new version header (Keep a
+   Changelog categories; today's date).
+2. Pre-tag verification: `grep '^replace' go.mod` empty, clean working
+   tree, `nix flake check` green.
+3. `git tag -a vX.Y.Z -m "..."` and push the tag.
+4. Verify the module proxy resolves:
+   `go list -m github.com/larsartmann/go-paperless@vX.Y.Z`.
+5. Create the GitHub Release from the CHANGELOG section.
+
 ## Reporting Issues
 
 Please use GitHub Issues to report bugs or request features. For security
