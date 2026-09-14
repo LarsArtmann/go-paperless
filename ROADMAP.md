@@ -14,13 +14,13 @@ retries", CHANGELOG [Unreleased]):
 
 - ~~A polling helper that blocks until `TaskStatus.Terminal()` with a
   deadline and context cancellation~~ → `WaitForTask` + `DefaultTaskPollInterval`
-  (`client.go:580`)
+  (`client.go`)
 - ~~A client-side retry policy that honors `RetryAfterError.After`~~ →
   opt-in `WithRetry(RetryPolicy)` backed by
   [go-retry](https://github.com/larsartmann/go-retry), fail-fast default
-  preserved (`client.go:184`)
+  preserved (`WithRetry`)
 - ~~First-class "was this a duplicate refusal?" ergonomics~~ →
-  `TaskOutcome.Duplicate()` (`client.go:465`)
+  `TaskOutcome.Duplicate()`
 
 ### 2. Growing with the API
 
@@ -32,12 +32,11 @@ Raw ideas:
 - ~~Notes, share links, and saved-view endpoints~~ → shipped (built on
   the user's go: `ListDocumentNotes`/`AddDocumentNote`/`DeleteDocumentNote`,
   `CreateShareLink`/`ListShareLinks`/`DeleteShareLink`,
-  `ListSavedViews`/`CreateSavedView`/`DeleteSavedView`; `client.go:1944`)
+  `ListSavedViews`/`CreateSavedView`/`DeleteSavedView`)
 - ~~Storage-path management alongside tags/correspondents/document types~~ →
   shipped: `FindStoragePath` / `EnsureStoragePath` / `ListStoragePaths`
-  (`client.go:971`)
 - ~~Hook points for request/response logging so operators can trace sync
-  runs~~ → shipped: `WithRequestHook` / `WithResponseHook` (`client.go:194`)
+  runs~~ → shipped: `WithRequestHook` / `WithResponseHook`
 - Streaming multipart upload for sources larger than the memory-safe
   envelope the current in-memory buffering assumes (`Upload`)
 - Share-link conveniences, demand-gated: a full-URL helper
