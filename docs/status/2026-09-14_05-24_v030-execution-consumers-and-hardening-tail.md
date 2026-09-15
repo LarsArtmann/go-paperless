@@ -9,16 +9,16 @@
 
 ## Headline numbers
 
-| Metric | Value |
-| --- | --- |
+| Metric                      | Value                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Plan coarse tasks completed | 20 of 26 (C25 restart-gated, C14 fork-gated, Q1 erraudit-CI consciously dropped, C05 subsumed by parallel session) |
-| v0.3.0 | tagged, pushed, proxy-verified, GitHub Release live |
-| Consumers bumped | bank-sync + InboxClean → go 1.27 + go-paperless v0.3.0, gates green, **not pushed** |
-| Lint findings cleared | 37 (incl. 1 real bug caught by `nilnesserr`) |
-| Test coverage | 88.6% (down from 90.1%, dilution from ~500 lines of new API code) |
-| Fuzz | 2 targets × 30s, zero crashers |
-| erraudit after session | zero findings (re-verified post-hoc) |
-| CI | flake ✓ race(via flake) ✓ govulncheck@v1.8.0 ✓ gosec ✓ |
+| v0.3.0                      | tagged, pushed, proxy-verified, GitHub Release live                                                                |
+| Consumers bumped            | bank-sync + InboxClean → go 1.27 + go-paperless v0.3.0, gates green, **not pushed**                                |
+| Lint findings cleared       | 37 (incl. 1 real bug caught by `nilnesserr`)                                                                       |
+| Test coverage               | 88.6% (down from 90.1%, dilution from ~500 lines of new API code)                                                  |
+| Fuzz                        | 2 targets × 30s, zero crashers                                                                                     |
+| erraudit after session      | zero findings (re-verified post-hoc)                                                                               |
+| CI                          | flake ✓ race(via flake) ✓ govulncheck@v1.8.0 ✓ gosec ✓                                                             |
 
 ---
 
@@ -153,4 +153,4 @@
 
 ---
 
-*Point-in-time snapshot. Claims re-verified where marked; INDEX.md link targets and consumer diffs are the known-unverified remnants (see d/7 and f/25).*
+_Point-in-time snapshot. Claims re-verified where marked; INDEX.md link targets and consumer diffs are the known-unverified remnants (see d/7 and f/25)._

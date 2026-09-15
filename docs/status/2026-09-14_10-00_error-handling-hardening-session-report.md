@@ -158,6 +158,7 @@ to fix while editing that very file.
 ## f) Next actions (prioritized, up to 50)
 
 **Gate enforcement (do first)**
+
 1. Pin erraudit in `flake.nix` (input + package, mirroring bank-sync's
    `packages.erraudit`) so the gate is reproducible
 2. Add erraudit as a CI step in `ci.yml`: fail closed, assert it scanned
@@ -171,102 +172,102 @@ to fix while editing that very file.
 
 **Downstream safety**
 6. Grep bank-sync for `empty_task_id`/Corruption matching; confirm the
-   rename is invisible or coordinate a bump
+rename is invisible or coordinate a bump
 7. Reconcile the suppression dialect across repos (pick one, document in
-   erraudit's repo; bank-sync's `//n` claim needs a live verification run)
+erraudit's repo; bank-sync's `//n` claim needs a live verification run)
 8. When releasing: CHANGELOG Unreleased → v0.3.2 via the go-release skill;
-   the code rename belongs in release notes
+the code rename belongs in release notes
 
 **Catalog + docs truth**
 9. Catalog the dynamic codes: `marshal_tag`, `marshal_correspondent`,
-   `marshal_document_type`, `marshal_tag_update`, `decode_correspondent`,
-   `decode_document_type` — or switch them to literal constants (better:
-   impossible-to-miss codes; the concatenation pattern is how the gap formed)
+`marshal_document_type`, `marshal_tag_update`, `decode_correspondent`,
+`decode_document_type` — or switch them to literal constants (better:
+impossible-to-miss codes; the concatenation pattern is how the gap formed)
 10. Document the `classifyStatus` body-snippet policy (body attached for
-    5xx/4xx but NOT 401/403 — deliberate? not written down anywhere)
+5xx/4xx but NOT 401/403 — deliberate? not written down anywhere)
 11. Update FEATURES.md error-handling inventory with the new codes/behavior
 12. Add this session's follow-ups to TODO_LIST.md
 13. Add `docs/reviews/INDEX.md` entry if this report should be indexed (it
-    lives in docs/status per instruction)
+lives in docs/status per instruction)
 14. CONTRIBUTING.md: add the erraudit gate to the dev workflow section
 15. README: link the error-code catalog from the error-handling mention (if
-    the README discusses errors — verify)
+the README discusses errors — verify)
 
 **Test depth**
 16. Table-test `classifyStatus` directly: 401/403/429/503/4xx/5xx ×
-    Retry-After present/absent × bodyReadErr nil/non-nil
+Retry-After present/absent × bodyReadErr nil/non-nil
 17. Assert the WaitForTask timeout message contains the task ID
 18. Test `RetryAfterError` unwrapping through the outer fmt.Errorf wraps
-    (chain preservation is the ADR-0002 contract — pin it)
+(chain preservation is the ADR-0002 contract — pin it)
 19. Add integration-tag assertions for `missing_task_id` + `invalid_retry`
-    against a real server
+against a real server
 20. Meta-test: every error returned by every public method carries a
-    non-empty `errorfamily.Code` (pins the ERROR_CODES.md claim "every error
-    carries a code")
+non-empty `errorfamily.Code` (pins the ERROR_CODES.md claim "every error
+carries a code")
 21. Coverage: run `nix run .#coverage`, check the touched paths are green
 
 **Code polish**
 22. Read client.go end-to-end once (this session was chunk-read only)
 23. Investigate the golines force-split of `//nolint`-terminated lines;
-    consider a config fix or upstream issue instead of living with 5-line
-    reflows
+consider a config fix or upstream issue instead of living with 5-line
+reflows
 24. Identify the 33rd audit-mode finding (32 suppressions written — one
-    violation appears in `--no-suppress` that I never mapped to a site)
+violation appears in `--no-suppress` that I never mapped to a site)
 25. Consider `WithContext("operation", ...)` for the retry wrap at doRequest
-    (1635) — message-only context is inconsistent with the rest
+(1635) — message-only context is inconsistent with the rest
 26. Revisit the `request failed after retries` wrap: the retry library may
-    already mark exhausted retries; avoid double-signaling
+already mark exhausted retries; avoid double-signaling
 27. `example_test.go`: add one example switching on `errorfamily.Code(err)`
 28. Check `fetchAllPages` page-cap behavior: hitting `maxDocumentListPages`
-    — silent truncation or error? Test whichever it is
+— silent truncation or error? Test whichever it is
 29. GetTask bare-array fallback: confirm a test exists (defensive path)
 30. Document/upload-response hardening: non-JSON 200 body with garbage task
-    id (only quote-trimming today)
+id (only quote-trimming today)
 
 **Tooling/housekeeping**
 31. Run `nix flake check --all-systems` once to see the omitted-platform
-    warning's real scope
+warning's real scope
 32. Consider an errcheck config exclusion for `resp.Body.Close()` as an
-    alternative to per-site comments (decide one idiom)
+alternative to per-site comments (decide one idiom)
 33. Verify `.crushrc` GOTOOLCHAIN pin still matches toolchain reality after
-    any nix updates
+any nix updates
 34. dprint.json vs golangci formatters: two formatter configs coexist —
-    confirm they don't fight over the same files
+confirm they don't fight over the same files
 35. Remove `/tmp/suptest` probe scratch (trivial)
 36. Consider a SARIF output step (`erraudit --format sarif`) for GitHub code
-    scanning if CI adoption lands
+scanning if CI adoption lands
 37. erraudit upstream: file the golines//nolint interaction + dialect
-    documentation gap in the erraudit repo (it's Lars's tool)
+documentation gap in the erraudit repo (it's Lars's tool)
 38. Bank-sync: run their documented gate once and check whether `//n` sites
-    would flag under `--no-suppress` (answers the dialect question with data)
+would flag under `--no-suppress` (answers the dialect question with data)
 
 **Bigger-lever items noticed in passing (not researched, per instruction)**
 39. If erraudit gets pinned: wire the same gate template into other
-    LarsArtmann Go repos (one flake input, N repos)
+LarsArtmann Go repos (one flake input, N repos)
 40. Consider a shared error-code lint: codes must be catalogued constants
-    (would have caught e/4a mechanically)
+(would have caught e/4a mechanically)
 41. ADR 0002 mentions "one code, one meaning" — a test could enforce code
-    uniqueness across the package (registry of used codes)
+uniqueness across the package (registry of used codes)
 42. `WaitForTask` + `Upload` compose naturally into `UploadAndWait`; not the
-    SDK's job (consumer scope) — note for InboxClean/bank-sync instead
+SDK's job (consumer scope) — note for InboxClean/bank-sync instead
 43. `Capabilities` probing could feed retry-policy tuning (server-advertised
-    behavior) — roadmap candidate, not now
+behavior) — roadmap candidate, not now
 44. `docs/planning/` pareto plans reference error handling; check whether
-    this session completes a planned item worth annotating (docs-health
-    HARVEST pass)
+this session completes a planned item worth annotating (docs-health
+HARVEST pass)
 45. CHANGELOG: keep the Unreleased code-rename entry prominent — it's the
-    only consumer-visible behavior change
+only consumer-visible behavior change
 46. If `//nolint:erraudit` sites grow past ~40, switch strategy: a
-    file-level or config-level allowance is cleaner than per-line noise
+file-level or config-level allowance is cleaner than per-line noise
 47. Add the erraudit gate to the pre-commit pattern bank-sync uses (hook
-    mechanics per their AGENTS) if Lars wants parity here
+mechanics per their AGENTS) if Lars wants parity here
 48. Consider `errors.AsType` adoption sweep in tests (client_test.go still
-    uses `errors.As`-style anywhere? — one grep; the go-error-modernization
-    skill's fix subcommand does this mechanically)
+uses `errors.As`-style anywhere? — one grep; the go-error-modernization
+skill's fix subcommand does this mechanically)
 49. Run `erraudit fix ./... --type-aware` once to confirm zero auto-fixable
-    legacy `errors.As` remain (should be a no-op)
+legacy `errors.As` remain (should be a no-op)
 50. Release decision: is this v0.3.2 scope or does it fold into the next
-    planned minor? (question for Lars — see g/2)
+planned minor? (question for Lars — see g/2)
 
 ## g) Questions I cannot answer myself
 

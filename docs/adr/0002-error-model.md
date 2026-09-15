@@ -59,4 +59,3 @@ toward zero:
   not a mechanical lint fix.
 
 [go-error-family]: https://github.com/larsartmann/go-error-family
-

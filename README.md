@@ -94,11 +94,11 @@ client, err := paperless.New(url, token, paperless.WithRetry(paperless.RetryPoli
 
 ## Lookup verbs
 
-| Verb   | Contract                                                       |
-| ------ | -------------------------------------------------------------- |
-| `Get*` | Read by ID; not found is an error or a `false` flag            |
-| `Find*`| Read-only exact-name lookup; returns `exists=false` when absent |
-| `Ensure*` | Find-or-create; never mutates an existing object's config    |
+| Verb      | Contract                                                        |
+| --------- | --------------------------------------------------------------- |
+| `Get*`    | Read by ID; not found is an error or a `false` flag             |
+| `Find*`   | Read-only exact-name lookup; returns `exists=false` when absent |
+| `Ensure*` | Find-or-create; never mutates an existing object's config       |
 
 ## Development
 

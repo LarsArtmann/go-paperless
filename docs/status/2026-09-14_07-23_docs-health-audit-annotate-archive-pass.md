@@ -9,17 +9,17 @@
 
 ## Headline numbers
 
-| Metric | Value |
-| --- | --- |
-| `**/2026-0*` files viewed | 19 of 19 (6 status `.md`, 2 planning `.md`, 6 HTML reviews, 2 D2, 2 SVG) |
-| Historical items resolved inline | ~450 rows/items across 8 files (strikethrough + `done at`/`Won't implement`/routed markers) |
-| Living docs updated | 6 of 6 (TODO_LIST, FEATURES, ROADMAP, CHANGELOG, AGENTS, README) |
-| TODO_LIST rebuilt | 9 DONE rows deleted, 1 ghost row killed, 1 overclaim corrected, 14 verified rows added → 3 High / 11 Med / 11 Low, 100% open |
-| Code/config fixes | 1 (`.golangci.yml` `run.go: 1.26.7` → `1.27`) |
-| Archived | 1 file → `docs/status/archived/` (the fully-resolved 13:42 audit) |
-| Claim verifications against code | 20+ (grep/fetch/live), 3 overclaims found |
-| Gates | `nix run .#check` "all checks passed!" · `.#vet` exit 0 · `nix fmt` 0 changed · coverage 88.6% re-verified first-hand |
-| Final health scores | Accuracy 10/10 · Fitness 10/10 (post-fix; prior baseline 9.5/10 from the 13:42 audit) |
+| Metric                           | Value                                                                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `**/2026-0*` files viewed        | 19 of 19 (6 status `.md`, 2 planning `.md`, 6 HTML reviews, 2 D2, 2 SVG)                                                     |
+| Historical items resolved inline | ~450 rows/items across 8 files (strikethrough + `done at`/`Won't implement`/routed markers)                                  |
+| Living docs updated              | 6 of 6 (TODO_LIST, FEATURES, ROADMAP, CHANGELOG, AGENTS, README)                                                             |
+| TODO_LIST rebuilt                | 9 DONE rows deleted, 1 ghost row killed, 1 overclaim corrected, 14 verified rows added → 3 High / 11 Med / 11 Low, 100% open |
+| Code/config fixes                | 1 (`.golangci.yml` `run.go: 1.26.7` → `1.27`)                                                                                |
+| Archived                         | 1 file → `docs/status/archived/` (the fully-resolved 13:42 audit)                                                            |
+| Claim verifications against code | 20+ (grep/fetch/live), 3 overclaims found                                                                                    |
+| Gates                            | `nix run .#check` "all checks passed!" · `.#vet` exit 0 · `nix fmt` 0 changed · coverage 88.6% re-verified first-hand        |
+| Final health scores              | Accuracy 10/10 · Fitness 10/10 (post-fix; prior baseline 9.5/10 from the 13:42 audit)                                        |
 
 ---
 
@@ -80,58 +80,58 @@
 
 Impact-ordered. Items 1–24 are the verified TODO_LIST (do not duplicate here in full — it is the source of truth); 25–50 are fresh from this session or routed-adjacent.
 
-| # | Thing | Impact | Effort |
-| --- | --- | --- | --- |
-| 1 | Cut v0.4.0 with the hardening tail (race-in-check, integration scaffold, error catalog, ADR 0001, typed enum, packages.default, lint alignment) — TODO_LIST High | High | 30m |
-| 2 | Push bank-sync + InboxClean consumer bumps (blocked on your go) — TODO_LIST High | High | 10m |
-| 3 | bank-sync trimmed-fork retirement decision — TODO_LIST High, BLOCKED | High | 2h |
-| 4 | Integration scaffold e2e: upload → `WaitForTask` → checksums reconcile — TODO_LIST Med | Med | 2h |
-| 5 | Verify v0.2.0/v0.3.0 tags build clean in-sandbox (settles the red-gate-at-tag question) — TODO_LIST Med | Med | 30m |
-| 6 | Audit the 8 non-mechanical lint fixes — TODO_LIST Med | Med | 1h |
-| 7 | gosec CI step: assert Files > 0 — TODO_LIST Med | Med | 15m |
-| 8 | erraudit CI gate decision — TODO_LIST Med | Med | 30m |
-| 9 | Coverage recovery (88.6% → top-3 uncovered blocks named + closed) — TODO_LIST Med | Med | 1h |
-| 10 | Cap-parity tests for `ListDocumentMetas` + `ListStoragePaths` — TODO_LIST Med (found this session) | Med | 30m |
-| 11 | Wire ERROR_CODES.md into CI (catalog-drift grep test) — TODO_LIST Med | Med | 30m |
-| 12 | Fuzz `savedViewPayload`/`shareLinkPayload` — TODO_LIST Med | Med | 30m |
-| 13 | SECURITY.md share-link threat model — TODO_LIST Med | Med | 15m |
-| 14 | Typed enums for `FileVersion`/expiry + `rule_type` — TODO_LIST Med | Med | 1h |
-| 15 | Flake version git-derived or release-commit-bumped — TODO_LIST Med | Med | 45m |
-| 16 | T23 streaming-upload spike note — TODO_LIST Low | Low | 1h |
-| 17 | Examples batch (WaitForTask + retry; `// Output:` for the two runnable examples) — TODO_LIST Low | Low | 45m |
-| 18 | `.crushrc` LSP verification after a real Crush restart — TODO_LIST Low | Low | 10m |
-| 19 | `docs/adr/` index + template — TODO_LIST Low | Low | 20m |
-| 20 | `t.Cleanup`-vs-`defer` call, recorded once in AGENTS.md — TODO_LIST Low | Low | 15m |
-| 21 | Integration wiring: `go vet -tags integration` gate + opt-in `checks.integration` — TODO_LIST Low | Low | 30m |
-| 22 | Verb-table drift test — TODO_LIST Low | Low | 20m |
-| 23 | README quick-start snippets for the three v0.3.0 families — TODO_LIST Low | Low | 30m |
-| 24 | Tests tail: transport constants, `WithHTTPClient(nil)`, custom_fields PATCH — TODO_LIST Low | Low | 30m |
-| 25 | Route-or-close the ~35 unmarked f-table leftovers (see g-1): rate-limit interplay doc, ADR 0002 pagination policy, `decode_*` normalization test, multipart property test, pagination benchmarks, PR-template consumer checkbox, probe AcceptAPIVersion integration assert | Low-Med | 30m |
-| 26 | Re-run `erraudit` inside the dev shell so the TODO row's "zero findings" is fresh, not inherited | Low | 5m |
-| 27 | Re-run `art-dupl -t 5` over the enlarged test file (last clean scan predates the tail's tests) | Low | 10m |
-| 28 | Add a `docs/status/INDEX.md` (or fold into reviews INDEX) covering the six status reports + `archived/` | Low | 15m |
-| 29 | Add "DONE evidence home" note to the TODO_LIST legend (CHANGELOG vs status report) | Low | 5m |
-| 30 | Annotate the 6 HTML review reports per-finding, or formalize LEAVE-ALONE in INDEX.md (g-3) | Low | 1h+ |
-| 31 | Standardize annotation style across plans vs reports (g-2) | Low | 30m |
-| 32 | Post-release ritual as one command — TODO_LIST Low | Low | 1h |
-| 33 | INDEX.md link-check in CI — declined this session (low churn); revisit if the report series grows | Low | 20m |
-| 34 | Release-notes-verbatim check: diff the v0.3.0 GitHub Release body against CHANGELOG once | Low | 10m |
-| 35 | `decode_*` code normalization: dedicated test for `fetchAllPages` space→underscore codes | Low | 15m |
-| 36 | `BenchmarkListDocumentChecksums` next to `BenchmarkUpload` | Low | 20m |
-| 37 | ROADMAP: capability-probe caching already routed; consider probe-cost measurement first so the idea has data | Low | 20m |
-| 38 | go-error-family upgrade check (v0.10.0 pinned; verify at next ecosystem sweep) | Low | 10m |
-| 39 | PR template: "consumer impact" checkbox (bank-sync/InboxClean pin this module) | Low | 10m |
-| 40 | Note-count/size guard documentation for the unpaginated notes endpoint | Low | 15m |
-| 41 | `WithRetry` + `WaitForTask` deadline math: one godoc paragraph (test already pins behavior) | Low | 10m |
-| 42 | Dependabot actions-group triage when the first PR lands (event-driven; on notice) | Low | 10m |
-| 43 | Consumer repos: nolintlint unknown-directive warnings (deferloop/erraudit/legacyerrors) — bank-sync-owned | Low | 15m |
-| 44 | Consumer repos: dependabot gomod pin for go-paperless bumps — bank-sync/InboxClean-owned | Low | 15m |
-| 45 | `checks.integration` demo-server workflow_dispatch (after item 21) | Low | 30m |
-| 46 | Multi-system flake decision (restrict `systems` vs portability work) — needs your call first | Med (decision) | — |
-| 47 | 13:51 + 18:40 plans: once C08/C14/C25 resolve, re-run docs-health and archive them | Low | 20m |
-| 48 | Quarterly ROADMAP prune (standing hygiene; last full pass was this session) | Low | 15m |
-| 49 | `client.go` split at ~3k lines — watch item, currently 2,371 | Low | — |
-| 50 | Session-hygiene standing rule held: gate first, cite only verified hashes, dry-run scripts — keep all three | — | — |
+| #  | Thing                                                                                                                                                                                                                                                                      | Impact         | Effort |
+| -- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
+| 1  | Cut v0.4.0 with the hardening tail (race-in-check, integration scaffold, error catalog, ADR 0001, typed enum, packages.default, lint alignment) — TODO_LIST High                                                                                                           | High           | 30m    |
+| 2  | Push bank-sync + InboxClean consumer bumps (blocked on your go) — TODO_LIST High                                                                                                                                                                                           | High           | 10m    |
+| 3  | bank-sync trimmed-fork retirement decision — TODO_LIST High, BLOCKED                                                                                                                                                                                                       | High           | 2h     |
+| 4  | Integration scaffold e2e: upload → `WaitForTask` → checksums reconcile — TODO_LIST Med                                                                                                                                                                                     | Med            | 2h     |
+| 5  | Verify v0.2.0/v0.3.0 tags build clean in-sandbox (settles the red-gate-at-tag question) — TODO_LIST Med                                                                                                                                                                    | Med            | 30m    |
+| 6  | Audit the 8 non-mechanical lint fixes — TODO_LIST Med                                                                                                                                                                                                                      | Med            | 1h     |
+| 7  | gosec CI step: assert Files > 0 — TODO_LIST Med                                                                                                                                                                                                                            | Med            | 15m    |
+| 8  | erraudit CI gate decision — TODO_LIST Med                                                                                                                                                                                                                                  | Med            | 30m    |
+| 9  | Coverage recovery (88.6% → top-3 uncovered blocks named + closed) — TODO_LIST Med                                                                                                                                                                                          | Med            | 1h     |
+| 10 | Cap-parity tests for `ListDocumentMetas` + `ListStoragePaths` — TODO_LIST Med (found this session)                                                                                                                                                                         | Med            | 30m    |
+| 11 | Wire ERROR_CODES.md into CI (catalog-drift grep test) — TODO_LIST Med                                                                                                                                                                                                      | Med            | 30m    |
+| 12 | Fuzz `savedViewPayload`/`shareLinkPayload` — TODO_LIST Med                                                                                                                                                                                                                 | Med            | 30m    |
+| 13 | SECURITY.md share-link threat model — TODO_LIST Med                                                                                                                                                                                                                        | Med            | 15m    |
+| 14 | Typed enums for `FileVersion`/expiry + `rule_type` — TODO_LIST Med                                                                                                                                                                                                         | Med            | 1h     |
+| 15 | Flake version git-derived or release-commit-bumped — TODO_LIST Med                                                                                                                                                                                                         | Med            | 45m    |
+| 16 | T23 streaming-upload spike note — TODO_LIST Low                                                                                                                                                                                                                            | Low            | 1h     |
+| 17 | Examples batch (WaitForTask + retry; `// Output:` for the two runnable examples) — TODO_LIST Low                                                                                                                                                                           | Low            | 45m    |
+| 18 | `.crushrc` LSP verification after a real Crush restart — TODO_LIST Low                                                                                                                                                                                                     | Low            | 10m    |
+| 19 | `docs/adr/` index + template — TODO_LIST Low                                                                                                                                                                                                                               | Low            | 20m    |
+| 20 | `t.Cleanup`-vs-`defer` call, recorded once in AGENTS.md — TODO_LIST Low                                                                                                                                                                                                    | Low            | 15m    |
+| 21 | Integration wiring: `go vet -tags integration` gate + opt-in `checks.integration` — TODO_LIST Low                                                                                                                                                                          | Low            | 30m    |
+| 22 | Verb-table drift test — TODO_LIST Low                                                                                                                                                                                                                                      | Low            | 20m    |
+| 23 | README quick-start snippets for the three v0.3.0 families — TODO_LIST Low                                                                                                                                                                                                  | Low            | 30m    |
+| 24 | Tests tail: transport constants, `WithHTTPClient(nil)`, custom_fields PATCH — TODO_LIST Low                                                                                                                                                                                | Low            | 30m    |
+| 25 | Route-or-close the ~35 unmarked f-table leftovers (see g-1): rate-limit interplay doc, ADR 0002 pagination policy, `decode_*` normalization test, multipart property test, pagination benchmarks, PR-template consumer checkbox, probe AcceptAPIVersion integration assert | Low-Med        | 30m    |
+| 26 | Re-run `erraudit` inside the dev shell so the TODO row's "zero findings" is fresh, not inherited                                                                                                                                                                           | Low            | 5m     |
+| 27 | Re-run `art-dupl -t 5` over the enlarged test file (last clean scan predates the tail's tests)                                                                                                                                                                             | Low            | 10m    |
+| 28 | Add a `docs/status/INDEX.md` (or fold into reviews INDEX) covering the six status reports + `archived/`                                                                                                                                                                    | Low            | 15m    |
+| 29 | Add "DONE evidence home" note to the TODO_LIST legend (CHANGELOG vs status report)                                                                                                                                                                                         | Low            | 5m     |
+| 30 | Annotate the 6 HTML review reports per-finding, or formalize LEAVE-ALONE in INDEX.md (g-3)                                                                                                                                                                                 | Low            | 1h+    |
+| 31 | Standardize annotation style across plans vs reports (g-2)                                                                                                                                                                                                                 | Low            | 30m    |
+| 32 | Post-release ritual as one command — TODO_LIST Low                                                                                                                                                                                                                         | Low            | 1h     |
+| 33 | INDEX.md link-check in CI — declined this session (low churn); revisit if the report series grows                                                                                                                                                                          | Low            | 20m    |
+| 34 | Release-notes-verbatim check: diff the v0.3.0 GitHub Release body against CHANGELOG once                                                                                                                                                                                   | Low            | 10m    |
+| 35 | `decode_*` code normalization: dedicated test for `fetchAllPages` space→underscore codes                                                                                                                                                                                   | Low            | 15m    |
+| 36 | `BenchmarkListDocumentChecksums` next to `BenchmarkUpload`                                                                                                                                                                                                                 | Low            | 20m    |
+| 37 | ROADMAP: capability-probe caching already routed; consider probe-cost measurement first so the idea has data                                                                                                                                                               | Low            | 20m    |
+| 38 | go-error-family upgrade check (v0.10.0 pinned; verify at next ecosystem sweep)                                                                                                                                                                                             | Low            | 10m    |
+| 39 | PR template: "consumer impact" checkbox (bank-sync/InboxClean pin this module)                                                                                                                                                                                             | Low            | 10m    |
+| 40 | Note-count/size guard documentation for the unpaginated notes endpoint                                                                                                                                                                                                     | Low            | 15m    |
+| 41 | `WithRetry` + `WaitForTask` deadline math: one godoc paragraph (test already pins behavior)                                                                                                                                                                                | Low            | 10m    |
+| 42 | Dependabot actions-group triage when the first PR lands (event-driven; on notice)                                                                                                                                                                                          | Low            | 10m    |
+| 43 | Consumer repos: nolintlint unknown-directive warnings (deferloop/erraudit/legacyerrors) — bank-sync-owned                                                                                                                                                                  | Low            | 15m    |
+| 44 | Consumer repos: dependabot gomod pin for go-paperless bumps — bank-sync/InboxClean-owned                                                                                                                                                                                   | Low            | 15m    |
+| 45 | `checks.integration` demo-server workflow_dispatch (after item 21)                                                                                                                                                                                                         | Low            | 30m    |
+| 46 | Multi-system flake decision (restrict `systems` vs portability work) — needs your call first                                                                                                                                                                               | Med (decision) | —      |
+| 47 | 13:51 + 18:40 plans: once C08/C14/C25 resolve, re-run docs-health and archive them                                                                                                                                                                                         | Low            | 20m    |
+| 48 | Quarterly ROADMAP prune (standing hygiene; last full pass was this session)                                                                                                                                                                                                | Low            | 15m    |
+| 49 | `client.go` split at ~3k lines — watch item, currently 2,371                                                                                                                                                                                                               | Low            | —      |
+| 50 | Session-hygiene standing rule held: gate first, cite only verified hashes, dry-run scripts — keep all three                                                                                                                                                                | —              | —      |
 
 **HARVEST note:** 1–24 already live in TODO_LIST (this session's harvest); 25–35 are the fresh residue of this session. The rest is ROADMAP-grade or event-driven.
 
@@ -143,4 +143,4 @@ Impact-ordered. Items 1–24 are the verified TODO_LIST (do not duplicate here i
 
 ---
 
-*Point-in-time snapshot — goes stale by design. Section (f) is the HARVEST input; items 1–24 were already routed into `TODO_LIST.md` this session. Annotate non-destructively via docs-health ANNOTATE mode; do not rewrite.*
+_Point-in-time snapshot — goes stale by design. Section (f) is the HARVEST input; items 1–24 were already routed into `TODO_LIST.md` this session. Annotate non-destructively via docs-health ANNOTATE mode; do not rewrite._
