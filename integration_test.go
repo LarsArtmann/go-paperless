@@ -190,8 +190,13 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 	if _, found := checksums[wantChecksum]; !found {
 		metas, metaErr := client.ListDocumentMetas(ctx)
 		if metaErr != nil {
-			t.Fatalf("document %d checksum %q missing from %d listed checksums (meta listing also failed: %v)",
-				documentID, wantChecksum, len(checksums), metaErr)
+			t.Fatalf(
+				"document %d checksum %q missing from %d listed checksums (meta listing also failed: %v)",
+				documentID,
+				wantChecksum,
+				len(checksums),
+				metaErr,
+			)
 		}
 
 		for _, meta := range metas {

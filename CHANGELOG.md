@@ -8,6 +8,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `SavedViewRuleType`, a distinct typed enum for saved-view `rule_type`
+  values (mirrors `matchingAlgorithm`), with 16 verified constants from the
+  upstream filter-rule table (title, content, ASN, correspondent, document
+  type, inbox, tag set, dates, full-text query, storage path); unknown
+  server IDs still decode and re-encode unchanged
+- Doc-drift tests (`docs_drift_test.go`) that mechanically pin release
+  contracts: every `paperless.*` error code extracted from `client.go`
+  (static literals AND the kind-parameterized helper sites) must have a
+  `docs/ERROR_CODES.md` row; flake.nix `version` must match the newest
+  CHANGELOG release heading; every exported `Find*`/`Get*`/`Ensure*`
+  method must appear in README.md
+- Fuzzers for the saved-view and share-link payload decoding
+  (`FuzzDecodeSavedViewPayload`, `FuzzDecodeShareLinkPayload`),
+  mirroring the existing checksum/retry-after fuzz contracts
+- Cap-parity tests for `ListDocumentMetas` and `ListStoragePaths` — all
+  five listings now prove the 100-page cap stops the scan
+- Real-server e2e `TestIntegrationUploadReconcile` (behind the
+  `integration` build tag): upload → `WaitForTask` → checksum reconcile →
+  metadata assertions, self-cleaning via `t.Cleanup`
+- `checks.integration-vet` (compiles the integration scaffold in
+  `nix flake check`) plus opt-in apps `nix run .#integration` (live run)
+  and `nix run .#release-verify -- vX.Y.Z` (post-release ritual: tag/
+  CHANGELOG/flake agreement, push status, CI green, pkg.go.dev indexing,
+  race tests)
+- gosec CI step now asserts the scanner actually loaded files
+  (`Files > 0`, pattern verified against real gosec output), failing
+  closed on the v0.1.1 zero-files failure class
+- ADR index (`docs/adr/README.md`), ADR template, and ADR 0003
+  (streaming upload is explicitly NOT promised, with the
+  Content-Length/replay constraints any future design must satisfy)
+- SECURITY.md share-link threat-model paragraph (public unauthenticated
+  URL exposure, expiration guidance, slug hygiene)
+- README "Common tasks" snippets (document notes, share links, saved
+  views) and a custom-fields features row; `ExampleClient_WaitForTask`
+  and `ExampleWithRetry`; `ExampleNew`/`ExampleNew_withOptions` are now
+  runnable with `// Output:` assertions
+- Coverage-recovery tests naming and closing the blocks behind the
+  88.6% dip: delete-family zero-ID rejections and server-error wraps
+  (`DeleteShareLink`/`DeleteSavedView`/`DeleteDocument`), and the
+  self-heal PATCH failure path; suite back above 90%
+- Tests tail: `defaultTransport` honors the exported idle-pool constants,
+  `WithHTTPClient(nil)` keeps the default transport, and
+  `UpdateDocument` custom_fields wire shape plus the empty-`TagIDs`
+  omission contract are asserted
 - `paperless.invalid_retry` code: `New` with a negative retry `MaxAttempts`
   now returns a coded Rejection naming the offending value (still wraps
   `ErrInvalidConfig`, so `errors.Is` matching is unchanged)
@@ -24,6 +68,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- `SavedViewFilterRule.RuleType` is now `SavedViewRuleType` (was bare
+  `int`). Untyped constants (`RuleType: 6`) keep compiling; values typed
+  as `int` need a conversion at the call site
+- erraudit CI decision recorded (AGENTS.md): the gate stays dev-shell-only
+  until `github.com/larsartmann/erraudit` is on the public module proxy
+  (404 there as of v0.4.0); private-runner auth and a golangci plugin were
+  rejected
 - Dependency floors bumped: `go-error-family` v0.10.1 and `go-retry` v0.6.0 —
   both upstream releases are behavior-preserving for this module (v0.10.1 is
   lint-comment/test-only; v0.6.0 extracts the existing retry codes into named
@@ -35,7 +86,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Nothing yet.
+- `findNamed` constructed a code containing a space for multi-word kinds
+  (`paperless.decode_document types`); multi-word kinds now produce
+  underscored codes (`paperless.decode_document_types`)
+- The error-code catalog was missing nine live codes produced by the
+  named-object helpers (`decode_tags`, `decode_correspondents`,
+  `decode_document_types`, `decode_tag`, `decode_correspondent`,
+  `decode_document_type`, `marshal_tag`, `marshal_correspondent`,
+  `marshal_document_type`, `marshal_tag_update`) — all documented now,
+  and kept complete by the drift test
+
+### Verified
+
+- All three tags (v0.2.0, v0.3.0, v0.3.1) build, test, and lint clean in
+  the Nix sandbox from their own worktrees — no red gate shipped inside a
+  tag (the failed `go-paperless-0.2.0` derivation was the v0.3.0 commit's
+  drift-named build, and it passes). The live integration e2e compiles in
+  `nix flake check` (`checks.integration-vet`); a live run still needs a
+  Paperless-ngx instance
 
 ## [0.3.1] - 2026-09-14
 

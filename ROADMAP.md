@@ -64,8 +64,9 @@ Raw ideas:
 - ~~An integration test tier against a real paperless-ngx (containers)
   exercising upload → poll → reconcile end to end~~ → scaffold shipped:
   `integration_test.go` behind the `integration` build tag (ping + the five
-  listings, env-driven); the upload → poll → reconcile loop itself is still
-  open, tracked in TODO_LIST
+  listings); the upload → poll → checksum-reconcile loop itself is written
+  (`TestIntegrationUploadReconcile`, compiled by `checks.integration-vet`)
+  and needs a live server to run (`nix run .#integration`)
 - ~~Fuzz or property tests for the checksum/status/date parsers~~ → shipped:
   `FuzzParseRetryAfter`, `FuzzParseDocumentCreated`, `FuzzChecksumFrom`,
   `FuzzClassifyTask` (`fuzz_test.go`; the retry-after fuzzer found and fixed

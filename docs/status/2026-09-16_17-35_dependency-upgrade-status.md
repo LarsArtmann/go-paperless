@@ -1,12 +1,12 @@
 # Status Report — Dependency Upgrade (go-error-family, go-retry, toolchain)
 
-| | |
-|---|---|
-| **Date** | 2026-09-16 17:35 CEST |
-| **Repo / Branch** | `go-paperless` @ `main`, HEAD `057e3a0` (daemon-swept, moving) |
-| **Session** | Crush (`go-ecosystem-upgrade` + `buildflow` skills loaded; repo NOT BuildFlow-covered) |
-| **Scope** | Single task: "make sure we use the latest version superbly" — deps + toolchain of go-paperless only |
-| **Format note** | User explicitly requested `.md`; the status-report skill's canonical format is HTML. Override honored per skill contract. |
+|                      |                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Date**             | 2026-09-16 17:35 CEST                                                                                                                                                                 |
+| **Repo / Branch**    | `go-paperless` @ `main`, HEAD `057e3a0` (daemon-swept, moving)                                                                                                                        |
+| **Session**          | Crush (`go-ecosystem-upgrade` + `buildflow` skills loaded; repo NOT BuildFlow-covered)                                                                                                |
+| **Scope**            | Single task: "make sure we use the latest version superbly" — deps + toolchain of go-paperless only                                                                                   |
+| **Format note**      | User explicitly requested `.md`; the status-report skill's canonical format is HTML. Override honored per skill contract.                                                             |
 | **Parallel session** | A sibling Crush session worked this same repo concurrently (integration test scaffold + CI). Its uncommitted files at report time: `.github/workflows/ci.yml`, `integration_test.go`. |
 
 ---
@@ -19,20 +19,20 @@ Both direct dependencies bumped to latest and verified by the full hermetic batt
 
 ## a) FULLY DONE
 
-| Item | Evidence |
-|---|---|
-| Researched latest versions via module proxy + go.dev (not guessed) | `go list -m -versions` for both deps; go.dev/dl JSON shows go1.27.1 latest stable |
-| Reviewed both upstream release diffs for breaking changes before bumping | `gh api compare v0.10.0...v0.10.1`, `v0.5.0...v0.6.0`; all root-module patches of error.go/family.go/handle.go/http.go/classify.go/example_test.go inspected |
-| Baseline established BEFORE change | `nix run .#build` + `.#test` green pre-bump (no pre-existing failures) |
-| `go-error-family` v0.10.0 → **v0.10.1** | go.mod grep-verified; `go mod verify` = "all modules verified" |
-| `go-retry` v0.5.0 → **v0.6.0** | go.mod grep-verified; go.sum updated |
-| `go 1.27` floor preserved (major.minor only — no patch-floor leak from deps) | `go mod edit -go=1.27` normalization; file re-read after |
-| Full verification battery | build ✅ test ✅ vet ✅ host `-race` ✅ sandboxed `checks.test-race` ✅ golangci-lint ✅ treefmt ✅ erraudit gate (exit 0, no violations) ✅ `go mod verify` ✅ |
-| `nix flake check` (CI-equivalent incl. sibling's new `integration-vet`) | "all checks passed!" |
-| vendorHash FOD updated for new module set | `sha256-oLknr8l…` → `sha256-mk/dJNF…`, proven by two successful sandboxed builds (authored by sibling session — see d2) |
-| No stale version references in living surfaces | swept go.mod/go.sum/flake.nix/README/AGENTS/CI/dprint/.golangci — none; AGENTS' "go 1.26.7" mentions describe the host machine, deliberately accurate |
-| CHANGELOG `[Unreleased] → Changed` entry | added, now committed by daemon |
-| Version-surface inventory | CI uses `go-version-file: go.mod` (no drift possible); README badge "Go 1.27+" still correct; dependabot config noted |
+| Item                                                                         | Evidence                                                                                                                                                        |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Researched latest versions via module proxy + go.dev (not guessed)           | `go list -m -versions` for both deps; go.dev/dl JSON shows go1.27.1 latest stable                                                                               |
+| Reviewed both upstream release diffs for breaking changes before bumping     | `gh api compare v0.10.0...v0.10.1`, `v0.5.0...v0.6.0`; all root-module patches of error.go/family.go/handle.go/http.go/classify.go/example_test.go inspected    |
+| Baseline established BEFORE change                                           | `nix run .#build` + `.#test` green pre-bump (no pre-existing failures)                                                                                          |
+| `go-error-family` v0.10.0 → **v0.10.1**                                      | go.mod grep-verified; `go mod verify` = "all modules verified"                                                                                                  |
+| `go-retry` v0.5.0 → **v0.6.0**                                               | go.mod grep-verified; go.sum updated                                                                                                                            |
+| `go 1.27` floor preserved (major.minor only — no patch-floor leak from deps) | `go mod edit -go=1.27` normalization; file re-read after                                                                                                        |
+| Full verification battery                                                    | build ✅ test ✅ vet ✅ host `-race` ✅ sandboxed `checks.test-race` ✅ golangci-lint ✅ treefmt ✅ erraudit gate (exit 0, no violations) ✅ `go mod verify` ✅ |
+| `nix flake check` (CI-equivalent incl. sibling's new `integration-vet`)      | "all checks passed!"                                                                                                                                            |
+| vendorHash FOD updated for new module set                                    | `sha256-oLknr8l…` → `sha256-mk/dJNF…`, proven by two successful sandboxed builds (authored by sibling session — see d2)                                         |
+| No stale version references in living surfaces                               | swept go.mod/go.sum/flake.nix/README/AGENTS/CI/dprint/.golangci — none; AGENTS' "go 1.26.7" mentions describe the host machine, deliberately accurate           |
+| CHANGELOG `[Unreleased] → Changed` entry                                     | added, now committed by daemon                                                                                                                                  |
+| Version-surface inventory                                                    | CI uses `go-version-file: go.mod` (no drift possible); README badge "Go 1.27+" still correct; dependabot config noted                                           |
 
 ## b) PARTIALLY DONE
 
@@ -61,14 +61,15 @@ Both direct dependencies bumped to latest and verified by the full hermetic batt
 ## Honesty corrections (did I lie?)
 
 No deliberate lies. Two overbroad statements corrected:
+
 - "v0.10.1 is lint-comment/test-only" — **verified for all 6 root-module library files**; the 2 `examples/cmd/*` patches were unviewed (and don't affect consumers of the root package regardless — but the sentence didn't scope that).
-- "go-retry v0.6.0 behavior-preserving" — the retry.go diff I inspected was head-truncated; one upstream test switched from `errors.Is` to pointer-identity on the non-retryable path, which *could* indicate an unviewed behavior change there. The full go-paperless suite (including the `invalid_retry` rejection-identity contract) passes on v0.6.0, which is the real gate — but the diff-level claim should have been stated as "reviewed up to truncation; suite-verified".
+- "go-retry v0.6.0 behavior-preserving" — the retry.go diff I inspected was head-truncated; one upstream test switched from `errors.Is` to pointer-identity on the non-retryable path, which _could_ indicate an unviewed behavior change there. The full go-paperless suite (including the `invalid_retry` rejection-identity contract) passes on v0.6.0, which is the real gate — but the diff-level claim should have been stated as "reviewed up to truncation; suite-verified".
 
 ## e) WHAT WE SHOULD IMPROVE
 
 1. **Parallel-session protocol.** Two agents + daemon on one worktree produced tangled commits and a near-miss on vendorHash attribution. Options: jj/worktree-per-session, or explicit "repo is busy" handoff. Biggest structural fix available.
 2. **Port `update-vendor-hash` from bank-sync's flake.** go-paperless still does the vendorHash dance by hand (exactly what bank-sync automation forbids there).
-3. **Hermetic erraudit.** The AGENTS-documented gate runs the *host's* erraudit through PATH inside `nix develop`; flake ships no pinned binary (bank-sync pins `packages.erraudit` v0.3.1 hermetically). Unreproducible gate.
+3. **Hermetic erraudit.** The AGENTS-documented gate runs the _host's_ erraudit through PATH inside `nix develop`; flake ships no pinned binary (bank-sync pins `packages.erraudit` v0.3.1 hermetically). Unreproducible gate.
 4. **Verify-rider-changes rule.** Any commit I build on must be diff-read in full (learned via 5f8d07b's AGENTS/ERROR_CODES riders).
 5. **Complete-diff discipline.** When a compare patch is truncated, either paginate it or scope the claim explicitly to what was seen + what the tests prove.
 6. **Claim only measured things.** The consumer-impact statement was reasoned, not measured; one grep would have converted it.
@@ -122,8 +123,8 @@ No deliberate lies. Two overbroad statements corrected:
 
 1. **Commit authorization & protocol:** In go-paperless, may I commit explicitly per task (beating the daemon), so bump+hash+changelog land as one honest commit? Same for future repos — or is heuristic daemon history acceptable to you there?
 2. **Coordination:** Is the sibling session's integration work still intended for the same release? Should I wait for its completion before cutting v0.3.2, or release the dep bump standalone?
-3. **Dependency policy:** Keep weekly dependabot gomod PRs *and* do manual sweeps like this one, or restrict dependabot (e.g. security-only) so bumps you care about stay deliberate?
+3. **Dependency policy:** Keep weekly dependabot gomod PRs _and_ do manual sweeps like this one, or restrict dependabot (e.g. security-only) so bumps you care about stay deliberate?
 
 ---
 
-*Point-in-time snapshot. The tree was actively changing while this was written (HEAD moved 4 daemon commits during the session; sibling files uncommitted). WAITING FOR INSTRUCTIONS.*
+_Point-in-time snapshot. The tree was actively changing while this was written (HEAD moved 4 daemon commits during the session; sibling files uncommitted). WAITING FOR INSTRUCTIONS._
