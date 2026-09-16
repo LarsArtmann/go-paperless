@@ -33,6 +33,7 @@
         {
           config,
           pkgs,
+          lib,
           ...
         }:
         let
@@ -54,6 +55,11 @@
             env = {
               CGO_ENABLED = "0";
               GOEXPERIMENT = goExperiment;
+            };
+            meta = {
+              description = "Paperless-ngx REST client SDK for Go";
+              license = lib.licenses.mit;
+              platforms = lib.platforms.unix;
             };
           };
 
@@ -105,22 +111,6 @@
             };
           };
 
-          checks.format = config.treefmt.build.check self;
-
-          # Race detector in CI-identical hermetic conditions: reuse the
-          # vendored module build and force -race in its test phase.
-          checks.test-race = goModule (
-            goModuleArgs
-            // {
-              pname = "go-paperless-race";
-              env = goModuleArgs.env // {
-                CGO_ENABLED = "1";
-              };
-              checkFlags = [ "-race" ];
-              installPhase = ''touch "$out"'';
-            }
-          );
-
           devShells = {
             default = pkgs.mkShellNoCC {
               packages = [
@@ -158,7 +148,23 @@
           };
 
           checks = {
+            format = config.treefmt.build.check self;
+
             build = moduleBuild;
+
+            # Race detector in CI-identical hermetic conditions: reuse the
+            # vendored module build and force -race in its test phase.
+            test-race = goModule (
+              goModuleArgs
+              // {
+                pname = "go-paperless-race";
+                env = goModuleArgs.env // {
+                  CGO_ENABLED = "1";
+                };
+                checkFlags = [ "-race" ];
+                installPhase = ''touch "$out"'';
+              }
+            );
 
             test = goModule (
               goModuleArgs
