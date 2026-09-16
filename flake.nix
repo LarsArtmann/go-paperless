@@ -281,6 +281,77 @@
                   trash-put coverage.out 2>/dev/null || true
                   go clean -testcache
                 '';
+
+            integration =
+              mkApp "integration"
+                "Run real-server integration tests (needs PAPERLESS_INTEGRATION_URL and PAPERLESS_INTEGRATION_TOKEN)"
+                [ goPkg ]
+                ''
+                  go test -tags integration -count=1 -v ./...
+                '';
+
+            release-verify =
+              mkApp "release-verify"
+                "Post-release ritual: tag/CHANGELOG/flake agreement, clean pushed tree, green CI, pkg.go.dev indexing, race tests"
+                [
+                  pkgs.bash
+                  pkgs.coreutils
+                  pkgs.curl
+                  pkgs.git
+                  pkgs.gh
+                  goPkg
+                ]
+                ''
+                  set -euo pipefail
+                  version="''${1:-}"
+                  if [[ -z "$version" ]]; then
+                    echo "usage: nix run .#release-verify -- vX.Y.Z" >&2
+                    exit 1
+                  fi
+                  version_digits="''${version#v}"
+
+                  echo "== tag exists =="
+                  git fetch --tags --quiet
+                  git rev-parse -q --verify "refs/tags/$version" >/dev/null \
+                    || { echo "FAIL: tag $version does not exist"; exit 1; }
+                  echo "ok: $version"
+
+                  echo "== CHANGELOG and flake.nix agree with the tag =="
+                  grep -q "^## \[$version_digits\]" CHANGELOG.md \
+                    || { echo "FAIL: CHANGELOG.md has no $version_digits heading"; exit 1; }
+                  grep -q "version = \"$version_digits\"" flake.nix \
+                    || { echo "FAIL: flake.nix version is not $version_digits"; exit 1; }
+                  echo "ok: CHANGELOG + flake.nix = $version_digits"
+
+                  echo "== working tree clean and pushed =="
+                  test -z "$(git status --porcelain)" \
+                    || { echo "FAIL: dirty working tree"; git status --short; exit 1; }
+                  git fetch --quiet
+                  ahead=$(git rev-list --count "origin/main..HEAD")
+                  behind=$(git rev-list --count "HEAD..origin/main")
+                  test "$ahead" -eq 0 -a "$behind" -eq 0 \
+                    || { echo "FAIL: main is ahead=$ahead behind=$behind of origin"; exit 1; }
+                  echo "ok: main == origin/main"
+
+                  echo "== CI green on origin/main =="
+                  gh run list --branch main --limit 1 --json status,conclusion \
+                    --jq '.[0] | select(.status == "completed" and .conclusion == "success")' >/dev/null \
+                    || { echo "FAIL: latest CI run on main is not green"; exit 1; }
+                  echo "ok: CI green"
+
+                  echo "== pkg.go.dev serves the version =="
+                  curl -fsSL -o /dev/null \
+                    "https://pkg.go.dev/github.com/larsartmann/go-paperless@$version" \
+                    || { echo "FAIL: pkg.go.dev has not indexed $version yet"; exit 1; }
+                  echo "ok: pkg.go.dev indexed $version"
+
+                  echo "== race detector over the tagged tree =="
+                  git worktree add "$TMPDIR/go-paperless-release-verify" "$version" >/dev/null
+                  trap 'git worktree remove --force "$TMPDIR/go-paperless-release-verify"' EXIT
+                  ( cd "$TMPDIR/go-paperless-release-verify" \
+                    && GOEXPERIMENT=jsonv2,simd CGO_ENABLED=1 go test -race -count=1 ./... )
+                  echo "ALL GREEN: $version is released, indexed, and race-clean"
+                '';
           };
         };
     };

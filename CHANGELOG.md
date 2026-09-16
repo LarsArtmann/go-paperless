@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Dependency floors bumped: `go-error-family` v0.10.1 and `go-retry` v0.6.0 —
+  both upstream releases are behavior-preserving for this module (v0.10.1 is
+  lint-comment/test-only; v0.6.0 extracts the existing retry codes into named
+  constants with identical values and adds nested-retry regression tests)
+
 - `WaitForTask` timeout errors that carry a last poll error now name the
   task ID in the message; the multipart tags-field failure attaches the
   offending `tag_id` as structured context
