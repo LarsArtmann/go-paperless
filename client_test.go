@@ -3481,9 +3481,13 @@ func TestListSavedViewsMapsFilterRules(t *testing.T) {
 		t.Fatalf("sort = %q reverse=%t", view.SortField, view.SortReverse)
 	}
 
-	if len(view.FilterRules) != 2 || view.FilterRules[0].RuleType != 6 ||
+	if len(view.FilterRules) != 2 || view.FilterRules[0].RuleType != SavedViewRuleTypeHasTagsAll ||
 		view.FilterRules[0].Value != "has_tag:1" {
 		t.Fatalf("filter rules = %+v", view.FilterRules)
+	}
+
+	if view.FilterRules[1].RuleType != SavedViewRuleType(19) {
+		t.Fatalf("unknown rule type must decode unchanged, got %+v", view.FilterRules[1])
 	}
 }
 
@@ -3512,7 +3516,10 @@ func TestCreateSavedViewSendsStableFields(t *testing.T) {
 		ShowOnDashboard: true,
 		SortField:       "created",
 		SortReverse:     true,
-		FilterRules:     []SavedViewFilterRule{{RuleType: 6, Value: "has_tag:1"}},
+		FilterRules: []SavedViewFilterRule{{
+			RuleType: SavedViewRuleTypeHasTagsAll,
+			Value:    "has_tag:1",
+		}},
 	})
 	if err != nil {
 		t.Fatalf("CreateSavedView: %v", err)

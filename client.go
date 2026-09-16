@@ -2330,11 +2330,58 @@ func (c *Client) DeleteShareLink(ctx context.Context, linkID int) error {
 	return nil
 }
 
+// SavedViewRuleType is Paperless-ngx's saved-view filter rule_type enum
+// (src-ui/src/app/data/filter-rule-type.ts, mirrored server-side in
+// documents/models.py). A distinct type keeps saved-view rules from
+// carrying arbitrary ints; the constants below are the common filters,
+// not the full upstream table — servers add IDs over time, so unknown
+// values decode and re-encode unchanged.
+type SavedViewRuleType int
+
+const (
+	// SavedViewRuleTypeTitle matches the title text (upstream
+	// title__icontains; deprecated upstream in favor of title_search but
+	// still present in existing saved views).
+	SavedViewRuleTypeTitle SavedViewRuleType = 0
+	// SavedViewRuleTypeContent matches the document's OCR content.
+	SavedViewRuleTypeContent SavedViewRuleType = 1
+	// SavedViewRuleTypeASN matches the archive serial number.
+	SavedViewRuleTypeASN SavedViewRuleType = 2
+	// SavedViewRuleTypeCorrespondent matches a correspondent by ID.
+	SavedViewRuleTypeCorrespondent SavedViewRuleType = 3
+	// SavedViewRuleTypeDocumentType matches a document type by ID.
+	SavedViewRuleTypeDocumentType SavedViewRuleType = 4
+	// SavedViewRuleTypeIsInInbox matches documents in the inbox.
+	SavedViewRuleTypeIsInInbox SavedViewRuleType = 5
+	// SavedViewRuleTypeHasTagsAll requires every listed tag.
+	SavedViewRuleTypeHasTagsAll SavedViewRuleType = 6
+	// SavedViewRuleTypeHasAnyTag matches documents carrying at least one
+	// tag (upstream is_tagged).
+	SavedViewRuleTypeHasAnyTag SavedViewRuleType = 7
+	// SavedViewRuleTypeCreatedBefore matches created dates before a value.
+	SavedViewRuleTypeCreatedBefore SavedViewRuleType = 8
+	// SavedViewRuleTypeCreatedAfter matches created dates after a value.
+	SavedViewRuleTypeCreatedAfter SavedViewRuleType = 9
+	// SavedViewRuleTypeAddedBefore matches added dates before a value.
+	SavedViewRuleTypeAddedBefore SavedViewRuleType = 13
+	// SavedViewRuleTypeAddedAfter matches added dates after a value.
+	SavedViewRuleTypeAddedAfter SavedViewRuleType = 14
+	// SavedViewRuleTypeDoesNotHaveTag excludes documents carrying the tag.
+	SavedViewRuleTypeDoesNotHaveTag SavedViewRuleType = 17
+	// SavedViewRuleTypeFullTextQuery runs the upstream full-text query
+	// syntax (upstream query filtervar).
+	SavedViewRuleTypeFullTextQuery SavedViewRuleType = 20
+	// SavedViewRuleTypeHasTagsAny requires at least one of the listed tags.
+	SavedViewRuleTypeHasTagsAny SavedViewRuleType = 22
+	// SavedViewRuleTypeStoragePath matches a storage path by ID.
+	SavedViewRuleTypeStoragePath SavedViewRuleType = 25
+)
+
 // SavedViewFilterRule is one filter criterion of a saved view: the
-// server's numeric rule type (e.g. 6 = "has tag ...") and its string
-// value.
+// server's numeric rule type (e.g. 6 = require all of the listed tags)
+// and its string value.
 type SavedViewFilterRule struct {
-	RuleType int
+	RuleType SavedViewRuleType
 	Value    string
 }
 
@@ -2383,7 +2430,10 @@ func (p savedViewPayload) savedView() SavedView {
 	}
 
 	for _, rule := range p.FilterRules {
-		view.FilterRules = append(view.FilterRules, SavedViewFilterRule(rule))
+		view.FilterRules = append(view.FilterRules, SavedViewFilterRule{
+			RuleType: SavedViewRuleType(rule.RuleType),
+			Value:    rule.Value,
+		})
 	}
 
 	return view
@@ -2429,7 +2479,10 @@ func (c *Client) CreateSavedView(
 
 	rules := make([]savedViewFilterRulePayload, 0, len(req.FilterRules))
 	for _, rule := range req.FilterRules {
-		rules = append(rules, savedViewFilterRulePayload(rule))
+		rules = append(rules, savedViewFilterRulePayload{
+			RuleType: int(rule.RuleType),
+			Value:    rule.Value,
+		})
 	}
 
 	payload, err := json.Marshal(struct {
