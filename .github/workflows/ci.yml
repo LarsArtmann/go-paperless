@@ -43,11 +43,12 @@ jobs:
           go-version-file: go.mod
       # Fail closed on the v0.1.1 failure class: a scanner whose toolchain
       # cannot load the module exits cleanly over zero files. The gate is
-      # only green when the instrument actually measured something.
+      # only green when the instrument actually measured something. The
+      # loose spacing matches gosec's "Files  : N" summary format.
       - run: |
           set -euo pipefail
           go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./... | tee gosec.log
-          grep -Eq 'Files:[[:space:]]*[1-9]' gosec.log || {
+          grep -Eq 'Files[[:space:]]*:[[:space:]]*[1-9]' gosec.log || {
             echo "::error::gosec scanned no files — it did not load the module"
             exit 1
           }

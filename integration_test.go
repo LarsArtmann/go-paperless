@@ -15,7 +15,11 @@ package paperless_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -113,4 +117,113 @@ func TestIntegrationSavedViewsRoundTrip(t *testing.T) {
 	}
 
 	t.Logf("server reports %d saved views", len(views))
+}
+
+// TestIntegrationUploadReconcile exercises the loop the SDK exists for:
+// upload a unique document, wait for asynchronous consumption to finish,
+// then prove the stored checksum appears in a full server listing. The
+// document is deleted in cleanup so repeated runs stay idempotent.
+func TestIntegrationUploadReconcile(t *testing.T) {
+	client := integrationClient(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	// A timestamp makes the bytes (and therefore the server-side SHA-256
+	// checksum) unique across runs.
+	content := []byte(fmt.Sprintf(
+		"go-paperless integration %s\ndocument for upload/wait/reconcile\n",
+		time.Now().UTC().Format(time.RFC3339Nano),
+	))
+
+	tagID, err := client.EnsureTag(ctx, "go-paperless-integration")
+	if err != nil {
+		t.Fatalf("EnsureTag: %v", err)
+	}
+
+	taskID, err := client.Upload(ctx, paperless.UploadRequest{
+		Filename: fmt.Sprintf("go-paperless-integration-%d.txt", time.Now().UnixNano()),
+		Content:  content,
+		Title:    "go-paperless integration upload",
+		TagIDs:   []int{tagID},
+	})
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+
+	outcome, err := client.WaitForTask(ctx, taskID, 2*time.Second)
+	if err != nil {
+		t.Fatalf("WaitForTask(%s): %v", taskID, err)
+	}
+
+	if _, _, refused := outcome.Duplicate(); refused {
+		t.Fatalf("upload refused as duplicate of %d — content collision?", outcome.DocumentID)
+	}
+
+	if outcome.DocumentID == 0 {
+		t.Fatalf("task %s consumed without a document ID: %+v", taskID, outcome)
+	}
+
+	documentID := int(outcome.DocumentID)
+
+	t.Logf("consumed as document %d", documentID)
+
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+
+		if err := client.DeleteDocument(cleanupCtx, documentID); err != nil {
+			t.Errorf("cleanup DeleteDocument(%d): %v", documentID, err)
+		}
+	})
+
+	// The server computes the checksum over the stored file; the listing
+	// must carry it after consumption.
+	sha := sha256.Sum256(content)
+	wantChecksum := hex.EncodeToString(sha[:])
+
+	checksums, err := client.ListDocumentChecksums(ctx)
+	if err != nil {
+		t.Fatalf("ListDocumentChecksums: %v", err)
+	}
+
+	if _, found := checksums[wantChecksum]; !found {
+		metas, metaErr := client.ListDocumentMetas(ctx)
+		if metaErr != nil {
+			t.Fatalf("document %d checksum %q missing from %d listed checksums (meta listing also failed: %v)",
+				documentID, wantChecksum, len(checksums), metaErr)
+		}
+
+		for _, meta := range metas {
+			if meta.ID == documentID {
+				t.Fatalf("document %d listed with checksum %q, want %q (checksum shapes differ?)",
+					meta.ID, meta.Checksum, wantChecksum)
+			}
+		}
+
+		t.Fatalf("document %d vanished from the listing entirely", documentID)
+	}
+
+	metas, err := client.ListDocumentMetas(ctx)
+	if err != nil {
+		t.Fatalf("ListDocumentMetas: %v", err)
+	}
+
+	for _, meta := range metas {
+		if meta.ID != documentID {
+			continue
+		}
+
+		if meta.Title != "go-paperless integration upload" {
+			t.Errorf("title = %q", meta.Title)
+		}
+
+		if !slices.Contains(meta.TagIDs, tagID) {
+			t.Errorf("tag IDs = %v, want %d among them", meta.TagIDs, tagID)
+		}
+
+		return
+	}
+
+	t.Fatalf("document %d missing from the meta listing", documentID)
 }
