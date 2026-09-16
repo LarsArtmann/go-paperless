@@ -3125,6 +3125,38 @@ func BenchmarkUpload(b *testing.B) {
 	}
 }
 
+func BenchmarkListChecksums(b *testing.B) {
+	const docsPerPage = 100
+
+	entries := make([]string, 0, docsPerPage)
+
+	for range docsPerPage {
+		entries = append(entries, `{"checksum":"bench-checksum"}`)
+	}
+
+	payload := `{"results":[` + strings.Join(entries, ",") + `],"next":null}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		b.Fatalf("New: %v", err)
+	}
+
+	ctx := b.Context()
+
+	b.ResetTimer()
+
+	for b.Loop() {
+		if _, err := client.ListDocumentChecksums(ctx); err != nil {
+			b.Fatalf("ListDocumentChecksums: %v", err)
+		}
+	}
+}
+
 type recordingTransport struct {
 	gotAuth   string
 	gotCalled int
@@ -3953,12 +3985,15 @@ func TestEnsureTagSelfHealPatchFailureSurfaces(t *testing.T) {
 	}
 }
 
+// errPartWriteFailed is the sentinel failingPartWriter always returns.
+var errPartWriteFailed = errors.New("part write failed")
+
 // failingPartWriter makes every multipart part write fail, forcing the
 // error branches in the upload-metadata writers without a live server.
 type failingPartWriter struct{}
 
 func (failingPartWriter) Write([]byte) (int, error) {
-	return 0, errors.New("part write failed")
+	return 0, errPartWriteFailed
 }
 
 func TestWriteUploadMetadataFieldFailuresCarryCodedErrors(t *testing.T) {
@@ -4011,9 +4046,11 @@ func TestWriteUploadMetadataFieldFailuresCarryCodedErrors(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *errorfamily.Error, got %T (%v)", err, err)
 			}
+
 			if coded.Code() != testCase.wantCode {
 				t.Fatalf("code = %q, want %q", coded.Code(), testCase.wantCode)
 			}
+
 			if coded.Family() != errorfamily.Infrastructure {
 				t.Fatalf("family = %v, want Infrastructure", coded.Family())
 			}
@@ -4035,9 +4072,11 @@ func TestWriteCustomFieldsFieldWriteFailureCarriesCodedError(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *errorfamily.Error, got %T (%v)", err, err)
 	}
+
 	if coded.Code() != "paperless.write_custom_fields" {
 		t.Fatalf("code = %q, want paperless.write_custom_fields", coded.Code())
 	}
+
 	if coded.Family() != errorfamily.Infrastructure {
 		t.Fatalf("family = %v, want Infrastructure", coded.Family())
 	}

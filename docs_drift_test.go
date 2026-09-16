@@ -261,7 +261,10 @@ func TestREADMEListsLookupVerbs(t *testing.T) {
 
 	readme := readProjectFile(t, "README.md")
 
-	for _, verb := range []string{"Find", "Get", "Ensure"} {
+	for _, verb := range []string{
+		"Add", "Create", "Delete", "Download", "Ensure", "Find", "Get",
+		"List", "Update", "Upload",
+	} {
 		for method := range reflect.TypeFor[*Client]().Methods() {
 			name := method.Name
 

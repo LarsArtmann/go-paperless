@@ -173,3 +173,23 @@ func ExampleClient_EnsureTag() {
 
 	fmt.Println(tagID)
 }
+
+// ExampleClient_ProbeCapabilities checks which checksum delivery a server
+// uses before consuming its documents at scale.
+//
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_ProbeCapabilities() {
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	caps, err := client.ProbeCapabilities(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(caps.ChecksumShape(), caps.DocumentsSampled)
+}

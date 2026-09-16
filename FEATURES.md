@@ -98,6 +98,14 @@
 | Share links (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Server generates the slug (never sent); typed `ShareLinkFileVersion` (archive/original, zero value omitted); optional expiration (`ListShareLinks`/`CreateShareLink`/`DeleteShareLink`); pagination + wire tests `TestListShareLinksPaginates`, `TestCreateShareLinkSendsDocumentAndFileVersion`, `TestListShareLinksCapStopsAtMaxPages` |
 | Saved views (list/create/delete) | 🟢 `FULLY_FUNCTIONAL` | Stable-core fields incl. typed `SavedViewRuleType` filter rules (verified upstream IDs, unknown IDs pass through); newer/older server UI fields are ignored (`ListSavedViews`/`CreateSavedView`/`DeleteSavedView`); `TestListSavedViewsMapsFilterRules`, `TestCreateSavedViewSendsStableFields`, `TestListSavedViewsCapStopsAtMaxPages`  |
 
+## Development and CI
+
+| Feature             | Status                | Notes                                                                                                                                                                                                                                                                                                     |
+| ------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Drift-pinning tests | 🟢 `FULLY_FUNCTIONAL` | `docs_drift_test.go` mechanically pins the release contracts: every `paperless.*` error code needs a `docs/ERROR_CODES.md` row, flake.nix `version` must match the newest CHANGELOG heading, and every exported `Find*`/`Get*`/`Ensure*` method must appear in README.md                                    |
+| Hermetic flake gates | 🟢 `FULLY_FUNCTIONAL` | `nix flake check` runs build, test, test-race, lint, format, and integration-vet in the sandbox; opt-in apps: `.#test`, `.#test-race`, `.#coverage`, `.#fuzz` (every fuzz target, per-target duration), `.#integration` (live server), `.#release-verify` (post-release ritual)                             |
+| Fuzzing             | 🟢 `FULLY_FUNCTIONAL` | Six fuzz targets (`parseRetryAfter`, `classifyTask`, saved-view/share-link payloads, checksum extraction, task-created parsing); CI carries a weekly scheduled plus on-demand `Fuzz` workflow — deliberately not a per-push gate                                                                          |
+
 ## Planned
 
 None. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).

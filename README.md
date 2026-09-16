@@ -15,8 +15,8 @@ pipelines are domain-coupled and stay in the consuming repos.
 
 - Upload documents (content-hash friendly metadata: tags, correspondents, document types, custom fields)
 - `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`, `EnsureStoragePath` (tags self-heal legacy auto-matching; storage paths keep their existing directory template)
-- Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate`)
-- Document management: list checksums/metadata, update metadata, download, delete
+- Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate` returns `(documentID int64, inTrash bool, refused bool)` in that order)
+- Document management: `ListDocumentChecksums`, `ListDocumentMetas` (paginated), `UpdateDocument`, `DownloadDocument`, `DeleteDocument`
 - Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
 - Share links: `CreateShareLink` (server-generated slug), `ListShareLinks`, `DeleteShareLink`
 - Saved views: `ListSavedViews`, `CreateSavedView`, `DeleteSavedView`
@@ -144,6 +144,11 @@ client, err := paperless.New(url, token, paperless.WithRetry(paperless.RetryPoli
     MaxAttempts: 4,
 }))
 ```
+
+A `RetryPolicy` zero value (or any unset field) falls back to the package
+defaults: 3 attempts total, 100ms initial delay, doubling per attempt,
+capped at 5s (`DefaultRetryMaxAttempts`, `DefaultRetryInitialDelay`,
+`DefaultRetryMultiplier`, `DefaultRetryMaxDelay`).
 
 ## Lookup verbs
 
