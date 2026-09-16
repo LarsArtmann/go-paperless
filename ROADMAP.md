@@ -72,6 +72,24 @@ Raw ideas:
   `FuzzClassifyTask` (`fuzz_test.go`; the retry-after fuzzer found and fixed
   a real overflow)
 
+### 4. Tooling & workflow (raw)
+
+Fleet-level workflow and automation ideas surfaced by the 2026-09-16
+dependency-upgrade session
+(`docs/status/2026-09-16_17-35_dependency-upgrade-status.md`):
+
+- Parallel-session protocol: two agents + the auto-commit daemon on one
+  worktree tangled commit attribution and raced builds; consider
+  per-session worktrees or an explicit repo-busy handoff convention
+- flake.lock ownership: who runs `nix flake update`, on what cadence, and
+  what guards drift (the daemon updated it unprompted on 2026-09-16)
+- Dependabot vs manual dependency sweeps: keep the weekly gomod PRs AND
+  coordinated manual bumps, or restrict dependabot (open user decision)
+- Weekly dep-freshness guard (`go list -m -u all` report) complementing
+  dependabot, if the policy question above lands on "keep both"
+- CHANGELOG convention: a dedicated "Dependencies" subsection instead of
+  burying dep bumps under Changed
+
 ## Testing infrastructure
 
 - Real-server integration tests exist behind the `integration` build tag
