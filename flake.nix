@@ -11,7 +11,6 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    systems.url = "github:nix-systems/default";
   };
 
   outputs =
@@ -19,11 +18,16 @@
       self,
       flake-parts,
       treefmt-nix,
-      systems,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = import systems;
+      # x86_64-darwin is omitted deliberately: nixpkgs 26.11 dropped it, and
+      # a system entry that cannot evaluate breaks the flake for everyone.
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
 
       imports = [
         treefmt-nix.flakeModule
@@ -38,7 +42,9 @@
         }:
         let
           goPkg = pkgs.go_1_27;
-          goExperiment = "jsonv2,simd";
+          # The `simd` experiment only enables the `simd` stdlib package —
+          # nothing in this module imports it, so it carries no weight here.
+          goExperiment = "jsonv2";
           # Release version — bump together with CHANGELOG.md and the git tag.
           version = "0.3.1";
 
@@ -298,6 +304,19 @@
                   go test -tags integration -count=1 -v ./...
                 '';
 
+            fuzz =
+              mkApp "fuzz"
+                "Run every fuzz target for a per-target duration (default 30s, e.g. nix run .#fuzz -- 5m)"
+                [ goPkg ]
+                ''
+                  duration="''${1:-30s}"
+                  while read -r pkg target; do
+                    [[ -n "$target" ]] || continue
+                    echo "=== fuzz $target ($pkg, $duration) ==="
+                    go test -run "^''${target}$" -fuzz "^''${target}$" -fuzztime "$duration" "$pkg"
+                  done < <(go test -list '^Fuzz' ./... | awk '/^Fuzz/ {t=''$0; next} /^ok/ {print ''$2, t}')
+                '';
+
             release-verify =
               mkApp "release-verify"
                 "Post-release ritual: tag/CHANGELOG/flake agreement, clean pushed tree, green CI, pkg.go.dev indexing, race tests"
@@ -357,7 +376,7 @@
                   git worktree add "$TMPDIR/go-paperless-release-verify" "$version" >/dev/null
                   trap 'git worktree remove --force "$TMPDIR/go-paperless-release-verify"' EXIT
                   ( cd "$TMPDIR/go-paperless-release-verify" \
-                    && GOEXPERIMENT=jsonv2,simd CGO_ENABLED=1 go test -race -count=1 ./... )
+                    && CGO_ENABLED=1 go test -race -count=1 ./... )
                   echo "ALL GREEN: $version is released, indexed, and race-clean"
                 '';
           };
