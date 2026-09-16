@@ -5,7 +5,9 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
 ## Critical
 
 - **Go 1.27+** (`go.mod` floors `go 1.27` — major.minor only; `encoding/json/v2` is the default
-  there). The flake sets `GOEXPERIMENT=jsonv2,simd` for the SIMD work; on a
+  there). The flake sets `GOEXPERIMENT=jsonv2` (the `simd` experiment was
+  dropped 2026-09-16: it only enables the `simd` stdlib package, which this
+  module never imports); on a
   Go ≤ 1.26 toolchain json/v2 additionally needs `GOEXPERIMENT=jsonv2`, and
   bare older invocations fail with "build constraints exclude all Go files".
 - Editor LSPs run the _machine's_ `go` (older, and `go env -w GOTOOLCHAIN=local`

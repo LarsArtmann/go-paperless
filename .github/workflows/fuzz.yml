@@ -1,0 +1,41 @@
+name: Fuzz
+
+# Fuzzing is deliberately not a per-push gate: it is nondeterministic and
+# time-boxed budgets only make sense on a schedule or on demand. Smoke-depth
+# runs happen locally via `nix run .#fuzz -- <duration>`; this workflow is
+# the deeper, unattended budget.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: Per-target fuzz duration (Go duration, e.g. 30s, 5m, 1h)
+        required: false
+        default: 1m
+  schedule:
+    # Weekly, Mondays 04:00 UTC.
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: fuzz targets
+    runs-on: ubuntu-24.04
+    env:
+      GOEXPERIMENT: jsonv2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - run: |
+          set -euo pipefail
+          duration="${{ inputs.fuzztime || '1m' }}"
+          while read -r target; do
+            [ -n "$target" ] || continue
+            echo "=== fuzz $target ($duration) ==="
+            # </dev/null: go test must not consume the loop's stdin.
+            go test -run "^${target}$" -fuzz "^${target}$" -fuzztime "$duration" . </dev/null
+          done < <(go test -list '^Fuzz' . | grep '^Fuzz')

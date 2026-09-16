@@ -156,7 +156,7 @@ client, err := paperless.New(url, token, paperless.WithRetry(paperless.RetryPoli
 ## Development
 
 ```bash
-nix develop          # dev shell (Go 1.27, GOEXPERIMENT=jsonv2,simd)
+nix develop          # dev shell (Go 1.27, GOEXPERIMENT=jsonv2)
 nix run .#check      # all checks (build, test, lint, format)
 nix build            # build the client (packages.default)
 nix run .#build      # build

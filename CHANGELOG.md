@@ -21,7 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   method must appear in README.md
 - Fuzzers for the saved-view and share-link payload decoding
   (`FuzzDecodeSavedViewPayload`, `FuzzDecodeShareLinkPayload`),
-  mirroring the existing checksum/retry-after fuzz contracts
+  mirroring the existing checksum/retry-after fuzz contracts; `nix run
+  .#fuzz -- <duration>` runs every target for a per-target budget, and a
+  scheduled/manual `Fuzz` workflow gives CI the deeper unattended budget
+  (fuzzing is deliberately not a per-push gate)
 - Cap-parity tests for `ListDocumentMetas` and `ListStoragePaths` — all
   five listings now prove the 100-page cap stops the scan
 - Real-server e2e `TestIntegrationUploadReconcile` (behind the
@@ -46,8 +49,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   runnable with `// Output:` assertions
 - Coverage-recovery tests naming and closing the blocks behind the
   88.6% dip: delete-family zero-ID rejections and server-error wraps
-  (`DeleteShareLink`/`DeleteSavedView`/`DeleteDocument`), and the
-  self-heal PATCH failure path; suite back above 90%
+  (`DeleteShareLink`/`DeleteSavedView`/`DeleteDocument`), the
+  self-heal PATCH failure path, and every multipart field-write failure in
+  the upload metadata (`writeUploadMetadata` 68.8% → 100%,
+  `writeCustomFieldsField` 81.8% → 90.9% — the remainder is the
+  structurally unreachable `json.Marshal` branch); suite at 91.2%
 - Tests tail: `defaultTransport` honors the exported idle-pool constants,
   `WithHTTPClient(nil)` keeps the default transport, and
   `UpdateDocument` custom_fields wire shape plus the empty-`TagIDs`
@@ -80,6 +86,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   both upstream releases are behavior-preserving for this module (v0.10.1 is
   lint-comment/test-only; v0.6.0 extracts the existing retry codes into named
   constants with identical values and adds nested-retry regression tests)
+- `GOEXPERIMENT` slimmed to `jsonv2`: the `simd` experiment only enables the
+  `simd` stdlib package, which this module never imports — the build flag now
+  states exactly what the module uses
+- The flake no longer declares `x86_64-darwin`: nixpkgs 26.11 dropped the
+  platform, and a system entry that cannot evaluate breaks the flake for
+  everyone (`nix flake check --all-systems` verified all remaining systems
+  evaluate; foreign-platform builds still need remote builders)
 
 - `WaitForTask` timeout errors that carry a last poll error now name the
   task ID in the message; the multipart tags-field failure attaches the
