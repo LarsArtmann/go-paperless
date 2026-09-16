@@ -3919,13 +3919,14 @@ func TestEnsureTagSelfHealPatchFailureSurfaces(t *testing.T) {
 	var patchRequests int
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet:
+		switch r.Method {
+		case http.MethodGet:
 			_, _ = w.Write([]byte(
 				`{"results":[{"id":4,"name":"legacy","matching_algorithm":6}]}`,
 			))
-		case r.Method == http.MethodPatch:
+		case http.MethodPatch:
 			patchRequests++
+
 			w.WriteHeader(http.StatusInternalServerError)
 
 			return

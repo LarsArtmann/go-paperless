@@ -68,19 +68,26 @@ replacement for its trimmed fork.
 - Go 1.27+, functional patterns, early returns, descriptive names.
 - Tests are httptest-based (no live server needed).
 - `nolint` single-line with a reason: `//nolint:<linter> // reason`.
-- **erraudit gate** (inside `nix develop`): `erraudit ./... --type-aware
-  --enforce-go-error-family --disable-extensions` exits 0. Deliberate
-  stdlib-constructor sites carry `//nolint:erraudit // reason` ON the anchor
-  line (`nix fmt` may move it to the closing paren — suppression still
-  anchors). golangci's "Found unknown linters: erraudit" warning is
-  unavoidable noise. `--no-suppress` is audit mode: suppressed findings
-  reappearing there is by design. **CI decision (2026-09-16)**: erraudit
-  stays a dev-shell-only gate until `github.com/larsartmann/erraudit` is
+- **erraudit gate is BROKEN as of 2026-09-16 (environmental, not this repo)**:
+  the command below was verified exit-0 on 2026-09-14, but erraudit v0.4.0
+  bundles go1.26-era source-processing packages (x/tools) and now fails with
+  "packages contain errors" on ANY state of this module (reproduced on the
+  pristine v0.3.1 worktree), warning: "rebuild the application using a newer
+  version of Go". The fix is upstream — rebuild/re-release
+  `github.com/larsartmann/erraudit` against current x/tools — tracked in
+  TODO_LIST. Intended gate command, once rebuilt: `erraudit ./...
+  --type-aware --enforce-go-error-family --disable-extensions` exits 0
+  inside `nix develop`. Deliberate stdlib-constructor sites carry
+  `//nolint:erraudit // reason` ON the anchor line (`nix fmt` may move it
+  to the closing paren — suppression still anchors). golangci's "Found
+  unknown linters: erraudit" warning is unavoidable noise. `--no-suppress`
+  is audit mode: suppressed findings reappearing there is by design.
+  **CI decision (2026-09-16)**: erraudit stays out of CI until it is (a)
   published on the public module proxy (proxy.golang.org 404s it today,
-  verified against erraudit v0.4.0) — private-runner auth and a
-  version-pinned golangci plugin were rejected as worse tradeoffs. When it
-  publishes: one CI job, `go run github.com/larsartmann/erraudit/cmd/erraudit@latest`
-  with the flags above.
+  verified against v0.4.0) AND (b) rebuilt on go1.27 source-processing.
+  Private-runner auth and a version-pinned golangci plugin were rejected as
+  worse tradeoffs. When both unblock: one CI job, `go run
+  github.com/larsartmann/erraudit/cmd/erraudit@latest` with the flags above.
 - **Error model = ADR 0002** (`docs/adr/0002-error-model.md`): codes+family
   live at the failure source; call-site wraps are uncoded `fmt.Errorf`
   context wraps (an outer code would shadow the inner HTTP classification —

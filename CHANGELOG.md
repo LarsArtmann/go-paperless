@@ -71,10 +71,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `SavedViewFilterRule.RuleType` is now `SavedViewRuleType` (was bare
   `int`). Untyped constants (`RuleType: 6`) keep compiling; values typed
   as `int` need a conversion at the call site
-- erraudit CI decision recorded (AGENTS.md): the gate stays dev-shell-only
-  until `github.com/larsartmann/erraudit` is on the public module proxy
-  (404 there as of v0.4.0); private-runner auth and a golangci plugin were
-  rejected
+- erraudit CI decision recorded (AGENTS.md): the gate stays out of CI until
+  erraudit is (a) published on the public module proxy (404 there as of
+  v0.4.0) and (b) rebuilt on go1.27 source-processing — its bundled
+  go1.26-era x/tools now rejects this module outright (reproduced on
+  pristine v0.3.1); private-runner auth and a golangci plugin were rejected
 - Dependency floors bumped: `go-error-family` v0.10.1 and `go-retry` v0.6.0 —
   both upstream releases are behavior-preserving for this module (v0.10.1 is
   lint-comment/test-only; v0.6.0 extracts the existing retry codes into named
