@@ -74,7 +74,13 @@ replacement for its trimmed fork.
   line (`nix fmt` may move it to the closing paren — suppression still
   anchors). golangci's "Found unknown linters: erraudit" warning is
   unavoidable noise. `--no-suppress` is audit mode: suppressed findings
-  reappearing there is by design.
+  reappearing there is by design. **CI decision (2026-09-16)**: erraudit
+  stays a dev-shell-only gate until `github.com/larsartmann/erraudit` is
+  published on the public module proxy (proxy.golang.org 404s it today,
+  verified against erraudit v0.4.0) — private-runner auth and a
+  version-pinned golangci plugin were rejected as worse tradeoffs. When it
+  publishes: one CI job, `go run github.com/larsartmann/erraudit/cmd/erraudit@latest`
+  with the flags above.
 - **Error model = ADR 0002** (`docs/adr/0002-error-model.md`): codes+family
   live at the failure source; call-site wraps are uncoded `fmt.Errorf`
   context wraps (an outer code would shadow the inner HTTP classification —
@@ -85,6 +91,25 @@ replacement for its trimmed fork.
   scanner (e.g. the Ping/`ProbeCapabilities` first-page query pair) — don't
   "fix" them away without checking the paired site named in the comment.
 - Errors: `github.com/larsartmann/go-error-family` (`New*`/`Wrap*` with dot-notation codes).
+- **Test cleanup: `defer server.Close()` stays.** Decision (2026-09-16):
+  httptest servers and body readers close via `defer` at the top of the test
+  that created them (~63 sites, per-test, no subtest survives its parent).
+  `t.Cleanup` is reserved for cleanups a helper registers on the test's
+  behalf (see `TestIntegrationUploadReconcile`) and for things that must run
+  after subtests. Don't migrate the defer sites.
+- **Release version lives in three places and must agree**: flake.nix
+  `version`, the newest `## [X.Y.Z]` CHANGELOG heading, and the git tag.
+  `TestFlakeVersionMatchesChangelog` (`docs_drift_test.go`) enforces the
+  first two mechanically; `nix run .#release-verify -- vX.Y.Z` checks all
+  three plus push status, CI, pkg.go.dev, and a race run. Bump both files
+  inside the release commit (the v0.3.1 flow; the v0.3.0 drift is closed).
+- **Doc-drift tests are the catalog's CI** (`docs_drift_test.go`):
+  `TestErrorCodesAreDocumented` extracts every `paperless.*` code — static
+  literals AND the kind-parameterized helper sites (`findNamed`,
+  `createNamed`, ...) resolve to — from client.go and requires a
+  docs/ERROR_CODES.md row for each; a non-literal kind argument fails the
+  test so new sites can't hide codes. `TestREADMEListsLookupVerbs` requires
+  every exported `Find*`/`Get*`/`Ensure*` method in README.md.
 
 ## Docs
 

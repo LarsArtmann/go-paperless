@@ -3791,3 +3791,162 @@ func TestDeleteSavedViewSendsDelete(t *testing.T) {
 		t.Fatalf("DeleteSavedView: %v", err)
 	}
 }
+
+// The delete-family rejects zero IDs without touching the server and wraps
+// server failures with the object ID — the highest-traffic untested paths
+// behind the coverage drop from ~90% to ~88.6%.
+
+func TestDeleteShareLinkRejectsZeroID(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("zero share-link ID must not reach the server")
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	err = client.DeleteShareLink(t.Context(), 0)
+	if err == nil {
+		t.Fatal("expected a rejection for share link ID 0")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Errorf("family = %v, want Rejection (%v)", family, err)
+	}
+}
+
+func TestDeleteShareLinkSurfacesServerError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	err = client.DeleteShareLink(t.Context(), 12)
+	if err == nil {
+		t.Fatal("expected the server error to surface")
+	}
+
+	if !strings.Contains(err.Error(), "12") {
+		t.Errorf("error should name the share link ID: %v", err)
+	}
+}
+
+func TestDeleteSavedViewRejectsZeroID(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("zero saved-view ID must not reach the server")
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	err = client.DeleteSavedView(t.Context(), 0)
+	if err == nil {
+		t.Fatal("expected a rejection for saved view ID 0")
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Errorf("family = %v, want Rejection (%v)", family, err)
+	}
+}
+
+func TestDeleteSavedViewSurfacesServerError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	err = client.DeleteSavedView(t.Context(), 12)
+	if err == nil {
+		t.Fatal("expected the server error to surface")
+	}
+
+	if !strings.Contains(err.Error(), "12") {
+		t.Errorf("error should name the saved view ID: %v", err)
+	}
+}
+
+func TestDeleteDocumentSurfacesServerError(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	err = client.DeleteDocument(t.Context(), 12)
+	if err == nil {
+		t.Fatal("expected the server error to surface")
+	}
+
+	if !strings.Contains(err.Error(), "12") {
+		t.Errorf("error should name the document ID: %v", err)
+	}
+}
+
+// The self-heal PATCH failure must surface with the tag name — the one
+// updateMatchingAlgorithm branch no other test drives.
+func TestEnsureTagSelfHealPatchFailureSurfaces(t *testing.T) {
+	t.Parallel()
+
+	var patchRequests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet:
+			_, _ = w.Write([]byte(
+				`{"results":[{"id":4,"name":"legacy","matching_algorithm":6}]}`,
+			))
+		case r.Method == http.MethodPatch:
+			patchRequests++
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.EnsureTag(t.Context(), "legacy")
+	if err == nil {
+		t.Fatal("expected the failed self-heal PATCH to surface")
+	}
+
+	if patchRequests != 1 {
+		t.Errorf("PATCH requests = %d, want exactly 1", patchRequests)
+	}
+}
