@@ -18,6 +18,21 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   point at a dead mount — bare golangci-lint needs fresh temp dirs for all three.
 - Host `erraudit`/`go` invocations run the machine's Go 1.26.7 and hard-fail on
   this module — run them inside `nix develop`.
+- **BuildFlow**: run it as `nix develop -c buildflow --fix …` (dev shell supplies
+  Go 1.27.1 + every BuildFlow-probed tool: go-licenses, govulncheck, lychee,
+  dprint, vulnix). From a bare shell, `env -u GOTOOLCHAIN buildflow …` also
+  works: `.buildflow.yml` sets `env: GOTOOLCHAIN: auto`, but BuildFlow's
+  caller-wins env contract lets an exported shell `GOTOOLCHAIN=local` preempt
+  it (feedback filed in the BuildFlow repo, docs/feedback/new/ 2026-09-16).
+- **go-auto-upgrade's samber/lo suggestions are accepted noise**: the two
+  "manual Map" sites in client.go are pure type conversions
+  (`StoragePath(payload)`, `CustomFieldValue(field)`); `lo.Map` would add a
+  dependency for nothing. Don't add samber/lo for them.
+- **Race coverage is deliberate and redundant by design**: CI runs
+  `nix flake check` (which builds `checks.test-race`) AND an explicit
+  `go test -race ./…` job, matching the standalone govulncheck/gosec job
+  pattern. The explicit job exists so tooling that only scans CI YAML sees
+  the race detector.
 
 ## Scope
 
