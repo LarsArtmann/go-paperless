@@ -70,6 +70,58 @@ func main() {
 }
 ```
 
+## Common tasks
+
+Document notes:
+
+```go
+notes, err := client.ListDocumentNotes(ctx, docID)
+if err != nil {
+    panic(err)
+}
+
+updated, err := client.AddDocumentNote(ctx, docID, "reviewed 2026-09-16")
+if err != nil {
+    panic(err)
+}
+
+err = client.DeleteDocumentNote(ctx, docID, updated[len(updated)-1].ID)
+```
+
+Share links (public, unauthenticated download URLs — see SECURITY.md):
+
+```go
+inWeek := time.Now().AddDate(0, 0, 7)
+
+link, err := client.CreateShareLink(ctx, paperless.CreateShareLinkRequest{
+    DocumentID:  docID,
+    FileVersion: paperless.ShareLinkFileVersionOriginal,
+    Expiration:  &inWeek,
+})
+if err != nil {
+    panic(err)
+}
+
+fmt.Println("share URL:", baseURL+"/share/"+link.Slug)
+```
+
+Saved views:
+
+```go
+viewID, err := client.CreateSavedView(ctx, paperless.CreateSavedViewRequest{
+    Name:        "This month's invoices",
+    SortField:   "created",
+    SortReverse: true,
+    FilterRules: []paperless.SavedViewFilterRule{
+        {RuleType: paperless.SavedViewRuleTypeHasTagsAll, Value: "invoice"},
+        {RuleType: paperless.SavedViewRuleTypeCreatedAfter, Value: "2026-09-01"},
+    },
+})
+if err != nil {
+    panic(err)
+}
+```
+
 ## Options
 
 | Option                                 | Effect                                                               |

@@ -38,6 +38,15 @@ holds, and what matters:
   server sets. If your hook logs, redact the `Set-Cookie` (and
   `Authorization`) headers first — see the redaction example in the hook
   test suite.
+- **Share links are public, unauthenticated URLs.** `CreateShareLink` asks
+  the server for a slug; anyone who learns the resulting
+  `<base>/share/<slug>` URL can download the document (or its original
+  file, depending on the file version) with no login and no token. The SDK
+  cannot revoke knowledge of a URL — it can only delete the link
+  (`DeleteShareLink`), which kills every copy of the URL at once. Set an
+  `Expiration` for time-boxed access, treat slugs as bearer secrets (don't
+  log them, don't embed them in shared documents), and delete links as
+  soon as their audience no longer needs them.
 - Uploads are multipart bodies read fully into memory; size them
   accordingly for very large documents.
 

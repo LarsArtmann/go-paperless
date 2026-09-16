@@ -34,12 +34,23 @@ jobs:
   gosec:
     name: gosec
     runs-on: ubuntu-24.04
+    env:
+      GOEXPERIMENT: jsonv2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
-      - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...
+      # Fail closed on the v0.1.1 failure class: a scanner whose toolchain
+      # cannot load the module exits cleanly over zero files. The gate is
+      # only green when the instrument actually measured something.
+      - run: |
+          set -euo pipefail
+          go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./... | tee gosec.log
+          grep -Eq 'Files:[[:space:]]*[1-9]' gosec.log || {
+            echo "::error::gosec scanned no files — it did not load the module"
+            exit 1
+          }
 
   test-race:
     name: test-race

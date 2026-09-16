@@ -85,3 +85,9 @@ Raw ideas:
   no complete spec, and the handwritten client carries domain decisions
   (matching-algorithm policy, duplicate-refusal classification) a generator
   would lose.
+
+## Decision records
+
+Architecture decisions that constrain the ideas above live in
+[docs/adr/](docs/adr/README.md) — notably ADR 0003, which records that
+streaming upload is explicitly NOT promised.
