@@ -61,7 +61,9 @@ func ExampleClient_WaitForTask() {
 		paperless.DefaultTaskPollInterval,
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+
+		return
 	}
 
 	if documentID, inTrash, refused := outcome.Duplicate(); refused {

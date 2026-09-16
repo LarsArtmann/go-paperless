@@ -1074,6 +1074,7 @@ func TestUpdateDocumentSendsCustomFieldsAndOmitsEmptyTags(t *testing.T) {
 	}
 
 	title := "Retitled"
+
 	err = client.UpdateDocument(t.Context(), 42, UpdateDocumentRequest{
 		Title:        &title,
 		TagIDs:       []int{},
@@ -2904,7 +2905,6 @@ func TestListDocumentMetasCapStopsAtMaxPages(t *testing.T) {
 	}
 }
 
-//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
 func TestListStoragePathsCapStopsAtMaxPages(t *testing.T) {
 	t.Parallel()
 

@@ -62,14 +62,7 @@ func expectedDynamicCodes(t *testing.T) []string {
 			continue
 		}
 
-		ownParams := map[string]bool{}
-		if fn.Type.Params != nil {
-			for _, param := range fn.Type.Params.List {
-				for _, name := range param.Names {
-					ownParams[name.Name] = true
-				}
-			}
-		}
+		params := ownParamNames(fn)
 
 		ast.Inspect(fn.Body, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
@@ -91,44 +84,79 @@ func expectedDynamicCodes(t *testing.T) []string {
 			// A kind forwarded from the enclosing helper's own parameter
 			// (ensureNamed -> findNamed) is pass-through delegation: the
 			// caller's literal sites already carry the emitted codes.
-			if variable, ok := call.Args[kindPos].(*ast.Ident); ok && ownParams[variable.Name] {
+			if variable, ok := call.Args[kindPos].(*ast.Ident); ok && params[variable.Name] {
 				return true
 			}
 
-			literal, ok := call.Args[kindPos].(*ast.BasicLit)
-			if !ok || literal.Kind != token.STRING {
-				t.Fatalf(
-					"%s kind argument at %s is not a string literal; the error-code catalog test needs a literal to track the emitted codes",
-					callee,
-					fset.Position(call.Pos()),
-				)
-			}
+			kind := literalKind(t, fset, callee, call.Args[kindPos])
 
-			kind := strings.Trim(literal.Value, `"`)
-
-			switch callee {
-			case "findNamed":
-				add("paperless.decode_" + snakeUpper(kind) + "s")
-			case "ensureNamed":
-				add("paperless.decode_" + kind + "s")
-				add("paperless.marshal_" + snakeUpper(kind))
-				add("paperless.decode_" + snakeUpper(kind))
-			case "createNamed":
-				add("paperless.marshal_" + snakeUpper(kind))
-				add("paperless.decode_" + snakeUpper(kind))
-			case "getNamedDetail":
-				add("paperless.decode_" + snakeUpper(kind))
-			case "updateMatchingAlgorithm":
-				add("paperless.marshal_" + kind + "_update")
-			case "fetchAllPages":
-				add("paperless.decode_" + snakeUpper(kind) + "s")
-			}
+			appendDynamicCodes(callee, kind, add)
 
 			return true
 		})
 	}
 
 	return codes
+}
+
+// ownParamNames collects the enclosing helper's parameter names so kind
+// arguments forwarded from them can be recognized as pass-through.
+func ownParamNames(fn *ast.FuncDecl) map[string]bool {
+	names := map[string]bool{}
+
+	if fn.Type.Params == nil {
+		return names
+	}
+
+	for _, param := range fn.Type.Params.List {
+		for _, name := range param.Names {
+			names[name.Name] = true
+		}
+	}
+
+	return names
+}
+
+// literalKind returns the unquoted string value of a helper call's kind
+// argument, failing the test when the site passes anything but a literal:
+// the catalog can only stay complete if the test can see what the helper
+// will emit.
+func literalKind(t *testing.T, fset *token.FileSet, callee string, arg ast.Expr) string {
+	t.Helper()
+
+	literal, ok := arg.(*ast.BasicLit)
+	if !ok || literal.Kind != token.STRING {
+		t.Fatalf(
+			"%s kind argument at %s is not a string literal; "+
+				"the error-code catalog test needs a literal to track the emitted codes",
+			callee,
+			fset.Position(arg.Pos()),
+		)
+	}
+
+	return strings.Trim(literal.Value, `"`)
+}
+
+// appendDynamicCodes maps one literal kind call site to the paperless.*
+// codes its helper emits, feeding each through add.
+func appendDynamicCodes(callee, kind string, add func(string)) {
+	switch callee {
+	case "findNamed":
+		add("paperless.decode_" + snakeUpper(kind) + "s")
+	case "ensureNamed":
+		add("paperless.decode_" + kind + "s")
+		add("paperless.marshal_" + snakeUpper(kind))
+		add("paperless.decode_" + snakeUpper(kind))
+	case "createNamed":
+		add("paperless.marshal_" + snakeUpper(kind))
+		add("paperless.decode_" + snakeUpper(kind))
+	case "getNamedDetail":
+		add("paperless.decode_" + snakeUpper(kind))
+	case "updateMatchingAlgorithm":
+		add("paperless.marshal_" + kind + "_update")
+	case "fetchAllPages":
+		add("paperless.decode_" + snakeUpper(kind) + "s")
+	}
 }
 
 // calledName unwraps generic instantiation (fetchAllPages[T](...)) and
