@@ -113,11 +113,19 @@
 
           devShells = {
             default = pkgs.mkShellNoCC {
+              # Tools BuildFlow probes inside `nix develop` (its preflight
+              # warns per-tool when missing); all nixpkgs, so the shell
+              # stays hermetic.
               packages = [
                 goPkg
+                pkgs.dprint
+                pkgs.go-licenses
                 pkgs.golangci-lint
                 pkgs.gotools
+                pkgs.govulncheck
+                pkgs.lychee
                 pkgs.trash-cli
+                pkgs.vulnix
               ];
 
               env = {
