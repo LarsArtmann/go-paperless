@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -3949,5 +3950,95 @@ func TestEnsureTagSelfHealPatchFailureSurfaces(t *testing.T) {
 
 	if patchRequests != 1 {
 		t.Errorf("PATCH requests = %d, want exactly 1", patchRequests)
+	}
+}
+
+// failingPartWriter makes every multipart part write fail, forcing the
+// error branches in the upload-metadata writers without a live server.
+type failingPartWriter struct{}
+
+func (failingPartWriter) Write([]byte) (int, error) {
+	return 0, errors.New("part write failed")
+}
+
+func TestWriteUploadMetadataFieldFailuresCarryCodedErrors(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		req      UploadRequest
+		wantCode string
+	}{
+		{
+			name:     "title",
+			req:      UploadRequest{Title: "Invoice"},
+			wantCode: "paperless.write_title",
+		},
+		{
+			name:     "created",
+			req:      UploadRequest{Created: time.Date(2026, 9, 16, 0, 0, 0, 0, time.UTC)},
+			wantCode: "paperless.write_created",
+		},
+		{
+			name:     "correspondent",
+			req:      UploadRequest{CorrespondentID: 7},
+			wantCode: "paperless.write_correspondent",
+		},
+		{
+			name:     "tags",
+			req:      UploadRequest{TagIDs: []int{3}},
+			wantCode: "paperless.write_tags",
+		},
+		{
+			name:     "document_type",
+			req:      UploadRequest{DocumentTypeID: 9},
+			wantCode: "paperless.write_document_type",
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			writer := multipart.NewWriter(failingPartWriter{})
+
+			err := writeUploadMetadata(writer, testCase.req)
+			if err == nil {
+				t.Fatal("expected a write failure against the closed writer")
+			}
+
+			coded, ok := errors.AsType[*errorfamily.Error](err)
+			if !ok {
+				t.Fatalf("expected *errorfamily.Error, got %T (%v)", err, err)
+			}
+			if coded.Code() != testCase.wantCode {
+				t.Fatalf("code = %q, want %q", coded.Code(), testCase.wantCode)
+			}
+			if coded.Family() != errorfamily.Infrastructure {
+				t.Fatalf("family = %v, want Infrastructure", coded.Family())
+			}
+		})
+	}
+}
+
+func TestWriteCustomFieldsFieldWriteFailureCarriesCodedError(t *testing.T) {
+	t.Parallel()
+
+	writer := multipart.NewWriter(failingPartWriter{})
+
+	err := writeCustomFieldsField(writer, []CustomFieldValue{{Field: 1, Value: "gmail-msg-42"}})
+	if err == nil {
+		t.Fatal("expected a write failure against the closed writer")
+	}
+
+	coded, ok := errors.AsType[*errorfamily.Error](err)
+	if !ok {
+		t.Fatalf("expected *errorfamily.Error, got %T (%v)", err, err)
+	}
+	if coded.Code() != "paperless.write_custom_fields" {
+		t.Fatalf("code = %q, want paperless.write_custom_fields", coded.Code())
+	}
+	if coded.Family() != errorfamily.Infrastructure {
+		t.Fatalf("family = %v, want Infrastructure", coded.Family())
 	}
 }
