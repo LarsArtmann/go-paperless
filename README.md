@@ -168,8 +168,13 @@ nix run .#build      # build
 nix run .#test       # tests
 nix run .#test-race  # tests with race detector
 nix run .#lint       # golangci-lint
+nix run .#coverage   # tests with coverage report
+nix run .#fuzz -- 5m # every fuzz target, per-target budget (default 30s)
 nix fmt              # format
 nix flake check      # all checks (CI equivalent)
+# Opt-in, needs a live server / released tag:
+nix run .#integration            # real-server integration tests
+nix run .#release-verify -- v0.3.1  # post-release ritual
 ```
 
 ## License
