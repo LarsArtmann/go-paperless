@@ -206,6 +206,24 @@
                 installPhase = ''touch "$out"'';
               }
             );
+
+            # The integration scaffold must never rot uncompiled: vet+build
+            # with the `integration` build tag type-checks
+            # integration_test.go without a live server. The live run is
+            # opt-in via `nix run .#integration` (needs a real
+            # Paperless-ngx) — deliberately NOT in `nix flake check`.
+            integration-vet = goModule (
+              goModuleArgs
+              // {
+                buildPhase = ''
+                  runHook preBuild
+                  go vet -tags integration ./...
+                  go build -tags integration ./...
+                  runHook postBuild
+                '';
+                installPhase = ''touch "$out"'';
+              }
+            );
           };
 
           apps = {
