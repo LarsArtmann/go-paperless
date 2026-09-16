@@ -310,12 +310,12 @@
                 [ goPkg ]
                 ''
                   duration="''${1:-30s}"
-                  while read -r pkg target; do
+                  while read -r target; do
                     [[ -n "$target" ]] || continue
-                    echo "=== fuzz $target ($pkg, $duration) ==="
+                    echo "=== fuzz $target ($duration) ==="
                     # </dev/null: go test must not consume the loop's stdin.
-                    go test -run "^''${target}$" -fuzz "^''${target}$" -fuzztime "$duration" "$pkg" < /dev/null
-                  done < <(go test -list '^Fuzz' ./... | awk '/^Fuzz/ {names[n++]=` + "''$0" + `; next} /^ok/ {for (i=0; i<n; i++) print ` + "''$2" + `, names[i]; n=0}')
+                    go test -run "^''${target}$" -fuzz "^''${target}$" -fuzztime "$duration" . < /dev/null
+                  done < <(go test -list '^Fuzz' . | grep '^Fuzz')
                 '';
 
             release-verify =
