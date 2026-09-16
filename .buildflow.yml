@@ -2,6 +2,16 @@
 # while the machine's default `go` is older with GOTOOLCHAIN=local pinned
 # host-wide. Auto-switching to the module's toolchain is a module concern
 # (the same pin .crushrc applies to the LSP servers), so BuildFlow tool
-# subprocesses get it here instead of a host-wide override.
+# subprocesses get it here instead of a host-wide override. NOTE: BuildFlow's
+# caller-wins env contract means an exported shell GOTOOLCHAIN=local still
+# preempts this — the canonical invocation is `nix develop -c buildflow ...`.
 env:
   GOTOOLCHAIN: auto
+
+skip_steps:
+  # go-paperless doesn't use govalid (no go:generate directives, no govalid
+  # config), and the machine's govalid binary (system profile, built with
+  # pre-1.27 Go) rejects this module's go directive in its in-process
+  # analysis. Revisit when govalid is adopted or rebuilt with a current
+  # toolchain.
+  - govalid-generate
