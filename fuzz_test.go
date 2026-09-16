@@ -115,7 +115,8 @@ func FuzzDecodeShareLinkPayload(f *testing.F) {
 
 		link := payload.shareLink()
 
-		if link.ID != payload.ID || link.Slug != payload.Slug || link.DocumentID != payload.Document {
+		if link.ID != payload.ID || link.Slug != payload.Slug ||
+			link.DocumentID != payload.Document {
 			t.Fatalf("core fields lost: payload %+v vs link %+v", payload, link)
 		}
 
