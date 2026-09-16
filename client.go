@@ -877,7 +877,7 @@ func (c *Client) findNamed(
 	if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
 		return namedPayload{}, false, errorfamily.WrapCorruption(
 			unmarshalErr,
-			"paperless.decode_"+kind+"s",
+			"paperless.decode_"+strings.ReplaceAll(kind, " ", "_")+"s",
 			"could not decode "+kind+" search result",
 		).WithContext(kind, name)
 	}

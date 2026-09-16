@@ -18,28 +18,85 @@ func ExampleNew_invalidConfig() {
 	// Output: configure the base URL before retrying
 }
 
-//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleNew() {
 	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_ = client // reference the client so the example compiles
+	fmt.Println(client != nil)
+	// Output: true
 }
 
-//nolint:testableexamples // illustrative; running it would need a live server
 func ExampleNew_withOptions() {
 	client, err := paperless.New(
 		"https://paperless.example.com",
 		"token-from-web-ui",
 		paperless.WithTimeout(30*time.Second),
+		paperless.WithRetry(paperless.RetryPolicy{MaxAttempts: 4}),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_ = client // reference the client so the example compiles
+	fmt.Println(client != nil)
+	// Output: true
+}
+
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_WaitForTask() {
+	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Poll every 2 seconds (the DefaultTaskPollInterval) until the task
+	// reaches a terminal state or the context expires.
+	outcome, err := client.WaitForTask(
+		ctx,
+		"0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77",
+		paperless.DefaultTaskPollInterval,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if documentID, inTrash, refused := outcome.Duplicate(); refused {
+		fmt.Println("duplicate of", documentID, "in trash:", inTrash)
+
+		return
+	}
+
+	fmt.Println("consumed as document", outcome.DocumentID)
+}
+
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleWithRetry() {
+	client, err := paperless.New(
+		"https://paperless.example.com",
+		"token-from-web-ui",
+		paperless.WithRetry(paperless.RetryPolicy{
+			MaxAttempts:  5,
+			InitialDelay: 200 * time.Millisecond,
+			MaxDelay:     10 * time.Second,
+			Multiplier:   2.0,
+		}),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	// Transient failures (network errors, 429/503, 5xx) retry with backoff;
+	// a server Retry-After hint overrides the computed delay. Rejections
+	// (401/403, other 4xx) fail fast without retrying.
+	if err := client.Ping(ctx); err != nil {
+		log.Fatal(err)
+	}
 }
 
 //nolint:testableexamples // illustrative; running it would need a live server

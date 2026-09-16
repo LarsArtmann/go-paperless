@@ -108,7 +108,7 @@ func expectedDynamicCodes(t *testing.T) []string {
 
 			switch callee {
 			case "findNamed":
-				add("paperless.decode_" + kind + "s")
+				add("paperless.decode_" + snakeUpper(kind) + "s")
 			case "ensureNamed":
 				add("paperless.decode_" + kind + "s")
 				add("paperless.marshal_" + snakeUpper(kind))
