@@ -1050,6 +1050,54 @@ func TestUpdateDocumentSendsPatchBody(t *testing.T) {
 	}
 }
 
+// An empty (non-nil) TagIDs slice must be omitted from the PATCH body:
+// Paperless-ngx replaces many-to-many fields wholesale, so a tags key with
+// an empty array would wipe the document's tags as a side effect of an
+// unrelated update. custom_fields must serialize field/value pairs.
+func TestUpdateDocumentSendsCustomFieldsAndOmitsEmptyTags(t *testing.T) {
+	t.Parallel()
+
+	var gotBody map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &gotBody)
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	title := "Retitled"
+	err = client.UpdateDocument(t.Context(), 42, UpdateDocumentRequest{
+		Title:        &title,
+		TagIDs:       []int{},
+		CustomFields: []CustomFieldValue{{Field: 3, Value: "msg-123"}},
+	})
+	if err != nil {
+		t.Fatalf("UpdateDocument: %v", err)
+	}
+
+	if _, hasTags := gotBody["tags"]; hasTags {
+		t.Errorf("empty TagIDs leaked into the PATCH body: %v", gotBody["tags"])
+	}
+
+	fields, ok := gotBody["custom_fields"].([]any)
+	if !ok || len(fields) != 1 {
+		t.Fatalf("custom_fields = %v, want one field", gotBody["custom_fields"])
+	}
+
+	field, ok := fields[0].(map[string]any)
+	if !ok || field["field"] != float64(3) || field["value"] != "msg-123" {
+		t.Fatalf("custom_fields[0] = %v, want field 3 with msg-123", fields[0])
+	}
+}
+
 func TestUpdateDocumentRejectsEmptyRequest(t *testing.T) {
 	t.Parallel()
 
@@ -2814,6 +2862,90 @@ func TestListSavedViewsCapStopsAtMaxPages(t *testing.T) {
 	}
 }
 
+//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
+func TestListDocumentMetasCapStopsAtMaxPages(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		page := r.URL.Query().Get("page")
+
+		entries := make([]string, 0, documentListPageSize)
+		for i := range documentListPageSize {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"title":"doc-%s-%03d","created":"2026-09-01"}`, i, page, i))
+		}
+
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(entries, ",") + `]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	metas, err := client.ListDocumentMetas(t.Context())
+	if err != nil {
+		t.Fatalf("ListDocumentMetas: %v", err)
+	}
+
+	if len(metas) != maxDocumentListPages*documentListPageSize {
+		t.Fatalf("metas = %d, want exactly %d (100 full pages)", len(metas),
+			maxDocumentListPages*documentListPageSize)
+	}
+
+	if requests != maxDocumentListPages {
+		t.Fatalf("requests = %d, want exactly %d (the cap must stop the scan, not hang)",
+			requests, maxDocumentListPages)
+	}
+}
+
+//nolint:dupl // the cap tests are intentionally parallel per-endpoint checks
+func TestListStoragePathsCapStopsAtMaxPages(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+
+		page := r.URL.Query().Get("page")
+
+		entries := make([]string, 0, documentListPageSize)
+		for i := range documentListPageSize {
+			entries = append(entries, fmt.Sprintf(
+				`{"id":%d,"name":"path-%s-%03d","path":"/docs/%s/%03d"}`, i, page, i, page, i))
+		}
+
+		_, _ = w.Write([]byte(`{"results":[` + strings.Join(entries, ",") + `]}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	paths, err := client.ListStoragePaths(t.Context())
+	if err != nil {
+		t.Fatalf("ListStoragePaths: %v", err)
+	}
+
+	if len(paths) != maxDocumentListPages*documentListPageSize {
+		t.Fatalf("paths = %d, want exactly %d (100 full pages)", len(paths),
+			maxDocumentListPages*documentListPageSize)
+	}
+
+	if requests != maxDocumentListPages {
+		t.Fatalf("requests = %d, want exactly %d (the cap must stop the scan, not hang)",
+			requests, maxDocumentListPages)
+	}
+}
+
 func TestListDocumentChecksumsConcurrentCalls(t *testing.T) {
 	t.Parallel()
 
@@ -3033,6 +3165,69 @@ func TestWithHTTPClientRoutesRequestsThroughSuppliedClient(t *testing.T) {
 
 	if transport.gotAuth != "Token secret-token" {
 		t.Fatalf("Authorization seen by the supplied transport = %q", transport.gotAuth)
+	}
+}
+
+// WithHTTPClient(nil) must be a no-op: the option's defensive branch keeps
+// the default transport instead of planting a nil client.
+func TestWithHTTPClientNilKeepsDefaultTransport(t *testing.T) {
+	t.Parallel()
+
+	client, err := New("https://paperless.example.com", "token", WithHTTPClient(nil))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	tuned, ok := client.httpClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport = %T, want the default *http.Transport", client.httpClient.Transport)
+	}
+
+	if tuned.MaxIdleConnsPerHost != DefaultMaxIdleConnsPerHost {
+		t.Fatalf("MaxIdleConnsPerHost = %d, want the default %d",
+			tuned.MaxIdleConnsPerHost, DefaultMaxIdleConnsPerHost)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[],"count":0}`))
+	}))
+	defer server.Close()
+
+	client, err = New(server.URL, "token", WithHTTPClient(nil))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if err := client.Ping(t.Context()); err != nil {
+		t.Fatalf("Ping with nil WithHTTPClient: %v", err)
+	}
+}
+
+func TestDefaultTransportHonorsExportedConstants(t *testing.T) {
+	t.Parallel()
+
+	client, err := New("https://paperless.example.com", "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	tuned, ok := client.httpClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport = %T, want *http.Transport", client.httpClient.Transport)
+	}
+
+	if tuned.MaxIdleConns != DefaultMaxIdleConns {
+		t.Errorf("MaxIdleConns = %d, want %d", tuned.MaxIdleConns, DefaultMaxIdleConns)
+	}
+
+	if tuned.MaxIdleConnsPerHost != DefaultMaxIdleConnsPerHost {
+		t.Errorf("MaxIdleConnsPerHost = %d, want %d",
+			tuned.MaxIdleConnsPerHost, DefaultMaxIdleConnsPerHost)
+	}
+
+	if tuned.IdleConnTimeout != DefaultIdleConnTimeout {
+		t.Errorf("IdleConnTimeout = %s, want %s",
+			tuned.IdleConnTimeout, DefaultIdleConnTimeout)
 	}
 }
 
