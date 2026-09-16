@@ -58,8 +58,16 @@
             };
             meta = {
               description = "Paperless-ngx REST client SDK for Go";
+              homepage = "https://github.com/LarsArtmann/go-paperless";
               license = lib.licenses.mit;
+              maintainers = [
+                {
+                  name = "Lars Artmann";
+                  github = "LarsArtmann";
+                }
+              ];
               platforms = lib.platforms.unix;
+              # No mainProgram: library-only marker output, nothing to run.
             };
           };
 

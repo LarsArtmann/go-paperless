@@ -46,6 +46,11 @@ Raw ideas:
   consumer needs editing
 - Capability-probe caching — `ProbeCapabilities` performs a full documents
   request per call today; probe once per client lifetime if consumers feel it
+- Typed public fields (phantom/branded types for `Slug`, `Checksum`,
+  `SortField`, ... — the branching-flow analyzer's PHANTOM_TYPE suggestions).
+  Breaking API change: bank-sync consumes this as a drop-in replacement, so a
+  typed-field migration is v2 scope at the earliest. branching-flow is
+  skipped in `.buildflow.yml` until then (rationale there).
 
 ### 3. Confidence
 
