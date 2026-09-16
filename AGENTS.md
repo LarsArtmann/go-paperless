@@ -33,6 +33,19 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   `go test -race ./…` job, matching the standalone govulncheck/gosec job
   pattern. The explicit job exists so tooling that only scans CI YAML sees
   the race detector.
+- **govalid-generate fails on the machine's stale govalid, not on this repo**:
+  `/run/current-system/sw/bin/govalid` is a nixpkgs snapshot
+  (`govalid-0-unstable-2026-05-16`) built against go1.26 source-processing;
+  against this module's Go 1.27 floor (encoding/json/v2) its markers analysis
+  exits 1, so BuildFlow's `govalid-generate` step fails while build/test pass.
+  Heals when the machine's nixpkgs bumps govalid — do NOT mask it in
+  `.buildflow.yml`. No upstream releases exist (`buildflow upgrade` 404s).
+- **`nix fmt` (treefmt) lags bare `dprint` after plugin bumps**: dprint
+  plugins update via `dprint config update` (bumped 2026-09-16 to
+  json 0.24.0 / markdown 0.24.0 / dockerfile 0.6.0 / npm-yaml URL), but
+  treefmt doesn't apply the new plugin's formatting (e.g. markdown table
+  padding). When `dprint check` flags files after a plugin bump, fix with
+  bare `dprint fmt <file>`; `nix fmt` is a no-op there, so no ping-pong.
 
 ## Scope
 
