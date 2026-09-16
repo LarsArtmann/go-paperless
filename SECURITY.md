@@ -46,11 +46,15 @@ holds, and what matters:
   (`DeleteShareLink`), which kills every copy of the URL at once. Set an
   `Expiration` for time-boxed access, treat slugs as bearer secrets (don't
   log them, don't embed them in shared documents), and delete links as
-  soon as their audience no longer needs them.
+  soon as their audience no longer needs them. Slug length and entropy are
+  server-controlled — the SDK cannot guarantee unpredictability, so for
+  highly sensitive documents prefer time-boxed links plus channel hygiene
+  (or skip share links entirely and provision accounts).
 - Uploads are multipart bodies read fully into memory; size them
   accordingly for very large documents.
 
 ## Scanning
 
 CI runs `govulncheck` (Go vulnerability database, code-reachability aware)
-and `gosec` (static analysis) on every push and pull request.
+and `gosec` (static analysis) on every push and pull request. A scheduled
+`Fuzz` workflow exercises the parsing fuzz targets weekly (and on demand).
