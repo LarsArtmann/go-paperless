@@ -314,8 +314,21 @@ func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"results":[{"id":42,"name":"gmail","matching_algorithm":6}]}`))
 		case r.Method == http.MethodPatch && r.URL.Path == "/api/tags/42/":
+			raw, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Errorf("read patch body: %v", err)
+			}
+
+			// The demote PATCH must carry ONLY matching_algorithm: DRF rejects
+			// a PATCH that re-sends a blank required name with 400 Bad Request
+			// (the 2026-09-17 live failure: "Bad Request: /api/tags/1/" on
+			// every sync tick, so the auto tag never healed).
+			if bytes.Contains(raw, []byte(`"name"`)) {
+				t.Errorf("patch body re-sent the name field: %s", raw)
+			}
+
 			var payload namedPayload
-			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
+			if err := json.UnmarshalRead(bytes.NewReader(raw), &payload); err != nil {
 				t.Errorf("decode patch body: %v", err)
 			}
 

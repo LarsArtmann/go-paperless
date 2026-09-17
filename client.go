@@ -819,7 +819,7 @@ func (c *Client) updateMatchingAlgorithm(
 	id int,
 	algorithm matchingAlgorithm,
 ) error {
-	payload, err := json.Marshal(namedPayload{MatchingAlgorithm: int(algorithm)})
+	payload, err := json.Marshal(matchingAlgorithmPatch{MatchingAlgorithm: int(algorithm)})
 	if err != nil {
 		return errorfamily.WrapInfrastructure(
 			err,
@@ -853,6 +853,15 @@ type namedPayload struct {
 	ID                int    `json:"id"`
 	Name              string `json:"name"`
 	MatchingAlgorithm int    `json:"matching_algorithm"`
+}
+
+// matchingAlgorithmPatch is the updateMatchingAlgorithm request body. It
+// carries ONLY the matching algorithm: Paperless-ngx's DRF serializer rejects
+// a PATCH that re-sends a blank required name ("name":"") with 400 Bad
+// Request, which silently broke the legacy auto-tag self-heal on every sync
+// tick (live 2026-09-17: "Bad Request: /api/tags/1/" once per 30 min).
+type matchingAlgorithmPatch struct {
+	MatchingAlgorithm int `json:"matching_algorithm"`
 }
 
 // findNamed looks up a Paperless-ngx named object (tag, correspondent) by

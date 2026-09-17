@@ -1,12 +1,12 @@
 # Status Report — Dependency Upgrade, Full Session (incl. continuation)
 
-| | |
-|---|---|
-| **Date** | 2026-09-16 18:18 CEST |
-| **Repo / Branch** | `go-paperless` @ `main`, HEAD `ebd50d4` (clean tree) |
-| **Session** | One Crush session, three phases: dep upgrade (~15:14–15:45), status report + self-review (~17:35), continuation (riders, diff completion, harvest, annotation ~17:45–18:05), final verification (18:18) |
-| **Companion reports** | `…17-35_dependency-upgrade-status.md` (mid-session snapshot, since annotated inline) · sibling sessions' `…17-34…` and `…17-57…` (theirs, referenced only where colliding) |
-| **Format note** | `.md` per explicit user instruction; skill default is styled HTML. |
+|                       |                                                                                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Date**              | 2026-09-16 18:18 CEST                                                                                                                                                                                   |
+| **Repo / Branch**     | `go-paperless` @ `main`, HEAD `ebd50d4` (clean tree)                                                                                                                                                    |
+| **Session**           | One Crush session, three phases: dep upgrade (~15:14–15:45), status report + self-review (~17:35), continuation (riders, diff completion, harvest, annotation ~17:45–18:05), final verification (18:18) |
+| **Companion reports** | `…17-35_dependency-upgrade-status.md` (mid-session snapshot, since annotated inline) · sibling sessions' `…17-34…` and `…17-57…` (theirs, referenced only where colliding)                              |
+| **Format note**       | `.md` per explicit user instruction; skill default is styled HTML.                                                                                                                                      |
 
 ---
 
@@ -23,19 +23,19 @@ Both direct deps on latest (go-error-family v0.10.1, go-retry v0.6.0), every ups
 
 ## a) FULLY DONE
 
-| Item | Evidence |
-|---|---|
-| `go-error-family` v0.10.0 → **v0.10.1**; `go-retry` v0.5.0 → **v0.6.0** | go.mod grep-verified; `go mod verify` "all modules verified"; committed in `5f8d07b` |
-| Complete upstream review — **all 8 changed `.go` files** viewed across both compares | classify/error/family/handle/http/example_test: comment+nolint+test-only; `examples/cmd/*`: comment + additive `WithContext`; retry.go full 78-line patch: pure constants extraction, identical values |
-| Toolchain: floor `go 1.27` preserved (major.minor), already latest (go1.27.1 newest stable) | go.dev/dl JSON + go.mod re-read |
-| vendorHash FOD updated + proven by two sandboxed builds | `sha256-oLknr8l…` → `sha256-mk/dJNF…` (authored by sibling; attribution disclosed) |
-| **Final-tree verification**: `nix flake check` all checks passed on clean committed HEAD | 18:18 run: build, test, test-race, lint, format, integration-vet — green, no mid-edit caveat |
-| Rider diffs in `5f8d07b` reviewed | AGENTS: BuildFlow usage/samber-lo/race rationale; ERROR_CODES: table re-alignment only |
-| HARVEST executed and durable | TODO_LIST rows at :24–28 verified present after sibling's parallel execution sweep; ROADMAP theme 4 added |
-| Mid-session report annotated non-destructively | `…17-35….md`: 30 inline markers + continuation appendix |
-| Consumer impact **measured** | bank-sync `go.mod:48` pins `go-paperless v0.3.0`; consumers unaffected pre-release |
-| Correct scope discipline | update-vendor-hash port dropped when `.buildflow.yml` landed (nix-hash-fix owns it); no commits without authorization; sibling work untouched |
-| ci.yml half-audit (measured 18:18) | govulncheck job present (`ci.yml:22-32`); **fuzz job absent** (grep) — feeds the open TODO row |
+| Item                                                                                        | Evidence                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `go-error-family` v0.10.0 → **v0.10.1**; `go-retry` v0.5.0 → **v0.6.0**                     | go.mod grep-verified; `go mod verify` "all modules verified"; committed in `5f8d07b`                                                                                                                   |
+| Complete upstream review — **all 8 changed `.go` files** viewed across both compares        | classify/error/family/handle/http/example_test: comment+nolint+test-only; `examples/cmd/*`: comment + additive `WithContext`; retry.go full 78-line patch: pure constants extraction, identical values |
+| Toolchain: floor `go 1.27` preserved (major.minor), already latest (go1.27.1 newest stable) | go.dev/dl JSON + go.mod re-read                                                                                                                                                                        |
+| vendorHash FOD updated + proven by two sandboxed builds                                     | `sha256-oLknr8l…` → `sha256-mk/dJNF…` (authored by sibling; attribution disclosed)                                                                                                                     |
+| **Final-tree verification**: `nix flake check` all checks passed on clean committed HEAD    | 18:18 run: build, test, test-race, lint, format, integration-vet — green, no mid-edit caveat                                                                                                           |
+| Rider diffs in `5f8d07b` reviewed                                                           | AGENTS: BuildFlow usage/samber-lo/race rationale; ERROR_CODES: table re-alignment only                                                                                                                 |
+| HARVEST executed and durable                                                                | TODO_LIST rows at :24–28 verified present after sibling's parallel execution sweep; ROADMAP theme 4 added                                                                                              |
+| Mid-session report annotated non-destructively                                              | `…17-35….md`: 30 inline markers + continuation appendix                                                                                                                                                |
+| Consumer impact **measured**                                                                | bank-sync `go.mod:48` pins `go-paperless v0.3.0`; consumers unaffected pre-release                                                                                                                     |
+| Correct scope discipline                                                                    | update-vendor-hash port dropped when `.buildflow.yml` landed (nix-hash-fix owns it); no commits without authorization; sibling work untouched                                                          |
+| ci.yml half-audit (measured 18:18)                                                          | govulncheck job present (`ci.yml:22-32`); **fuzz job absent** (grep) — feeds the open TODO row                                                                                                         |
 
 ## b) PARTIALLY DONE
 
@@ -120,4 +120,4 @@ Both direct deps on latest (go-error-family v0.10.1, go-retry v0.6.0), every ups
 
 ---
 
-*Final-tree green at 18:18 on clean HEAD `ebd50d4`. All session claims above are measured or explicitly marked as others' claims. WAITING FOR INSTRUCTIONS.*
+_Final-tree green at 18:18 on clean HEAD `ebd50d4`. All session claims above are measured or explicitly marked as others' claims. WAITING FOR INSTRUCTIONS._
