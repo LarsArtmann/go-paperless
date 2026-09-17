@@ -39,7 +39,7 @@
           goPkg = pkgs.go_1_27;
           goExperiment = "jsonv2,simd";
           # Release version — bump together with CHANGELOG.md and the git tag.
-          version = "0.3.1";
+          version = "0.3.2";
 
           # buildGoModule fetches Go modules into a fixed-output derivation
           # (network access there) and materialises them as vendor/ inside the

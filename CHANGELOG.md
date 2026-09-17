@@ -18,6 +18,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Nothing yet.
 
+## [0.3.2] - 2026-09-17
+
+### Fixed
+
+- `updateMatchingAlgorithm` (the legacy auto-tag self-heal behind
+  `EnsureTag`) sent `{"id":0,"name":"","matching_algorithm":0}` —
+  Paperless-ngx's DRF serializer rejects a PATCH that re-sends a blank
+  required name with 400 Bad Request, so the demote never landed and every
+  papersync tick retried it forever (live symptom: `Bad Request:
+  /api/tags/1/` once per sync). The PATCH now carries only
+  `matching_algorithm`, and the self-heal test pins that `name` stays out
+  of the request body.
+
 ## [0.3.1] - 2026-09-14
 
 A hardening patch: no public API changes, no dependency changes — the module
