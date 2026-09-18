@@ -974,7 +974,7 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 		return 0, false, nil
 	}
 
-	return field.ID, true, nil
+	return field.ID, true, nil //art-dupl:accept parallel tail of the shared findByName skeleton
 }
 
 // EnsureCustomField returns the ID of the custom field definition with the
@@ -1060,7 +1060,7 @@ func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, e
 		return 0, false, nil
 	}
 
-	return path.ID, true, nil
+	return path.ID, true, nil //art-dupl:accept parallel tail of the shared findByName skeleton
 }
 
 // EnsureStoragePath returns the ID of the storage path with the given name,

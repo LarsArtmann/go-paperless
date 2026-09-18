@@ -11,7 +11,7 @@ import (
 )
 
 func ExampleNew_invalidConfig() {
-	_, err := paperless.New("", "token-from-web-ui") //art-dupl:accept doc examples are self-contained by design
+	_, err := paperless.New("", "token-from-web-ui") //art-dupl:accept doc-example boilerplate
 	if errors.Is(err, paperless.ErrInvalidConfig) {
 		fmt.Println("configure the base URL before retrying")
 	}
@@ -19,7 +19,8 @@ func ExampleNew_invalidConfig() {
 }
 
 func ExampleNew() {
-	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,7 +30,7 @@ func ExampleNew() {
 }
 
 func ExampleNew_withOptions() {
-	client, err := paperless.New( //art-dupl:accept doc examples are self-contained by design
+	client, err := paperless.New( //art-dupl:accept doc-example boilerplate
 		"https://paperless.example.com",
 		"token-from-web-ui",
 		paperless.WithTimeout(30*time.Second),
@@ -45,7 +46,8 @@ func ExampleNew_withOptions() {
 
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_WaitForTask() {
-	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,7 +79,7 @@ func ExampleClient_WaitForTask() {
 
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleWithRetry() {
-	client, err := paperless.New( //art-dupl:accept doc examples are self-contained by design
+	client, err := paperless.New( //art-dupl:accept doc-example boilerplate
 		"https://paperless.example.com",
 		"token-from-web-ui",
 		paperless.WithRetry(paperless.RetryPolicy{
@@ -103,7 +105,8 @@ func ExampleWithRetry() {
 
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_Upload() {
-	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,7 +140,8 @@ func ExampleClient_Upload() {
 
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_GetTask() {
-	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("https://paperless.example.com", "token-from-web-ui")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,7 +163,8 @@ func ExampleClient_GetTask() {
 //
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_EnsureTag() {
-	client, err := paperless.New("http://paperless.local:8000", "my-token") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -179,7 +184,8 @@ func ExampleClient_EnsureTag() {
 //
 //nolint:testableexamples // illustrative; running it would need a live server
 func ExampleClient_ProbeCapabilities() {
-	client, err := paperless.New("http://paperless.local:8000", "my-token") //art-dupl:accept doc examples are self-contained by design
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
 	if err != nil {
 		log.Fatal(err)
 	}
