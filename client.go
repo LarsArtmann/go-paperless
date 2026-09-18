@@ -864,38 +864,54 @@ type matchingAlgorithmPatch struct {
 	MatchingAlgorithm int `json:"matching_algorithm"`
 }
 
-// findNamed looks up a Paperless-ngx named object (tag, correspondent) by
-// exact (case-insensitive) name. found is false when no match exists.
-func (c *Client) findNamed(
+// findByName is the shared query+doRequest+decode skeleton behind the
+// by-name finders (tags, correspondents, document types, custom fields,
+// storage paths): exact case-insensitive name match with page_size=1,
+// returning the first result. Request errors return unwrapped so callers
+// can add their own context; decode failures are wrapped as corruption with
+// a kind-derived code ("paperless.decode_<kind with underscores>s").
+func findByName[T any](
 	ctx context.Context,
+	c *Client,
 	endpoint, kind, name string,
-) (namedPayload, bool, error) {
+) (T, bool, error) {
+	var zero T
+
 	query := url.Values{}
 	query.Set("name__iexact", name)
 	query.Set("page_size", "1")
 
 	raw, reqErr := c.doRequest(ctx, http.MethodGet, endpoint, query.Encode(), nil, "")
 	if reqErr != nil {
-		return namedPayload{}, false, reqErr
+		return zero, false, reqErr
 	}
 
 	list := struct {
-		Results []namedPayload `json:"results"`
+		Results []T `json:"results"`
 	}{}
 
 	if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
-		return namedPayload{}, false, errorfamily.WrapCorruption(
+		return zero, false, errorfamily.WrapCorruption(
 			unmarshalErr,
 			"paperless.decode_"+strings.ReplaceAll(kind, " ", "_")+"s",
 			"could not decode "+kind+" search result",
-		).WithContext(kind, name)
+		).WithContext("name", name)
 	}
 
 	if len(list.Results) == 0 {
-		return namedPayload{}, false, nil
+		return zero, false, nil
 	}
 
 	return list.Results[0], true, nil
+}
+
+// findNamed looks up a Paperless-ngx named object (tag, correspondent) by
+// exact (case-insensitive) name. found is false when no match exists.
+func (c *Client) findNamed(
+	ctx context.Context,
+	endpoint, kind, name string,
+) (namedPayload, bool, error) {
+	return findByName[namedPayload](ctx, c, endpoint, kind, name)
 }
 
 // EnsureCorrespondent returns the ID of the correspondent with the given
@@ -945,11 +961,7 @@ type customFieldPayload struct {
 // creating it — the read-only half of EnsureCustomField, used by dry-run
 // backfills to report what they would record without mutating the server.
 func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, error) {
-	query := url.Values{}
-	query.Set("name__iexact", name)
-	query.Set("page_size", "1")
-
-	raw, err := c.doRequest(ctx, http.MethodGet, pathCustomFields, query.Encode(), nil, "")
+	field, found, err := findByName[customFieldPayload](ctx, c, pathCustomFields, "custom field", name)
 	if err != nil {
 		return 0, false, fmt.Errorf(
 			"find custom field %q: %w",
@@ -958,23 +970,11 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 		) //nolint:erraudit // keeps inner code+family
 	}
 
-	list := struct {
-		Results []customFieldPayload `json:"results"`
-	}{}
-
-	if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
-		return 0, false, errorfamily.WrapCorruption(
-			unmarshalErr,
-			"paperless.decode_custom_fields",
-			"could not decode custom field search result",
-		).WithContext("name", name)
-	}
-
-	if len(list.Results) == 0 {
+	if !found {
 		return 0, false, nil
 	}
 
-	return list.Results[0].ID, true, nil
+	return field.ID, true, nil
 }
 
 // EnsureCustomField returns the ID of the custom field definition with the
@@ -1051,32 +1051,16 @@ type storagePathPayload struct {
 // FindStoragePath looks up a storage path by exact (case-insensitive) name
 // WITHOUT creating it — the read-only lookup for dry-run reporting.
 func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, error) {
-	query := url.Values{}
-	query.Set("name__iexact", name)
-	query.Set("page_size", "1")
-
-	raw, reqErr := c.doRequest(ctx, http.MethodGet, pathStoragePaths, query.Encode(), nil, "")
-	if reqErr != nil {
-		return 0, false, reqErr
+	path, found, err := findByName[storagePathPayload](ctx, c, pathStoragePaths, "storage path", name)
+	if err != nil {
+		return 0, false, err
 	}
 
-	list := struct {
-		Results []storagePathPayload `json:"results"`
-	}{}
-
-	if unmarshalErr := json.Unmarshal(raw, &list); unmarshalErr != nil {
-		return 0, false, errorfamily.WrapCorruption(
-			unmarshalErr,
-			"paperless.decode_storage_paths",
-			"could not decode storage path search result",
-		).WithContext("name", name)
-	}
-
-	if len(list.Results) == 0 {
+	if !found {
 		return 0, false, nil
 	}
 
-	return list.Results[0].ID, true, nil
+	return path.ID, true, nil
 }
 
 // EnsureStoragePath returns the ID of the storage path with the given name,
