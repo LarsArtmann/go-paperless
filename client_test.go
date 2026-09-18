@@ -2297,15 +2297,26 @@ func TestWaitForTaskContextDeadlineSurfacesLastPollError(t *testing.T) {
 	}
 }
 
-func TestWaitForTaskRejectsEmptyTaskID(t *testing.T) {
-	t.Parallel()
+// newNoRequestServer starts a server that only counts received requests;
+// rejection tests assert the counter stays zero to prove the rejected call
+// never touched the wire. The server closes via t.Cleanup.
+func newNoRequestServer(t *testing.T) (*httptest.Server, func() int) {
+	t.Helper()
 
 	var requests int
 
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		requests++
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
+
+	return server, func() int { return requests }
+}
+
+func TestWaitForTaskRejectsEmptyTaskID(t *testing.T) {
+	t.Parallel()
+
+	server, requestCount := newNoRequestServer(t)
 
 	client, err := New(server.URL, "token")
 	if err != nil {
@@ -2321,8 +2332,8 @@ func TestWaitForTaskRejectsEmptyTaskID(t *testing.T) {
 		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
 	}
 
-	if requests != 0 {
-		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	if n := requestCount(); n != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", n)
 	}
 }
 
@@ -2516,12 +2527,7 @@ func TestEnsureStoragePathKeepsExistingTemplateWithoutPOST(t *testing.T) {
 func TestEnsureStoragePathRejectsEmptyArgs(t *testing.T) {
 	t.Parallel()
 
-	var requests int
-
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		requests++
-	}))
-	defer server.Close()
+	server, requestCount := newNoRequestServer(t)
 
 	client, err := New(server.URL, "token")
 	if err != nil {
@@ -2541,8 +2547,8 @@ func TestEnsureStoragePathRejectsEmptyArgs(t *testing.T) {
 		t.Fatal("expected an error for the empty directory template")
 	}
 
-	if requests != 0 {
-		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	if n := requestCount(); n != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", n)
 	}
 }
 
@@ -3402,12 +3408,7 @@ func TestAddDocumentNoteSendsNoteFieldAndReturnsUpdated(t *testing.T) {
 func TestAddDocumentNoteRejectsEmptyNote(t *testing.T) {
 	t.Parallel()
 
-	var requests int
-
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		requests++
-	}))
-	defer server.Close()
+	server, requestCount := newNoRequestServer(t)
 
 	client, err := New(server.URL, "token")
 	if err != nil {
@@ -3427,8 +3428,8 @@ func TestAddDocumentNoteRejectsEmptyNote(t *testing.T) {
 		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
 	}
 
-	if requests != 0 {
-		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", requests)
+	if n := requestCount(); n != 0 {
+		t.Fatalf("requests = %d, want 0 (validation happens before any HTTP)", n)
 	}
 }
 
@@ -3641,12 +3642,7 @@ func TestCreateShareLinkDefaultsFileVersionAndCarriesExpiration(t *testing.T) {
 func TestCreateShareLinkRejectsZeroDocument(t *testing.T) {
 	t.Parallel()
 
-	var requests int
-
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		requests++
-	}))
-	defer server.Close()
+	server, requestCount := newNoRequestServer(t)
 
 	client, err := New(server.URL, "token")
 	if err != nil {
@@ -3657,8 +3653,8 @@ func TestCreateShareLinkRejectsZeroDocument(t *testing.T) {
 		t.Fatal("expected an error for the zero document ID")
 	}
 
-	if requests != 0 {
-		t.Fatalf("requests = %d, want 0", requests)
+	if n := requestCount(); n != 0 {
+		t.Fatalf("requests = %d, want 0", n)
 	}
 }
 
@@ -3787,12 +3783,7 @@ func TestCreateSavedViewSendsStableFields(t *testing.T) {
 func TestCreateSavedViewRejectsEmptyName(t *testing.T) {
 	t.Parallel()
 
-	var requests int
-
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-		requests++
-	}))
-	defer server.Close()
+	server, requestCount := newNoRequestServer(t)
 
 	client, err := New(server.URL, "token")
 	if err != nil {
@@ -3808,8 +3799,8 @@ func TestCreateSavedViewRejectsEmptyName(t *testing.T) {
 		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
 	}
 
-	if requests != 0 {
-		t.Fatalf("requests = %d, want 0", requests)
+	if n := requestCount(); n != 0 {
+		t.Fatalf("requests = %d, want 0", n)
 	}
 }
 
