@@ -961,7 +961,13 @@ type customFieldPayload struct {
 // creating it — the read-only half of EnsureCustomField, used by dry-run
 // backfills to report what they would record without mutating the server.
 func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, error) {
-	field, found, err := findByName[customFieldPayload](ctx, c, pathCustomFields, "custom field", name)
+	field, found, err := findByName[customFieldPayload](
+		ctx,
+		c,
+		pathCustomFields,
+		"custom field",
+		name,
+	)
 	if err != nil {
 		return 0, false, fmt.Errorf(
 			"find custom field %q: %w",
@@ -1051,7 +1057,13 @@ type storagePathPayload struct {
 // FindStoragePath looks up a storage path by exact (case-insensitive) name
 // WITHOUT creating it — the read-only lookup for dry-run reporting.
 func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, error) {
-	path, found, err := findByName[storagePathPayload](ctx, c, pathStoragePaths, "storage path", name)
+	path, found, err := findByName[storagePathPayload](
+		ctx,
+		c,
+		pathStoragePaths,
+		"storage path",
+		name,
+	)
 	if err != nil {
 		return 0, false, err
 	}
