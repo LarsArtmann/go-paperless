@@ -22,4 +22,12 @@ skip_steps:
   # adoption is v2 scope (see ROADMAP.md) — not gate-blocking debt. The
   # analyzer's other 13 checks are informational here and are re-enabled
   # together with a typed-API migration.
-  - branching-flow
+  # UNSKIPPED 2026-09-22 (retest under the branching-flow v0.6.2+ SDK
+  # severity cap): verified live - exit 0, ~112 findings all at
+  # warning/info. The old reason to skip (PHANTOM_TYPE at error severity
+  # tripping the findings gate on every public string field) is gone: the
+  # cap keeps the run green while the full analyzer set (panic,
+  # split-brain, ro-leak, mixin suggestions) documents the typed-API v2
+  # migration debt on every run instead of hiding it. The public API
+  # remains a compatibility contract (bank-sync drop-in) - phantom-type
+  # adoption stays v2 scope.
