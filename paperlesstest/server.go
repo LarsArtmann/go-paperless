@@ -92,6 +92,18 @@ type Server struct {
 	tasks          []*taskRecord
 	nextTaskNumber int
 
+	tags              []namedEntity
+	correspondents    []namedEntity
+	documentTypes     []namedEntity
+	nextTagID         int
+	nextCorrespondentID int
+	nextDocumentTypeID  int
+
+	customFields      []customFieldEntity
+	storagePaths      []storagePathEntity
+	nextCustomFieldID int
+	nextStoragePathID int
+
 	requests []RequestRecord
 	token    string
 	faults   []Fault
@@ -173,6 +185,8 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) bool {
 	case s.routeUpload(w, r):
 		return true
 	case s.routeTasks(w, r):
+		return true
+	case s.routeEntities(w, r):
 		return true
 	}
 
