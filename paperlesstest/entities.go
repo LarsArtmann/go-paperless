@@ -148,7 +148,11 @@ func (s *Server) AddCorrespondent(name string, matchingAlgorithm int) int {
 
 	s.nextCorrespondentID++
 
-	entity := namedEntity{ID: s.nextCorrespondentID, Name: name, MatchingAlgorithm: matchingAlgorithm}
+	entity := namedEntity{
+		ID:                s.nextCorrespondentID,
+		Name:              name,
+		MatchingAlgorithm: matchingAlgorithm,
+	}
 	s.correspondents = append(s.correspondents, entity)
 
 	return entity.ID
@@ -161,7 +165,11 @@ func (s *Server) AddDocumentType(name string, matchingAlgorithm int) int {
 
 	s.nextDocumentTypeID++
 
-	entity := namedEntity{ID: s.nextDocumentTypeID, Name: name, MatchingAlgorithm: matchingAlgorithm}
+	entity := namedEntity{
+		ID:                s.nextDocumentTypeID,
+		Name:              name,
+		MatchingAlgorithm: matchingAlgorithm,
+	}
 	s.documentTypes = append(s.documentTypes, entity)
 
 	return entity.ID
@@ -187,7 +195,12 @@ func (s *Server) AddStoragePath(name, path string) int {
 
 	s.nextStoragePathID++
 
-	entity := storagePathEntity{ID: s.nextStoragePathID, Slug: fmt.Sprintf("path-%d", s.nextStoragePathID), Name: name, Path: path}
+	entity := storagePathEntity{
+		ID:   s.nextStoragePathID,
+		Slug: fmt.Sprintf("path-%d", s.nextStoragePathID),
+		Name: name,
+		Path: path,
+	}
 	s.storagePaths = append(s.storagePaths, entity)
 
 	return entity.ID
@@ -200,9 +213,21 @@ func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {
 	case strings.HasPrefix(r.URL.Path, prefixTags):
 		return s.routeNamedFamily(w, r, prefixTags, &s.tags, &s.nextTagID)
 	case strings.HasPrefix(r.URL.Path, prefixCorrespondents):
-		return s.routeNamedFamily(w, r, prefixCorrespondents, &s.correspondents, &s.nextCorrespondentID)
+		return s.routeNamedFamily(
+			w,
+			r,
+			prefixCorrespondents,
+			&s.correspondents,
+			&s.nextCorrespondentID,
+		)
 	case strings.HasPrefix(r.URL.Path, prefixDocumentTypes):
-		return s.routeNamedFamily(w, r, prefixDocumentTypes, &s.documentTypes, &s.nextDocumentTypeID)
+		return s.routeNamedFamily(
+			w,
+			r,
+			prefixDocumentTypes,
+			&s.documentTypes,
+			&s.nextDocumentTypeID,
+		)
 	case strings.HasPrefix(r.URL.Path, prefixCustomFields):
 		return s.routeCustomFields(w, r)
 	case strings.HasPrefix(r.URL.Path, prefixStoragePaths):
@@ -290,11 +315,20 @@ func (s *Server) handleNamedList(w http.ResponseWriter, r *http.Request, store *
 
 // handleNamedCreate stores one named object and answers the created
 // payload.
-func (s *Server) handleNamedCreate(w http.ResponseWriter, r *http.Request, store *[]namedEntity, nextID *int) {
+func (s *Server) handleNamedCreate(
+	w http.ResponseWriter,
+	r *http.Request,
+	store *[]namedEntity,
+	nextID *int,
+) {
 	var payload namedEntityWire
 	if err := json.Unmarshal(readBody(r), &payload); err != nil {
 		s.t.Errorf("paperlesstest: decode %s create body: %v", r.URL.Path, err)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid create payload"})
+		s.writeJSON(
+			w,
+			http.StatusBadRequest,
+			map[string]string{detailKey: "invalid create payload"},
+		)
 
 		return
 	}
@@ -327,7 +361,12 @@ func (s *Server) handleNamedDetail(w http.ResponseWriter, id int, store *[]named
 
 // handleNamedPatch applies a matching-algorithm patch (the self-heal
 // flow's write).
-func (s *Server) handleNamedPatch(w http.ResponseWriter, r *http.Request, id int, store *[]namedEntity) {
+func (s *Server) handleNamedPatch(
+	w http.ResponseWriter,
+	r *http.Request,
+	id int,
+	store *[]namedEntity,
+) {
 	var patch matchingAlgorithmWire
 	if err := json.Unmarshal(readBody(r), &patch); err != nil {
 		s.t.Errorf("paperlesstest: decode %s patch body: %v", r.URL.Path, err)
@@ -387,7 +426,11 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 		var payload customFieldWire
 		if err := json.Unmarshal(readBody(r), &payload); err != nil {
 			s.t.Errorf("paperlesstest: decode custom field create body: %v", err)
-			s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid create payload"})
+			s.writeJSON(
+				w,
+				http.StatusBadRequest,
+				map[string]string{detailKey: "invalid create payload"},
+			)
 
 			return true
 		}
@@ -450,7 +493,11 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 		var payload storagePathWire
 		if err := json.Unmarshal(readBody(r), &payload); err != nil {
 			s.t.Errorf("paperlesstest: decode storage path create body: %v", err)
-			s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid create payload"})
+			s.writeJSON(
+				w,
+				http.StatusBadRequest,
+				map[string]string{detailKey: "invalid create payload"},
+			)
 
 			return true
 		}

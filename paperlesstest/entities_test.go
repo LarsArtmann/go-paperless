@@ -3,8 +3,6 @@ package paperlesstest
 import (
 	"context"
 	"testing"
-
-	paperless "github.com/larsartmann/go-paperless"
 )
 
 // storagePathTemplate reads one storage path's template straight from the
@@ -60,7 +58,10 @@ func TestEnsureTagCreatesFindsAndSelfHeals(t *testing.T) {
 		t.Errorf("self-heal id = %d, want the existing %d", healed, legacy)
 	}
 
-	name, err := client.GetCorrespondentName(ctx, legacy) // different family, just exercising detail 404 path
+	name, err := client.GetCorrespondentName(
+		ctx,
+		legacy,
+	) // different family, just exercising detail 404 path
 	if err == nil {
 		t.Errorf("correspondent lookup on a tag id = %q, want an error", name)
 	}
@@ -157,7 +158,10 @@ func TestFindAndEnsureCustomField(t *testing.T) {
 func TestFindEnsureAndListStoragePaths(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer(t, WithStoragePaths(StoragePathFixture{Name: "Invoices", Path: "{created_year}/invoices"}))
+	server := NewServer(
+		t,
+		WithStoragePaths(StoragePathFixture{Name: "Invoices", Path: "{created_year}/invoices"}),
+	)
 	client := newTestClient(t, server)
 	ctx := context.Background()
 

@@ -92,10 +92,10 @@ type Server struct {
 	tasks          []*taskRecord
 	nextTaskNumber int
 
-	tags              []namedEntity
-	correspondents    []namedEntity
-	documentTypes     []namedEntity
-	nextTagID         int
+	tags                []namedEntity
+	correspondents      []namedEntity
+	documentTypes       []namedEntity
+	nextTagID           int
 	nextCorrespondentID int
 	nextDocumentTypeID  int
 

@@ -157,7 +157,9 @@ func TestDetailRoutesAnswer404ForUnknownDocuments(t *testing.T) {
 	}
 
 	if err := client.UpdateDocument(ctx, 99, paperless.UpdateDocumentRequest{}); err == nil {
-		t.Error("update of unknown document = nil error, want either the local empty-update rejection or a 404")
+		t.Error(
+			"update of unknown document = nil error, want either the local empty-update rejection or a 404",
+		)
 	}
 
 	if _, err := client.DownloadDocument(ctx, 99); err == nil {
