@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.4.0] - 2026-09-23
 
 ### Added
 
@@ -132,6 +132,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   drift-named build, and it passes). The live integration e2e compiles in
   `nix flake check` (`checks.integration-vet`); a live run still needs a
   Paperless-ngx instance
+
+## [0.3.2] - 2026-09-17
+
+### Fixed
+
+- `updateMatchingAlgorithm` (the legacy auto-tag self-heal behind
+  `EnsureTag`) sent `{"id":0,"name":"","matching_algorithm":0}` —
+  Paperless-ngx's DRF serializer rejects a PATCH that re-sends a blank
+  required name with 400 Bad Request, so the demote never landed and every
+  papersync tick retried it forever (live symptom: `Bad Request:
+  /api/tags/1/` once per sync). The PATCH now carries only
+  `matching_algorithm`, and the self-heal test pins that `name` stays out
+  of the request body.
+
+> Recovered 2026-09-23: the v0.3.2 tag shipped this section and the flake
+> bump, but both were lost on `main` in later history; restored verbatim
+> from the tag.
 
 ## [0.3.1] - 2026-09-14
 
@@ -315,6 +332,8 @@ error-code catalog, and supply-chain/tooling cleanup.
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.4.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.0
+[0.3.2]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.2
 [0.3.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.1
 [0.3.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.0
 [0.2.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.2.0
