@@ -49,6 +49,8 @@ func (s *tbStub) runCleanups() {
 }
 
 func TestUnknownRouteAnswers404AndFailsTest(t *testing.T) {
+	t.Parallel()
+
 	stub := &tbStub{TB: t}
 	server := NewServer(stub)
 	defer server.Close()
@@ -69,6 +71,8 @@ func TestUnknownRouteAnswers404AndFailsTest(t *testing.T) {
 }
 
 func TestRequestsAreRecorded(t *testing.T) {
+	t.Parallel()
+
 	stub := &tbStub{TB: t}
 	server := NewServer(stub)
 	defer server.Close()

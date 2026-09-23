@@ -10,6 +10,8 @@ import (
 )
 
 func TestUploadReturnsTaskIDAndCapturesUpload(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 
 	taskID, err := newTestClient(t, server).Upload(context.Background(), paperless.UploadRequest{
@@ -36,6 +38,8 @@ func TestUploadReturnsTaskIDAndCapturesUpload(t *testing.T) {
 }
 
 func TestUploadTaskHappyPathRoundTrip(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	client := newTestClient(t, server)
 
@@ -72,6 +76,8 @@ func TestUploadTaskHappyPathRoundTrip(t *testing.T) {
 }
 
 func TestUploadNaturalDuplicateRefusal(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	server.addDocument(Document{Title: "existing", Content: []byte("%PDF-same")})
 	client := newTestClient(t, server)
@@ -89,7 +95,7 @@ func TestUploadNaturalDuplicateRefusal(t *testing.T) {
 		t.Fatalf("WaitForTask: %v (duplicate refusals are honest outcomes, not errors)", err)
 	}
 
-	duplicateID, refused, inTrash := outcome.Duplicate()
+	duplicateID, inTrash, refused := outcome.Duplicate()
 	if !refused {
 		t.Fatalf("outcome %+v, want a duplicate refusal", outcome)
 	}
@@ -100,6 +106,8 @@ func TestUploadNaturalDuplicateRefusal(t *testing.T) {
 }
 
 func TestTaskPollUnknownTaskAnswersNotFound(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 
 	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), "task-missing")
@@ -113,6 +121,8 @@ func TestTaskPollUnknownTaskAnswersNotFound(t *testing.T) {
 }
 
 func TestUploadAppliesFormMetadata(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	client := newTestClient(t, server)
 
@@ -163,8 +173,12 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 		t.Errorf("stored meta = %+v, want title The Letter, correspondent 7, type 3", meta)
 	}
 
-	if !meta.Created.Equal(created) {
-		t.Errorf("stored created = %v, want %v", meta.Created, created)
+	// The SDK sends created as a date-only form field, so the fake stores
+	// midnight UTC of that date.
+	wantCreated := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+
+	if !meta.Created.Equal(wantCreated) {
+		t.Errorf("stored created = %v, want %v", meta.Created, wantCreated)
 	}
 
 	if !slices.Equal(meta.TagIDs, []int{2, 4}) {
@@ -177,6 +191,8 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 }
 
 func TestUploadWithoutTitleUsesFilename(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	client := newTestClient(t, server)
 

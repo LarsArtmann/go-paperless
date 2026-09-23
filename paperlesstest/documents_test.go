@@ -8,6 +8,8 @@ import (
 )
 
 func TestDocumentListServesFlatChecksums(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t, WithChecksumShape(ChecksumFlat))
 	server.addDocument(Document{Title: "one", Checksum: "checksum-one"})
 	server.addDocument(Document{Title: "two", Checksum: "checksum-two"})
@@ -29,6 +31,8 @@ func TestDocumentListServesFlatChecksums(t *testing.T) {
 }
 
 func TestDocumentListServesVersionsChecksums(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t, WithChecksumShape(ChecksumVersions))
 	server.addDocument(Document{Title: "three", Checksum: "checksum-three"})
 
@@ -55,6 +59,8 @@ func TestDocumentListServesVersionsChecksums(t *testing.T) {
 }
 
 func TestDocumentListPaginatesBeyondOnePage(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 
 	const documentCount = defaultPageSize + 7
@@ -74,6 +80,8 @@ func TestDocumentListPaginatesBeyondOnePage(t *testing.T) {
 }
 
 func TestDocumentListServesFullMetaShape(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	created := time.Date(2026, 9, 23, 10, 30, 0, 0, time.UTC)
 	server.addDocument(Document{
@@ -118,6 +126,8 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 }
 
 func TestPingTraversesDocumentList(t *testing.T) {
+	t.Parallel()
+
 	server := NewServer(t)
 	server.addDocument(Document{Title: "one", Checksum: "checksum-one"})
 

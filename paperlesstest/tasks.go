@@ -246,7 +246,7 @@ func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 	}
 
 	if record.plan.DocumentID == 0 && record.plan.Kind == TaskPlanSuccess {
-		record.plan.DocumentID = int64(s.consumeUploadLocked(upload))
+		record.plan = s.naturalPlanLocked(upload)
 	}
 
 	s.tasks = append(s.tasks, record)
@@ -254,16 +254,16 @@ func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 	return record
 }
 
-// consumeUploadLocked applies one upload through the natural consumption
-// path: duplicate checksums are refused, anything else becomes a stored
-// document carrying the upload's form metadata. Returns the document the
-// upload resolved to. The caller must hold s.mu.
-func (s *Server) consumeUploadLocked(upload Upload) int {
+// naturalPlanLocked resolves one upload through the natural consumption
+// path: a duplicate checksum is refused (the plan points at the pre-existing
+// document), anything else is consumed — the upload becomes a stored
+// document carrying its form metadata. The caller must hold s.mu.
+func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 	checksum := ChecksumOf(upload.Content)
 
 	for _, doc := range s.documents {
 		if doc.Checksum == checksum {
-			return doc.ID
+			return TaskPlan{Kind: TaskPlanDuplicate, DocumentID: int64(doc.ID)}
 		}
 	}
 
@@ -278,7 +278,7 @@ func (s *Server) consumeUploadLocked(upload Upload) int {
 		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
 	})
 
-	return stored.ID
+	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: int64(stored.ID)}
 }
 
 // popScriptLocked removes and returns the next scripted plan, or nil when
