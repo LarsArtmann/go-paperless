@@ -8,7 +8,6 @@ import (
 	"time"
 
 	errorfamily "github.com/larsartmann/go-error-family"
-
 	paperless "github.com/larsartmann/go-paperless"
 )
 

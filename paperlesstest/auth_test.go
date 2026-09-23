@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	errorfamily "github.com/larsartmann/go-error-family"
-
 	paperless "github.com/larsartmann/go-paperless"
 )
 
@@ -14,6 +13,7 @@ func TestTokenEnforcementRejectsWrongTokens(t *testing.T) {
 	t.Parallel()
 
 	server := NewServer(t, WithToken("sekrit"))
+
 	client, err := paperless.New(server.URL(), "wrong-token")
 	if err != nil {
 		t.Fatalf("paperless.New: %v", err)
