@@ -56,6 +56,24 @@ func ChecksumOf(content []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// Documents returns a copy of every stored document fixture, oldest first.
+// Mutating the copies does not affect the fake.
+func (s *Server) Documents() []Document {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	documents := make([]Document, 0, len(s.documents))
+	for _, doc := range s.documents {
+		copied := *doc
+		copied.Content = slices.Clone(doc.Content)
+		copied.TagIDs = slices.Clone(doc.TagIDs)
+		copied.CustomFields = slices.Clone(doc.CustomFields)
+		documents = append(documents, copied)
+	}
+
+	return documents
+}
+
 // addDocument stores one document fixture, assigning an ID and a derived
 // checksum when unset. It is the locking entry point for tests and options.
 func (s *Server) addDocument(doc Document) *Document {

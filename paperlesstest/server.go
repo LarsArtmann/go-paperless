@@ -47,6 +47,16 @@ func WithChecksumShape(shape ChecksumShape) Option {
 	}
 }
 
+// WithDocuments seeds the fake with stored documents. IDs and checksums
+// follow the Document fixture rules (auto-assigned when unset).
+func WithDocuments(documents ...Document) Option {
+	return func(s *Server) {
+		for _, doc := range documents {
+			s.addDocument(doc)
+		}
+	}
+}
+
 // Server is a stateful in-memory fake of the Paperless-ngx REST API.
 // Construct it with NewServer; the zero value is not usable.
 type Server struct {
