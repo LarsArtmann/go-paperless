@@ -118,7 +118,11 @@ func (s *Server) handleNoteCreateLocked(w http.ResponseWriter, r *http.Request, 
 func (s *Server) handleNoteDeleteLocked(w http.ResponseWriter, r *http.Request, id int) bool {
 	noteID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil || noteID <= 0 {
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "the id query parameter is required"})
+		s.writeJSON(
+			w,
+			http.StatusBadRequest,
+			map[string]string{detailKey: "the id query parameter is required"},
+		)
 
 		return true
 	}
