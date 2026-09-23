@@ -86,6 +86,8 @@ type Server struct {
 // on tb's cleanup list. Unexpected requests fail the test (tb.Errorf) and
 // answer 404.
 func NewServer(tb testing.TB, opts ...Option) *Server {
+	tb.Helper()
+
 	server := &Server{
 		t:          tb,
 		apiVersion: DefaultAPIVersion,
