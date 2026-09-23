@@ -19,6 +19,9 @@ const (
 	// response's Content-Type ("application/json; version=N"), matching the
 	// SDK's Accept-header target.
 	DefaultAPIVersion = "10"
+
+	// detailKey is the DRF error body's message key.
+	detailKey = "detail"
 )
 
 // ChecksumShape selects the document checksum wire shape the fake serves
@@ -80,11 +83,11 @@ type Server struct {
 }
 
 // NewServer starts a fake Paperless-ngx server and registers its shutdown
-// on t's cleanup list. Unexpected requests fail the test (t.Errorf) and
+// on tb's cleanup list. Unexpected requests fail the test (tb.Errorf) and
 // answer 404.
-func NewServer(t testing.TB, opts ...Option) *Server {
+func NewServer(tb testing.TB, opts ...Option) *Server {
 	server := &Server{
-		t:          t,
+		t:          tb,
 		apiVersion: DefaultAPIVersion,
 	}
 
@@ -93,7 +96,7 @@ func NewServer(t testing.TB, opts ...Option) *Server {
 	}
 
 	server.http = httptest.NewServer(server)
-	t.Cleanup(server.Close)
+	tb.Cleanup(server.Close)
 
 	return server
 }
@@ -116,7 +119,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !s.route(w, r) {
 		s.t.Errorf("paperlesstest: unexpected request: %s %s", r.Method, r.URL.Path)
-		s.writeJSON(w, http.StatusNotFound, map[string]string{"detail": "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
 	}
 }
 

@@ -183,9 +183,15 @@ func (s *Server) routeUpload(w http.ResponseWriter, r *http.Request) bool {
 // task plan (scripted first, natural otherwise), and answers with the new
 // task's UUID as a bare JSON string.
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadFormMemory)
+
 	if err := r.ParseMultipartForm(maxUploadFormMemory); err != nil {
 		s.t.Errorf("paperlesstest: parse upload multipart: %v", err)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{"detail": "invalid multipart form"})
+		s.writeJSON(
+			w,
+			http.StatusBadRequest,
+			map[string]string{detailKey: "invalid multipart form"},
+		)
 
 		return
 	}
@@ -193,22 +199,27 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("document")
 	if err != nil {
 		s.t.Errorf("paperlesstest: upload without document file: %v", err)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{"detail": "missing document file"})
+		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "missing document file"})
 
 		return
 	}
 
 	content, readErr := io.ReadAll(file)
-	_ = file.Close()
+
 	if readErr != nil {
+		_ = file.Close()
 		s.t.Errorf("paperlesstest: read uploaded document: %v", readErr)
 		s.writeJSON(
 			w,
 			http.StatusBadRequest,
-			map[string]string{"detail": "unreadable document file"},
+			map[string]string{detailKey: "unreadable document file"},
 		)
 
 		return
+	}
+
+	if closeErr := file.Close(); closeErr != nil {
+		s.t.Errorf("paperlesstest: close uploaded document: %v", closeErr)
 	}
 
 	upload := Upload{
@@ -237,21 +248,25 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 const maxUploadFormMemory = 32 << 20
 
 // createTaskLocked issues the next task record for an upload: the queued
-// script plan when one is pending, the natural outcome otherwise. Natural
-// consumption stores the uploaded document. The caller must hold s.mu.
+// script plan when one is pending, the natural outcome otherwise. The
+// caller must hold s.mu.
 func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 	s.nextTaskNumber++
 
 	record := &taskRecord{
-		ID:   fmt.Sprintf("task-%d", s.nextTaskNumber),
-		plan: TaskPlan{Kind: TaskPlanSuccess},
+		ID: fmt.Sprintf("task-%d", s.nextTaskNumber),
 	}
 
 	if scripted := s.popScriptLocked(); scripted != nil {
 		record.plan = *scripted
-	}
 
-	if record.plan.DocumentID == 0 && record.plan.Kind == TaskPlanSuccess {
+		// A scripted success without a document pointer consumes the
+		// upload naturally (storing it) while keeping the script's shape
+		// (e.g. pending polls).
+		if record.plan.Kind == TaskPlanSuccess && record.plan.DocumentID == 0 {
+			record.plan.DocumentID = int64(s.resolveConsumptionLocked(upload))
+		}
+	} else {
 		record.plan = s.naturalPlanLocked(upload)
 	}
 
@@ -285,6 +300,33 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 	})
 
 	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: int64(stored.ID)}
+}
+
+// resolveConsumptionLocked resolves one upload's content to a document ID:
+// a duplicate checksum maps to the pre-existing document, anything else is
+// stored (carrying its form metadata) and maps to the new document. The
+// caller must hold s.mu.
+func (s *Server) resolveConsumptionLocked(upload Upload) int {
+	checksum := ChecksumOf(upload.Content)
+
+	for _, doc := range s.documents {
+		if doc.Checksum == checksum {
+			return doc.ID
+		}
+	}
+
+	stored := s.appendDocumentLocked(Document{
+		Title:          consumptionTitle(upload),
+		Content:        upload.Content,
+		Checksum:       checksum,
+		Created:        parseUploadDate(upload.Created),
+		Correspondent:  atoiOrZero(upload.Correspondent),
+		TagIDs:         atoiSlice(upload.Tags),
+		DocumentTypeID: atoiOrZero(upload.DocumentType),
+		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
+	})
+
+	return stored.ID
 }
 
 // popScriptLocked removes and returns the next scripted plan, or nil when

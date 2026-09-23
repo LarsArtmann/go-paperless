@@ -77,11 +77,11 @@ func (s *Server) Documents() []Document {
 
 // addDocument stores one document fixture, assigning an ID and a derived
 // checksum when unset. It is the locking entry point for tests and options.
-func (s *Server) addDocument(doc Document) *Document {
+func (s *Server) addDocument(doc Document) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.appendDocumentLocked(doc)
+	s.appendDocumentLocked(doc)
 }
 
 // appendDocumentLocked stores one document fixture. The caller must hold
@@ -194,7 +194,7 @@ const defaultPageSize = 100
 
 // pageBounds resolves the DRF page/page_size query parameters into slice
 // bounds for a collection of the given size.
-func pageBounds(r *http.Request, total int) (start, end int) {
+func pageBounds(r *http.Request, total int) (int, int) {
 	query := r.URL.Query()
 
 	page := 1
@@ -207,17 +207,9 @@ func pageBounds(r *http.Request, total int) (start, end int) {
 		size = parsed
 	}
 
-	start = (page - 1) * size
-	if start > total {
-		start = total
-	}
+	start := min((page-1)*size, total)
 
-	end = start + size
-	if end > total {
-		end = total
-	}
-
-	return start, end
+	return start, min(start+size, total)
 }
 
 // writePage serves one paginated envelope; results returns the page's
@@ -272,6 +264,6 @@ func (s *Server) methodNotAllowed(w http.ResponseWriter, r *http.Request, allowe
 	s.writeJSON(
 		w,
 		http.StatusMethodNotAllowed,
-		map[string]string{"detail": fmt.Sprintf("Method %q not allowed.", r.Method)},
+		map[string]string{detailKey: fmt.Sprintf("Method %q not allowed.", r.Method)},
 	)
 }
