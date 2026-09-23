@@ -61,6 +61,11 @@ type Server struct {
 	documents      []*Document
 	nextDocumentID int
 
+	uploads        []Upload
+	script         []TaskPlan
+	tasks          []*taskRecord
+	nextTaskNumber int
+
 	requests []RequestRecord
 }
 
@@ -110,6 +115,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) route(w http.ResponseWriter, r *http.Request) bool {
 	switch {
 	case s.routeDocuments(w, r):
+		return true
+	case s.routeUpload(w, r):
+		return true
+	case s.routeTasks(w, r):
 		return true
 	}
 
