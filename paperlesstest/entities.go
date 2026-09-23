@@ -328,7 +328,7 @@ func (s *Server) handleNamedCreate(
 		s.writeJSON(
 			w,
 			http.StatusBadRequest,
-			map[string]string{detailKey: "invalid create payload"},
+			map[string]string{detailKey: invalidCreateDetail},
 		)
 
 		return
@@ -430,7 +430,7 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 			s.writeJSON(
 				w,
 				http.StatusBadRequest,
-				map[string]string{detailKey: "invalid create payload"},
+				map[string]string{detailKey: invalidCreateDetail},
 			)
 
 			return true
@@ -497,7 +497,7 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 			s.writeJSON(
 				w,
 				http.StatusBadRequest,
-				map[string]string{detailKey: "invalid create payload"},
+				map[string]string{detailKey: invalidCreateDetail},
 			)
 
 			return true

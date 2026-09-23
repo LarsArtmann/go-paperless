@@ -25,6 +25,10 @@ const (
 
 	// notFoundDetail is the DRF detail message for unknown objects.
 	notFoundDetail = "Not found."
+
+	// invalidCreateDetail is the DRF detail message for undecodable create
+	// payloads.
+	invalidCreateDetail = "invalid create payload"
 )
 
 // ChecksumShape selects the document checksum wire shape the fake serves

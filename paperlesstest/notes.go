@@ -31,12 +31,15 @@ type noteUserWire struct {
 	LastName  string `json:"last_name"`
 }
 
-// defaultNoteUser is the fixed author the fake attaches to every note.
-var defaultNoteUser = &noteUserWire{
-	ID:        1,
-	Username:  "paperlesstest",
-	FirstName: "Paperless",
-	LastName:  "Test",
+// defaultNoteUser is the fixed author the fake attaches to every note (a
+// fresh value per call; noteWire stores the pointer).
+func defaultNoteUser() *noteUserWire {
+	return &noteUserWire{
+		ID:        1,
+		Username:  "paperlesstest",
+		FirstName: "Paperless",
+		LastName:  "Test",
+	}
 }
 
 // handleDocumentNotesLocked serves one document's notes routes (the notes
@@ -145,7 +148,7 @@ func (s *Server) writeNotes(w http.ResponseWriter, id int) {
 			ID:      notes[index].ID,
 			Note:    notes[index].Note,
 			Created: notes[index].Created,
-			User:    defaultNoteUser,
+			User:    defaultNoteUser(),
 		})
 	}
 

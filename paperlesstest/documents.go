@@ -315,15 +315,10 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 	}
 
 	switch {
+	case len(segments) == 1:
+		return s.routeDocumentByID(w, r, id)
 	case len(segments) == 2 && segments[1] == "notes":
-		if s.notes == nil {
-			s.notes = map[int][]noteEntity{}
-		}
-
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		return s.handleDocumentNotesLocked(w, r, id)
+		return s.routeDocumentNotes(w, r, id)
 	case len(segments) == 2 && segments[1] == "download":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowed(w, r, http.MethodGet)
@@ -334,28 +329,44 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 		s.serveDocumentDownload(w, id)
 
 		return true
-	case len(segments) == 1:
-		switch r.Method {
-		case http.MethodPatch:
-			s.handleDocumentPatch(w, r, id)
-
-			return true
-		case http.MethodDelete:
-			s.handleDocumentDelete(w, id)
-
-			return true
-		case http.MethodGet:
-			s.handleDocumentGet(w, id)
-
-			return true
-		default:
-			s.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
-
-			return true
-		}
 	default:
 		return false
 	}
+}
+
+// routeDocumentByID serves the PATCH/GET/DELETE surface of one document.
+func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id int) bool {
+	switch r.Method {
+	case http.MethodPatch:
+		s.handleDocumentPatch(w, r, id)
+
+		return true
+	case http.MethodDelete:
+		s.handleDocumentDelete(w, id)
+
+		return true
+	case http.MethodGet:
+		s.handleDocumentGet(w, id)
+
+		return true
+	default:
+		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+
+		return true
+	}
+}
+
+// routeDocumentNotes serves one document's notes routes under the fake's
+// lock (the notes handlers read the document store directly).
+func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.notes == nil {
+		s.notes = map[int][]noteEntity{}
+	}
+
+	return s.handleDocumentNotesLocked(w, r, id)
 }
 
 // handleDocumentPatch applies and records one metadata patch. The caller

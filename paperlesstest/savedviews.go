@@ -107,7 +107,7 @@ func (s *Server) handleSavedViewCreate(w http.ResponseWriter, r *http.Request) {
 		s.writeJSON(
 			w,
 			http.StatusBadRequest,
-			map[string]string{detailKey: "invalid create payload"},
+			map[string]string{detailKey: invalidCreateDetail},
 		)
 
 		return
