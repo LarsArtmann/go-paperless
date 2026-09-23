@@ -149,3 +149,39 @@ func TestPingTraversesDocumentList(t *testing.T) {
 func checksumNumber(i int) string {
 	return ChecksumOf([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24)})
 }
+
+func TestAddAndEditDocumentsAtRuntime(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(t)
+	client := newTestClient(t, server)
+	ctx := context.Background()
+
+	stored := server.AddDocument(Document{Content: []byte("%PDF-runtime")})
+
+	if stored.ID != 1 || stored.Checksum != ChecksumOf([]byte("%PDF-runtime")) {
+		t.Fatalf("stored = %+v, want id 1 with derived checksum", stored)
+	}
+
+	aged := server.EditDocument(1, func(doc *Document) {
+		doc.Title = ""
+		doc.Correspondent = 0
+	})
+
+	if !aged {
+		t.Fatal("EditDocument = false for document 1")
+	}
+
+	if server.EditDocument(99, func(doc *Document) {}) {
+		t.Error("EditDocument = true for unknown document 99")
+	}
+
+	metas, err := client.ListDocumentMetas(ctx)
+	if err != nil {
+		t.Fatalf("ListDocumentMetas: %v", err)
+	}
+
+	if len(metas) != 1 || metas[0].Title != "" {
+		t.Errorf("metas after edit = %+v, want the aged fixture", metas)
+	}
+}

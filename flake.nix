@@ -46,7 +46,7 @@
           # nothing in this module imports it, so it carries no weight here.
           goExperiment = "jsonv2";
           # Release version — bump together with CHANGELOG.md and the git tag.
-          version = "0.4.0";
+          version = "0.4.1";
 
           # buildGoModule fetches Go modules into a fixed-output derivation
           # (network access there) and materialises them as vendor/ inside the

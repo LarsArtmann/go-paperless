@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.1] - 2026-09-23
+
+### Added
+
+- `paperlesstest.Server.AddDocument` and `EditDocument`: mid-test fixture
+  seeding and in-place reshaping (aging metadata, corrupting titles) — the
+  InboxClean backfill migration needs both to replace its hand-rolled
+  stateful fake. Found by that migration, shipped before any consumer
+  pins v0.4.x.
+
 ## [0.4.0] - 2026-09-23
 
 ### Added
@@ -332,6 +342,7 @@ error-code catalog, and supply-chain/tooling cleanup.
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.4.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.1
 [0.4.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.0
 [0.3.2]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.2
 [0.3.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.1

@@ -76,6 +76,34 @@ func (s *Server) Documents() []Document {
 	return documents
 }
 
+// AddDocument stores one document fixture at runtime (the locking
+// equivalent of WithDocuments for mid-test seeding) and returns the stored
+// copy with its assigned ID and derived checksum.
+func (s *Server) AddDocument(doc Document) Document {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return *s.appendDocumentLocked(doc)
+}
+
+// EditDocument applies edit to one stored document fixture in place and
+// reports whether the document exists. Use it to reshape server state
+// mid-test (aging metadata, corrupting titles). The edit function runs
+// under the fake's lock — it must not call back into the server.
+func (s *Server) EditDocument(id int, edit func(doc *Document)) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	doc := s.findDocumentLocked(id)
+	if doc == nil {
+		return false
+	}
+
+	edit(doc)
+
+	return true
+}
+
 // addDocument stores one document fixture, assigning an ID and a derived
 // checksum when unset. It is the locking entry point for tests and options.
 func (s *Server) addDocument(doc Document) {
