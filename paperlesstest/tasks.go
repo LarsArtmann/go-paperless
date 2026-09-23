@@ -126,6 +126,17 @@ func (s *Server) ScriptTask(plan TaskPlan) {
 	s.scriptTask(plan)
 }
 
+// SeedTask plants a task with a GIVEN ID, reproducing server state a
+// previous run left behind (e.g. a ledger row referencing a consumption
+// task this test never uploads). The plan is served to every matching
+// poll; PendingPolls applies as with scripted uploads.
+func (s *Server) SeedTask(taskID string, plan TaskPlan) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.tasks = append(s.tasks, &taskRecord{ID: taskID, plan: plan})
+}
+
 func (s *Server) scriptTask(plan TaskPlan) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

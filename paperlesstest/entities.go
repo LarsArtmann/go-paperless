@@ -207,6 +207,45 @@ func (s *Server) AddStoragePath(name, path string) int {
 	return entity.ID
 }
 
+// CorrespondentCount reports how many correspondents exist on the fake
+// (dry-run purity assertions).
+func (s *Server) CorrespondentCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.correspondents)
+}
+
+// DocumentTypeID looks one seeded or created document type up by exact
+// name and reports whether it exists.
+func (s *Server) DocumentTypeID(name string) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, entity := range s.documentTypes {
+		if entity.Name == name {
+			return entity.ID, true
+		}
+	}
+
+	return 0, false
+}
+
+// CustomFieldID looks one seeded or created custom-field definition up by
+// exact name and reports whether it exists.
+func (s *Server) CustomFieldID(name string) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, field := range s.customFields {
+		if field.Name == name {
+			return field.ID, true
+		}
+	}
+
+	return 0, false
+}
+
 // routeEntities serves the five named-entity families. It reports whether
 // the request matched one of their routes.
 func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {

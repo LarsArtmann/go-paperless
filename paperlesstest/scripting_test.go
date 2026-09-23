@@ -187,3 +187,20 @@ func TestScriptTaskQueueRunsFIFO(t *testing.T) {
 		t.Errorf("second outcome = %+v, want success", outcome)
 	}
 }
+
+func TestSeedTaskServesAFixedTaskID(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(t)
+	server.SeedTask("task-from-past", TaskPlan{Kind: TaskPlanDuplicate, DocumentID: 7})
+
+	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), "task-from-past")
+	if err != nil || !found {
+		t.Fatalf("GetTask = (%+v, %v, %v), want the planted task", outcome, found, err)
+	}
+
+	duplicateID, _, refused := outcome.Duplicate()
+	if !refused || duplicateID != 7 {
+		t.Errorf("duplicate = (id %d, refused %v), want (7, true)", duplicateID, refused)
+	}
+}

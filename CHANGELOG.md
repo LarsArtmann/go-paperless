@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.2] - 2026-09-23
+
+### Added
+
+- `paperlesstest` runtime introspection the consumer migrations need:
+  `SeedTask` plants a task with a fixed ID (reproducing ledger rows that
+  reference a previous run's consumption task), `CorrespondentCount` for
+  dry-run purity assertions, and `DocumentTypeID`/`CustomFieldID` lookups
+  for asserting created entities by name.
+
 ## [0.4.1] - 2026-09-23
 
 ### Added
@@ -342,6 +352,7 @@ error-code catalog, and supply-chain/tooling cleanup.
 - Typed errors via `github.com/larsartmann/go-error-family`
 - httptest-based test suite, green under `-race`
 
+[0.4.2]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.2
 [0.4.1]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.1
 [0.4.0]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.4.0
 [0.3.2]: https://github.com/LarsArtmann/go-paperless/releases/tag/v0.3.2
