@@ -1,7 +1,6 @@
 package paperlesstest
 
 import (
-	"bytes"
 	"net/http"
 	"net/url"
 )
@@ -27,8 +26,8 @@ func (s *Server) Requests() []RequestRecord {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	records := make([]RequestRecord, len(s.requests))
-	copy(records, s.requests)
+	records := make([]RequestRecord, 0, len(s.requests))
+	records = append(records, s.requests...)
 
 	return records
 }
