@@ -135,10 +135,7 @@ func (s *Server) handleSavedViewCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, rule := range payload.FilterRules {
-		entity.FilterRules = append(entity.FilterRules, savedViewRuleEntity{
-			RuleType: rule.RuleType,
-			Value:    rule.Value,
-		})
+		entity.FilterRules = append(entity.FilterRules, savedViewRuleEntity(rule))
 	}
 
 	s.savedViews = append(s.savedViews, entity)
@@ -179,10 +176,7 @@ func savedViewEntityWire(view savedViewEntity) savedViewWire {
 	}
 
 	for _, rule := range view.FilterRules {
-		wire.FilterRules = append(wire.FilterRules, savedViewRuleWire{
-			RuleType: rule.RuleType,
-			Value:    rule.Value,
-		})
+		wire.FilterRules = append(wire.FilterRules, savedViewRuleWire(rule))
 	}
 
 	return wire

@@ -3,6 +3,7 @@ package paperlesstest
 import (
 	"encoding/json/v2"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -49,91 +50,98 @@ func defaultNoteUser() *noteUserWire {
 func (s *Server) handleDocumentNotesLocked(w http.ResponseWriter, r *http.Request, id int) bool {
 	switch r.Method {
 	case http.MethodGet:
-		if s.findDocumentLocked(id) == nil {
-			s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
-
-			return true
-		}
-
-		s.writeNotes(w, id)
-
-		return true
+		return s.handleNoteGetLocked(w, id)
 	case http.MethodPost:
-		var payload struct {
-			Note string `json:"note"`
-		}
-		if err := json.Unmarshal(readBody(r), &payload); err != nil {
-			s.t.Errorf("paperlesstest: decode note create body: %v", err)
-			s.writeJSON(
-				w,
-				http.StatusBadRequest,
-				map[string]string{detailKey: "invalid note payload"},
-			)
-
-			return true
-		}
-
-		if payload.Note == "" {
-			s.writeJSON(
-				w,
-				http.StatusBadRequest,
-				map[string]string{detailKey: "note text is required"},
-			)
-
-			return true
-		}
-
-		if s.findDocumentLocked(id) == nil {
-			s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
-
-			return true
-		}
-
-		s.nextNoteID++
-		s.notes[id] = append(s.notes[id], noteEntity{
-			ID:      s.nextNoteID,
-			Note:    payload.Note,
-			Created: time.Now().UTC(),
-		})
-
-		s.writeNotes(w, id)
-
-		return true
+		return s.handleNoteCreateLocked(w, r, id)
 	case http.MethodDelete:
-		noteID, err := strconv.Atoi(r.URL.Query().Get("id"))
-		if err != nil || noteID <= 0 {
-			s.writeJSON(
-				w,
-				http.StatusBadRequest,
-				map[string]string{detailKey: "the id query parameter is required"},
-			)
-
-			return true
-		}
-
-		remaining := make([]noteEntity, 0, len(s.notes[id]))
-		for _, note := range s.notes[id] {
-			if note.ID != noteID {
-				remaining = append(remaining, note)
-			}
-		}
-
-		if len(remaining) == len(s.notes[id]) {
-			s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
-
-			return true
-		}
-
-		s.notes[id] = remaining
-
-		s.writeNotes(w, id)
-
-		return true
+		return s.handleNoteDeleteLocked(w, r, id)
 	default:
 		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost, http.MethodDelete)
 
 		return true
 	}
+}
+
+// handleNoteGetLocked serves one document's note list, 404ing unknown
+// documents. The caller must hold s.mu.
+func (s *Server) handleNoteGetLocked(w http.ResponseWriter, id int) bool {
+	if s.findDocumentLocked(id) == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+
+		return true
+	}
+
+	s.writeNotes(w, id)
+
+	return true
+}
+
+// handleNoteCreateLocked appends one note. The caller must hold s.mu.
+func (s *Server) handleNoteCreateLocked(w http.ResponseWriter, r *http.Request, id int) bool {
+	var payload struct {
+		Note string `json:"note"`
+	}
+
+	if err := json.Unmarshal(readBody(r), &payload); err != nil {
+		s.t.Errorf("paperlesstest: decode note create body: %v", err)
+		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid note payload"})
+
+		return true
+	}
+
+	if payload.Note == "" {
+		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "note text is required"})
+
+		return true
+	}
+
+	if s.findDocumentLocked(id) == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+
+		return true
+	}
+
+	s.nextNoteID++
+	s.notes[id] = append(s.notes[id], noteEntity{
+		ID:      s.nextNoteID,
+		Note:    payload.Note,
+		Created: time.Now().UTC(),
+	})
+
+	s.writeNotes(w, id)
+
+	return true
+}
+
+// handleNoteDeleteLocked removes one note by its id query parameter. The
+// caller must hold s.mu.
+func (s *Server) handleNoteDeleteLocked(w http.ResponseWriter, r *http.Request, id int) bool {
+	noteID, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil || noteID <= 0 {
+		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "the id query parameter is required"})
+
+		return true
+	}
+
+	remaining := make([]noteEntity, 0, len(s.notes[id]))
+
+	for _, note := range s.notes[id] {
+		if note.ID != noteID {
+			remaining = append(remaining, note)
+		}
+	}
+
+	if len(remaining) == len(s.notes[id]) {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+
+		return true
+	}
+
+	s.notes[id] = remaining
+
+	s.writeNotes(w, id)
+
+	return true
 }
 
 // writeNotes serves one document's notes as the bare JSON array the notes
@@ -143,11 +151,12 @@ func (s *Server) writeNotes(w http.ResponseWriter, id int) {
 	notes := s.notes[id]
 
 	wires := make([]noteWire, 0, len(notes))
-	for index := len(notes) - 1; index >= 0; index-- {
+
+	for _, note := range slices.Backward(notes) {
 		wires = append(wires, noteWire{
-			ID:      notes[index].ID,
-			Note:    notes[index].Note,
-			Created: notes[index].Created,
+			ID:      note.ID,
+			Note:    note.Note,
+			Created: note.Created,
 			User:    defaultNoteUser(),
 		})
 	}

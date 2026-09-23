@@ -157,12 +157,5 @@ func (s *Server) handleShareLinkDelete(w http.ResponseWriter, id int) {
 
 // shareLinkEntityWire converts the stored link to its wire shape.
 func shareLinkEntityWire(link shareLinkEntity) shareLinkWire {
-	return shareLinkWire{
-		ID:          link.ID,
-		Created:     link.Created,
-		Expiration:  link.Expiration,
-		Slug:        link.Slug,
-		Document:    link.Document,
-		FileVersion: link.FileVersion,
-	}
+	return shareLinkWire(link)
 }

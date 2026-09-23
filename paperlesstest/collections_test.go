@@ -24,8 +24,7 @@ func TestDocumentNotesRoundTrip(t *testing.T) {
 		t.Fatalf("fresh document notes = %d, want 0", len(notes))
 	}
 
-	notes, err = client.AddDocumentNote(ctx, 1, "first")
-	if err != nil {
+	if _, err := client.AddDocumentNote(ctx, 1, "first"); err != nil {
 		t.Fatalf("AddDocumentNote: %v", err)
 	}
 
