@@ -77,7 +77,11 @@ func TestRequestsAreRecorded(t *testing.T) {
 	server := NewServer(stub)
 	defer server.Close()
 
-	request, err := http.NewRequest(http.MethodGet, server.URL()+"/api/missing/?page=1&page_size=1", http.NoBody)
+	request, err := http.NewRequest(
+		http.MethodGet,
+		server.URL()+"/api/missing/?page=1&page_size=1",
+		http.NoBody,
+	)
 	if err != nil {
 		t.Fatalf("build request: %v", err)
 	}

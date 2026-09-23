@@ -105,7 +105,9 @@ func WithTaskFailure(message string) Option {
 // duplicate sitting in the trash).
 func WithTaskDuplicate(documentID int, inTrash bool) Option {
 	return func(s *Server) {
-		s.scriptTask(TaskPlan{Kind: TaskPlanDuplicate, DocumentID: int64(documentID), InTrash: inTrash})
+		s.scriptTask(
+			TaskPlan{Kind: TaskPlanDuplicate, DocumentID: int64(documentID), InTrash: inTrash},
+		)
 	}
 }
 
@@ -200,7 +202,11 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	_ = file.Close()
 	if readErr != nil {
 		s.t.Errorf("paperlesstest: read uploaded document: %v", readErr)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{"detail": "unreadable document file"})
+		s.writeJSON(
+			w,
+			http.StatusBadRequest,
+			map[string]string{"detail": "unreadable document file"},
+		)
 
 		return
 	}
@@ -406,7 +412,6 @@ func parseUploadDate(raw string) time.Time {
 	}
 
 	parsed, err := time.Parse(time.DateOnly, raw)
-
 	if err != nil {
 		return time.Time{}
 	}
@@ -419,7 +424,6 @@ func parseUploadDate(raw string) time.Time {
 // faults cover more honestly).
 func atoiOrZero(raw string) int {
 	parsed, err := strconv.Atoi(raw)
-
 	if err != nil {
 		return 0
 	}

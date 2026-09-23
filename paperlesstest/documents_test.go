@@ -44,7 +44,10 @@ func TestDocumentListServesVersionsChecksums(t *testing.T) {
 	}
 
 	if _, ok := checksums["checksum-three"]; !ok {
-		t.Fatalf("checksums missing %q (versions[] shape not resolved by the client)", "checksum-three")
+		t.Fatalf(
+			"checksums missing %q (versions[] shape not resolved by the client)",
+			"checksum-three",
+		)
 	}
 
 	probe, err := client.ProbeCapabilities(context.Background())
@@ -75,7 +78,11 @@ func TestDocumentListPaginatesBeyondOnePage(t *testing.T) {
 	}
 
 	if len(checksums) != documentCount {
-		t.Fatalf("checksums = %d entries, want %d (pagination stopped early)", len(checksums), documentCount)
+		t.Fatalf(
+			"checksums = %d entries, want %d (pagination stopped early)",
+			len(checksums),
+			documentCount,
+		)
 	}
 }
 
@@ -116,7 +123,8 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 		t.Errorf("tags/type = %v/%d, want [3 9]/5", meta.TagIDs, meta.DocumentTypeID)
 	}
 
-	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 2 || meta.CustomFields[0].Value != "msg-42" {
+	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 2 ||
+		meta.CustomFields[0].Value != "msg-42" {
 		t.Errorf("custom fields = %v, want [{2 msg-42}]", meta.CustomFields)
 	}
 

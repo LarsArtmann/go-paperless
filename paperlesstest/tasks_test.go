@@ -33,7 +33,11 @@ func TestUploadReturnsTaskIDAndCapturesUpload(t *testing.T) {
 
 	upload := uploads[0]
 	if upload.Filename != "invoice.pdf" || string(upload.Content) != "%PDF-invoice" {
-		t.Errorf("captured upload = %q %q, want invoice.pdf %%PDF-invoice", upload.Filename, upload.Content)
+		t.Errorf(
+			"captured upload = %q %q, want invoice.pdf %%PDF-invoice",
+			upload.Filename,
+			upload.Content,
+		)
 	}
 }
 
@@ -147,8 +151,14 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 	}
 
 	upload := server.Uploads()[0]
-	if upload.Title != "The Letter" || upload.Created != "2026-09-01" || upload.Correspondent != "7" {
-		t.Errorf("captured fields = title %q created %q correspondent %q", upload.Title, upload.Created, upload.Correspondent)
+	if upload.Title != "The Letter" || upload.Created != "2026-09-01" ||
+		upload.Correspondent != "7" {
+		t.Errorf(
+			"captured fields = title %q created %q correspondent %q",
+			upload.Title,
+			upload.Created,
+			upload.Correspondent,
+		)
 	}
 
 	if !slices.Equal(upload.Tags, []string{"2", "4"}) || upload.DocumentType != "3" {
@@ -185,7 +195,8 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 		t.Errorf("stored tags = %v, want [2 4]", meta.TagIDs)
 	}
 
-	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 8 || meta.CustomFields[0].Value != "msg-99" {
+	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 8 ||
+		meta.CustomFields[0].Value != "msg-99" {
 		t.Errorf("stored custom fields = %v, want [{8 msg-99}]", meta.CustomFields)
 	}
 }

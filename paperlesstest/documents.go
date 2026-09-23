@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -181,10 +182,10 @@ func (s *Server) documentWires(documents []*Document) []documentWire {
 // serves. Next/previous stay null: the SDK walks pages via the page query
 // parameter and terminates on the short page, never on the links.
 type envelope struct {
-	Count    int   `json:"count"`
+	Count    int     `json:"count"`
 	Next     *string `json:"next"`
 	Previous *string `json:"previous"`
-	Results  any   `json:"results"`
+	Results  any     `json:"results"`
 }
 
 // defaultPageSize mirrors the SDK's list scan page size (100); DRF also
@@ -222,7 +223,12 @@ func pageBounds(r *http.Request, total int) (start, end int) {
 // writePage serves one paginated envelope; results returns the page's
 // entries for the resolved bounds. The caller must hold s.mu when the
 // closure reads server state.
-func (s *Server) writePage(w http.ResponseWriter, r *http.Request, total int, results func(start, end int) any) {
+func (s *Server) writePage(
+	w http.ResponseWriter,
+	r *http.Request,
+	total int,
+	results func(start, end int) any,
+) {
 	start, end := pageBounds(r, total)
 	s.writeJSON(w, http.StatusOK, envelope{
 		Count:   total,
@@ -256,7 +262,16 @@ func (s *Server) routeDocuments(w http.ResponseWriter, r *http.Request) bool {
 // methodNotAllowed rejects a wrong method on a known path: the test code
 // under development called the fake incorrectly, so the test fails.
 func (s *Server) methodNotAllowed(w http.ResponseWriter, r *http.Request, allowed ...string) {
-	s.t.Errorf("paperlesstest: unexpected method %s on %s (allowed: %v)", r.Method, r.URL.Path, allowed)
+	s.t.Errorf(
+		"paperlesstest: unexpected method %s on %s (allowed: %v)",
+		r.Method,
+		r.URL.Path,
+		allowed,
+	)
 	w.Header().Set("Allow", strings.Join(allowed, ", "))
-	s.writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"detail": fmt.Sprintf("Method %q not allowed.", r.Method)})
+	s.writeJSON(
+		w,
+		http.StatusMethodNotAllowed,
+		map[string]string{"detail": fmt.Sprintf("Method %q not allowed.", r.Method)},
+	)
 }
