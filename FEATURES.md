@@ -106,6 +106,16 @@
 | Hermetic flake gates | 🟢 `FULLY_FUNCTIONAL` | `nix flake check` runs build, test, test-race, lint, format, and integration-vet in the sandbox; opt-in apps: `.#test`, `.#test-race`, `.#coverage`, `.#fuzz` (every fuzz target, per-target duration), `.#integration` (live server), `.#release-verify` (post-release ritual) |
 | Fuzzing              | 🟢 `FULLY_FUNCTIONAL` | Six fuzz targets (`parseRetryAfter`, `classifyTask`, saved-view/share-link payloads, checksum extraction, task-created parsing); CI carries a weekly scheduled plus on-demand `Fuzz` workflow — deliberately not a per-push gate                                                |
 
+## Consumer testing fake (`paperlesstest`)
+
+| Feature                             | Status                | Notes                                                                                                                                                                                                                                        |
+| ----------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In-memory fake Paperless-ngx server | 🟢 `FULLY_FUNCTIONAL` | Stdlib-only subpackage serving the full wire protocol: DRF pagination, flat + `versions[]` checksum shapes (`WithChecksumShape`), `post_document` with upload capture, `/api/tasks/` polling; unexpected requests 404 + `t.Errorf` (`NewServer`) |
+| Task scripting                      | 🟢 `FULLY_FUNCTIONAL` | FIFO `TaskPlan` queue (`WithTaskSuccess`/`WithTaskFailure`/`WithTaskDuplicate`/`WithTaskPendingThenSuccess`, runtime `ScriptTask`); natural path refuses duplicate checksums and stores uploads with form metadata                            |
+| Fault injection                     | 🟢 `FULLY_FUNCTIONAL` | `InjectFault`/`WithFaults`: per-route status sequences with `Times` budget, `Retry-After` (seconds + HTTP-date), verbatim malformed bodies; round-tripped through `WithRetry` recovery and `RetryAfterError` parsing (`TestRateLimitYieldsRetryAfterError`) |
+| Auth enforcement + assertions       | 🟢 `FULLY_FUNCTIONAL` | `WithToken` 401s wrong tokens before any endpoint runs; `RequireAuthorized`/`RequireUploadCount`; recording accessors `Requests`/`Uploads`/`Documents`/`Patches`/`DeletedDocuments`/`NoteCount`                                              |
+| Drift guard                         | 🟢 `FULLY_FUNCTIONAL` | Every fake route round-tripped through the real `Client` in-package; `TestFakeCoversEveryClientRoute` pins `servedRoutes` to client.go's route constants in both directions (plan D2)                                                         |
+
 ## Planned
 
 None. Ideas for future coverage live in [ROADMAP.md](ROADMAP.md).

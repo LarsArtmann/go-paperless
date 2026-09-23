@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `paperlesstest` package: a stateful in-memory fake of the Paperless-ngx
+  REST API for consumer tests (stdlib-only, same module). Speaks the full
+  wire protocol the SDK targets — DRF-paginated lists in both checksum
+  shapes (flat pre-3.x and 3.x `versions[]`), `post_document` upload with
+  multipart capture, consumption-task polling with scriptable outcomes
+  (success / failure / duplicate refusal / pending-then-success), named
+  entities incl. the tag self-heal PATCH, document detail
+  PATCH/DELETE/download with recording, notes, share links, saved views,
+  token enforcement, fault injection (429+`Retry-After`, 5xx sequences,
+  malformed bodies), and request/upload/patch/delete assertions. Drift is
+  guarded two ways: every route is round-tripped through the real
+  `Client` in this module, and an endpoint-coverage test requires the
+  fake's routes to match client.go's route constants in both directions
+
 - `SavedViewRuleType`, a distinct typed enum for saved-view `rule_type`
   values (mirrors `matchingAlgorithm`), with 16 verified constants from the
   upstream filter-rule table (title, content, ASN, correspondent, document

@@ -69,26 +69,34 @@ replacement for its trimmed fork.
 
 - Go 1.27+, functional patterns, early returns, descriptive names.
 - Tests are httptest-based (no live server needed).
+- **`paperlesstest/` is the consumer-testing fake** (plan:
+  `docs/planning/2026-09-23_16-19_paperlesstest-consumer-testing-sdk.md`).
+  Its non-test files are stdlib-only by contract — never import
+  `paperless` or third-party modules there (round-trip tests live in its
+  `_test.go` files). Every route must be registered in `servedRoutes` AND
+  round-tripped through the real `Client`;
+  `TestFakeCoversEveryClientRoute` enforces set equality with client.go's
+  `path*` constants in both directions, so a new SDK endpoint fails the
+  suite until the fake speaks it. Consumers' hand-rolled fakes should be
+  replaced by this package, not extended.
 - `nolint` single-line with a reason: `//nolint:<linter> // reason`.
-- **erraudit gate is BROKEN as of 2026-09-16 (environmental, not this repo)**:
-  the command below was verified exit-0 on 2026-09-14, but erraudit v0.4.0
-  bundles go1.26-era source-processing packages (x/tools) and now fails with
-  "packages contain errors" on ANY state of this module (reproduced on the
-  pristine v0.3.1 worktree), warning: "rebuild the application using a newer
-  version of Go". The fix is upstream — rebuild/re-release
-  `github.com/larsartmann/erraudit` against current x/tools — tracked in
-  TODO_LIST. Intended gate command, once rebuilt: `erraudit ./...
-  --type-aware --enforce-go-error-family --disable-extensions` exits 0
-  inside `nix develop`. Deliberate stdlib-constructor sites carry
+- **erraudit gate WORKS again (verified 2026-09-23)**: the 2026-09-16
+  breakage ("packages contain errors" from go1.26-era x/tools) is healed
+  upstream — `erraudit ./... --type-aware --enforce-go-error-family
+  --disable-extensions` exits 0 inside `nix develop` on the clean state
+  and correctly flags real violations (it caught an error-discard in
+  paperlesstest). Run it inside `nix develop` (the machine's bare `go`
+  is too old). Deliberate stdlib-constructor sites carry
   `//nolint:erraudit // reason` ON the anchor line (`nix fmt` may move it
   to the closing paren — suppression still anchors). golangci's "Found
   unknown linters: erraudit" warning is unavoidable noise. `--no-suppress`
   is audit mode: suppressed findings reappearing there is by design.
   **CI decision (2026-09-16)**: erraudit stays out of CI until it is (a)
-  published on the public module proxy (proxy.golang.org 404s it today,
-  verified against v0.4.0) AND (b) rebuilt on go1.27 source-processing.
-  Private-runner auth and a version-pinned golangci plugin were rejected as
-  worse tradeoffs. When both unblock: one CI job, `go run
+  published on the public module proxy (proxy.golang.org 404s it as of
+  v0.4.0 — re-verify before revisiting) AND (b) rebuilt on go1.27
+  source-processing (done). Private-runner auth and a version-pinned
+  golangci plugin were rejected as worse tradeoffs. When the proxy
+  unblocks: one CI job, `go run
   github.com/larsartmann/erraudit/cmd/erraudit@latest` with the flags above.
 - **Error model = ADR 0002** (`docs/adr/0002-error-model.md`): codes+family
   live at the failure source; call-site wraps are uncoded `fmt.Errorf`

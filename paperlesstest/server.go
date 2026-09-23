@@ -86,6 +86,29 @@ func WithDocuments(documents ...Document) Option {
 	}
 }
 
+// servedRoutes enumerates every route the fake implements, mirroring the
+// route constants client.go declares. The endpoint-coverage test
+// (coverage_test.go) enforces set equality in both directions: an SDK
+// route without fake support fails the suite, and so does a fake route
+// the SDK never calls.
+func servedRoutes() []string {
+	return []string{
+		"/api/documents/",
+		"/api/documents/%d/",
+		"/api/documents/%d/download/",
+		"/api/documents/%d/notes/",
+		"/api/documents/post_document/",
+		"/api/saved_views/",
+		"/api/share_links/",
+		"/api/storage_paths/",
+		"/api/tags/",
+		"/api/tasks/",
+		"/api/correspondents/",
+		"/api/document_types/",
+		"/api/custom_fields/",
+	}
+}
+
 // Server is a stateful in-memory fake of the Paperless-ngx REST API.
 // Construct it with NewServer; the zero value is not usable.
 type Server struct {

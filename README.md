@@ -150,6 +150,19 @@ defaults: 3 attempts total, 100ms initial delay, doubling per attempt,
 capped at 5s (`DefaultRetryMaxAttempts`, `DefaultRetryInitialDelay`,
 `DefaultRetryMultiplier`, `DefaultRetryMaxDelay`).
 
+## Testing your integration with `paperlesstest`
+
+The `paperlesstest` package is a stateful in-memory fake of the
+Paperless-ngx REST API for consumer tests (stdlib-only, no live server).
+Every route it serves is exercised round-trip against this SDK, and an
+endpoint-coverage test fails when the SDK grows a route the fake does not
+speak. See [paperlesstest/README.md](paperlesstest/README.md).
+
+```go
+srv := paperlesstest.NewServer(t)
+client, err := paperless.New(srv.URL(), paperlesstest.DefaultToken)
+```
+
 ## Lookup verbs
 
 | Verb      | Contract                                                        |

@@ -33,6 +33,8 @@ func (s *tbStub) Cleanup(fn func()) {
 	s.cleanups = append(s.cleanups, fn)
 }
 
+func (s *tbStub) Helper() {}
+
 func (s *tbStub) errorCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()

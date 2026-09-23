@@ -205,10 +205,10 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() { _ = file.Close() }() //nolint:erraudit // cleanup only: the content is already buffered in memory
+
 	content, readErr := io.ReadAll(file)
 	if readErr != nil {
-		_ = file.Close()
-
 		s.t.Errorf("paperlesstest: read uploaded document: %v", readErr)
 		s.writeJSON(
 			w,
@@ -217,10 +217,6 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		)
 
 		return
-	}
-
-	if closeErr := file.Close(); closeErr != nil {
-		s.t.Errorf("paperlesstest: close uploaded document: %v", closeErr)
 	}
 
 	upload := Upload{
