@@ -120,6 +120,12 @@ replacement for its trimmed fork.
   first two mechanically; `nix run .#release-verify -- vX.Y.Z` checks all
   three plus push status, CI, pkg.go.dev, and a race run. Bump both files
   inside the release commit (the v0.3.1 flow; the v0.3.0 drift is closed).
+- **Standalone gosec honors `#nosec`, not `nolint`**: the CI gosec job runs
+  the bare scanner (`go run .../gosec@v2.29.0`), which only reads gosec's own
+  `// #nosec Gxxx` annotations — a golangci-style `//nolint:gosec` comment
+  suppresses nothing there (the v0.4.2 red CI was exactly this). Suppressions
+  aimed at the CI gate go in gosec syntax, with the rationale as a preceding
+  comment.
 - **Doc-drift tests are the catalog's CI** (`docs_drift_test.go`):
   `TestErrorCodesAreDocumented` extracts every `paperless.*` code — static
   literals AND the kind-parameterized helper sites (`findNamed`,

@@ -4,6 +4,10 @@ _Point-in-time report, 2026-09-23 18:12 CEST. Written mid-execution: the
 paperlesstest package is released; the InboxClean migration is half-landed
 with one test under active debugging; bank-sync not started._
 
+> **[2026-09-23 22:45] SUPERSEDED** by
+> `2026-09-23_22-45_paperlesstest-consumers-done-status.md` — the plan
+> finished the same day; all three open questions below are answered there.
+
 ## Session summary
 
 Executed the `paperlesstest` consumer-testing-SDK plan
