@@ -4,6 +4,11 @@ _Created 2026-09-23 22:45. Supersedes
 `2026-09-23_18-12_paperlesstest-execution-status.md` (whose three open
 questions are resolved below)._
 
+> **[2026-09-24 00:08] SUPERSEDED** by
+> `2026-09-24_00-08_paperlesstest-session-brutal-review.md` — same facts,
+> plus the honest critique (what was forgotten, what was fucked up) and the
+> 50-item backlog.
+
 ## One-line verdict
 
 The whole `paperlesstest` plan (M1–M24) is DONE and shipped: the SDK is
