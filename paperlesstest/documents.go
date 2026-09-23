@@ -367,7 +367,7 @@ func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id 
 
 	doc := s.findDocumentLocked(id)
 	if doc == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
@@ -407,7 +407,7 @@ func (s *Server) handleDocumentDelete(w http.ResponseWriter, id int) {
 	defer s.mu.Unlock()
 
 	if s.findDocumentLocked(id) == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
@@ -428,7 +428,7 @@ func (s *Server) handleDocumentGet(w http.ResponseWriter, id int) {
 
 	doc := s.findDocumentLocked(id)
 	if doc == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
@@ -443,7 +443,7 @@ func (s *Server) serveDocumentDownload(w http.ResponseWriter, id int) {
 
 	doc := s.findDocumentLocked(id)
 	if doc == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}

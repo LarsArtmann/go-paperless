@@ -22,6 +22,9 @@ const (
 
 	// detailKey is the DRF error body's message key.
 	detailKey = "detail"
+
+	// notFoundDetail is the DRF detail message for unknown objects.
+	notFoundDetail = "Not found."
 )
 
 // ChecksumShape selects the document checksum wire shape the fake serves
@@ -158,7 +161,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !s.route(w, r) {
 		s.t.Errorf("paperlesstest: unexpected request: %s %s", r.Method, r.URL.Path)
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 	}
 }
 

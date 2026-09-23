@@ -63,10 +63,6 @@ type storagePathWire struct {
 	Path string `json:"path"`
 }
 
-// namedPayloadWire is the create-request body of a named object (name is
-// required; the matching algorithm is only sent on create).
-type namedPayloadWire = namedEntityWire
-
 // matchingAlgorithmWire is the PATCH body for a named object's matching
 // algorithm.
 type matchingAlgorithmWire struct {
@@ -83,12 +79,17 @@ func WithTags(names ...string) Option {
 	}
 }
 
-// WithCorrespondents seeds correspondents (matching algorithm 6 = auto,
-// mirroring the SDK's EnsureCorrespondent default).
+// matchingAlgorithmAuto is Paperless-ngx's "auto" matching algorithm, the
+// default the fake seeds correspondents with (mirroring the SDK's
+// EnsureCorrespondent creation policy).
+const matchingAlgorithmAuto = 6
+
+// WithCorrespondents seeds correspondents (auto matching, mirroring the
+// SDK's EnsureCorrespondent default).
 func WithCorrespondents(names ...string) Option {
 	return func(s *Server) {
 		for _, name := range names {
-			s.AddCorrespondent(name, 6)
+			s.AddCorrespondent(name, matchingAlgorithmAuto)
 		}
 	}
 }
@@ -351,7 +352,7 @@ func (s *Server) handleNamedDetail(w http.ResponseWriter, id int, store *[]named
 
 	entity := findNamedLocked(*store, id)
 	if entity == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
@@ -380,7 +381,7 @@ func (s *Server) handleNamedPatch(
 
 	entity := findNamedLocked(*store, id)
 	if entity == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
