@@ -315,6 +315,15 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 	}
 
 	switch {
+	case len(segments) == 2 && segments[1] == "notes":
+		if s.notes == nil {
+			s.notes = map[int][]noteEntity{}
+		}
+
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		return s.handleDocumentNotesLocked(w, r, id)
 	case len(segments) == 2 && segments[1] == "download":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowed(w, r, http.MethodGet)

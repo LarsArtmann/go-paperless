@@ -54,6 +54,15 @@ func WithToken(token string) Option {
 	}
 }
 
+// WithAPIVersion sets the API version the fake echoes in every response's
+// Content-Type ("application/json; version=N"), so capability probing can
+// be tested against any negotiated version.
+func WithAPIVersion(version string) Option {
+	return func(s *Server) {
+		s.apiVersion = version
+	}
+}
+
 // WithChecksumShape selects the checksum wire shape the fake serves for
 // stored documents: ChecksumFlat (pre-3.x flat field, the default) or
 // ChecksumVersions (paperless-ngx 3.x versions[] array).
@@ -106,6 +115,13 @@ type Server struct {
 	storagePaths      []storagePathEntity
 	nextCustomFieldID int
 	nextStoragePathID int
+
+	notes           map[int][]noteEntity
+	nextNoteID      int
+	shareLinks      []shareLinkEntity
+	nextShareLinkID int
+	savedViews      []savedViewEntity
+	nextSavedViewID int
 
 	requests []RequestRecord
 	token    string
@@ -190,6 +206,10 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request) bool {
 	case s.routeTasks(w, r):
 		return true
 	case s.routeEntities(w, r):
+		return true
+	case s.routeShareLinks(w, r):
+		return true
+	case s.routeSavedViews(w, r):
 		return true
 	}
 
