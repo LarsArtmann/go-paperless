@@ -38,6 +38,15 @@ const (
 // Option configures a Server at construction time.
 type Option func(*Server)
 
+// WithChecksumShape selects the checksum wire shape the fake serves for
+// stored documents: ChecksumFlat (pre-3.x flat field, the default) or
+// ChecksumVersions (paperless-ngx 3.x versions[] array).
+func WithChecksumShape(shape ChecksumShape) Option {
+	return func(s *Server) {
+		s.shape = shape
+	}
+}
+
 // Server is a stateful in-memory fake of the Paperless-ngx REST API.
 // Construct it with NewServer; the zero value is not usable.
 type Server struct {
@@ -47,6 +56,10 @@ type Server struct {
 	mu sync.Mutex
 
 	apiVersion string
+	shape      ChecksumShape
+
+	documents      []*Document
+	nextDocumentID int
 
 	requests []RequestRecord
 }
@@ -95,10 +108,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // route dispatches one request to the endpoint handlers. It reports whether
 // the request matched a route (the response is then fully written).
 func (s *Server) route(w http.ResponseWriter, r *http.Request) bool {
-	// Endpoint families fill in as the fake grows; the scaffold routes
-	// nothing yet, so every request lands on the 404 path above.
-	_ = w
-	_ = r
+	switch {
+	case s.routeDocuments(w, r):
+		return true
+	}
 
 	return false
 }
