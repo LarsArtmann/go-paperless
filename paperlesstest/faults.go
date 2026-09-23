@@ -92,7 +92,11 @@ func (s *Server) serveFault(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
-	s.writeJSON(w, fault.Status, map[string]string{detailKey: "Faulted by " + strconv.Quote(fault.PathPrefix) + "."})
+	s.writeJSON(
+		w,
+		fault.Status,
+		map[string]string{detailKey: "Faulted by " + strconv.Quote(fault.PathPrefix) + "."},
+	)
 
 	return true
 }

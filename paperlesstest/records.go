@@ -3,6 +3,7 @@ package paperlesstest
 import (
 	"net/http"
 	"net/url"
+	"testing"
 )
 
 // RequestRecord is the capture of one request the fake received.
@@ -30,6 +31,47 @@ func (s *Server) Requests() []RequestRecord {
 	records = append(records, s.requests...)
 
 	return records
+}
+
+// RequireAuthorized fails the test when any request the fake received was
+// NOT authorized with the server's configured token. Requires WithToken to
+// be configured (otherwise nothing is enforced and the assertion reports
+// that).
+func RequireAuthorized(tb testing.TB, server *Server) {
+	tb.Helper()
+
+	server.mu.Lock()
+	defer server.mu.Unlock()
+
+	if server.token == "" {
+		tb.Fatal("paperlesstest: RequireAuthorized needs WithToken configured on the server")
+
+		return
+	}
+
+	want := "Token " + server.token
+
+	for _, record := range server.requests {
+		if got := record.Header.Get("Authorization"); got != want {
+			tb.Errorf(
+				"request %s %s authorized with %q, want %q",
+				record.Method,
+				record.Path,
+				got,
+				want,
+			)
+		}
+	}
+}
+
+// RequireUploadCount fails the test unless the fake captured exactly want
+// uploads.
+func RequireUploadCount(tb testing.TB, server *Server, want int) {
+	tb.Helper()
+
+	if got := len(server.Uploads()); got != want {
+		tb.Errorf("captured uploads = %d, want %d", got, want)
+	}
 }
 
 // recordRequest captures one incoming request. Bodyless requests record a
