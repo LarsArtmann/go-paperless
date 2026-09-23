@@ -3,6 +3,17 @@
 _Point-in-time execution plan. Created 2026-09-23 16:19. Annotate, never rewrite
 (docs-health ANNOTATE mode)._
 
+> **[2026-09-23 23:00] EXECUTED TO COMPLETION.** All milestones M1–M24 done.
+> Shipped as v0.4.0/v0.4.1/v0.4.2 (proxy + pkg.go.dev verified); InboxClean
+> migrated (both hand-rolled fakes deleted, commit `cce98ed`, pushed) and
+> bank-sync pinned with paperlesstest tests (commit `37e3ced6`, pushed, v0.4.2).
+> The consumer migrations caught and fixed two real latent bugs (InboxClean's
+> nil-TagIDs tag clearing; the watch loop's shutdown-vs-tick select race) —
+> the migration was worth it for that alone. Consumer-repo CI is blocked on
+> the GitHub Actions billing failure (jobs never start; owner action) — see
+> `docs/status/2026-09-23_22-45_paperlesstest-consumers-done-status.md`.
+> Definition-of-done ticks below reflect end state.
+
 ## Context in one paragraph
 
 go-paperless ships zero exported test surface: its own ~60 `httptest` servers are
@@ -250,11 +261,11 @@ flowchart TD
 
 ## Definition of done
 
-- [ ] `paperlesstest/` package: server, fixtures, task scripting, faults, assertions
-- [ ] Every fake route exercised through the real `Client` (round-trip)
-- [ ] Endpoint-coverage drift test green and gating
-- [ ] `nix run .#check` (build/test/test-race/vet/lint) + buildflow green
-- [ ] CHANGELOG/FEATURES/README/AGENTS.md updated; released
-- [ ] InboxClean: both hand-rolled fakes deleted, suite green
-- [ ] bank-sync: paperlesstest-based unit tests, suite green
-- [ ] Consumer pins bumped and pushed (with owner go)
+- [x] `paperlesstest/` package: server, fixtures, task scripting, faults, assertions
+- [x] Every fake route exercised through the real `Client` (round-trip)
+- [x] Endpoint-coverage drift test green and gating
+- [x] `nix run .#check` (build/test/test-race/vet/lint) + buildflow green
+- [x] CHANGELOG/FEATURES/README/AGENTS.md updated; released (v0.4.0–v0.4.2, proxy + pkg.go.dev verified)
+- [x] InboxClean: both hand-rolled fakes deleted, suite green (commit `cce98ed`, pushed)
+- [x] bank-sync: paperlesstest-based unit tests, suite green (commit `37e3ced6`, pushed)
+- [x] Consumer pins bumped and pushed (with owner go — "GET SHIT DONE! The WHOLE TODO LIST!")

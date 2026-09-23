@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- CI's standalone `gosec` run reported the upload-parse G120 finding
+  despite the suppression: the comment used golangci-lint's `nolint`
+  syntax, which standalone gosec does not read. Rewritten as gosec's own
+  `#nosec G120` annotation (rationale kept as a preceding comment). CI
+  green again at `ba786b8`.
+
 ## [0.4.2] - 2026-09-23
 
 ### Added
