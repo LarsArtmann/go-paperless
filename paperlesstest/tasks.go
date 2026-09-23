@@ -185,9 +185,8 @@ func (s *Server) routeUpload(w http.ResponseWriter, r *http.Request) bool {
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadFormMemory)
 
-	if err := r.ParseMultipartForm(
-		maxUploadFormMemory,
-	); err != nil { //nolint:gosec // G120: bounded by MaxBytesReader above and the 32 MiB ReadForm cap; the fake serves in-memory tests only
+	//nolint:gosec // G120: bounded by MaxBytesReader + the 32 MiB cap; the fake serves in-memory tests only
+	if err := r.ParseMultipartForm(maxUploadFormMemory); err != nil {
 		s.t.Errorf("paperlesstest: parse upload multipart: %v", err)
 		s.writeJSON(
 			w,
