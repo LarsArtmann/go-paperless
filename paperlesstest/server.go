@@ -84,6 +84,9 @@ type Server struct {
 	documents      []*Document
 	nextDocumentID int
 
+	patches          []DocumentPatch
+	deletedDocuments []int
+
 	uploads        []Upload
 	script         []TaskPlan
 	tasks          []*taskRecord

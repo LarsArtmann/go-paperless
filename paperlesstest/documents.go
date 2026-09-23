@@ -3,6 +3,7 @@ package paperlesstest
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json/v2"
 	"fmt"
 	"net/http"
 	"slices"
@@ -228,27 +229,255 @@ func (s *Server) writePage(
 	})
 }
 
-// routeDocuments serves the document list endpoint. It reports whether the
-// request matched one of the document routes.
+// routeDocuments serves the document list and document detail endpoints.
+// It reports whether the request matched one of the document routes.
 func (s *Server) routeDocuments(w http.ResponseWriter, r *http.Request) bool {
-	if r.URL.Path != "/api/documents/" {
+	if r.URL.Path == "/api/documents/" {
+		if r.Method != http.MethodGet {
+			s.methodNotAllowed(w, r, http.MethodGet)
+
+			return true
+		}
+
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		s.writePage(w, r, len(s.documents), func(start, end int) any {
+			return s.documentWires(s.documents[start:end])
+		})
+
+		return true
+	}
+
+	if strings.HasPrefix(r.URL.Path, "/api/documents/") {
+		return s.routeDocumentDetail(w, r)
+	}
+
+	return false
+}
+
+// DocumentPatch records one PATCH a test made against a document detail
+// route.
+type DocumentPatch struct {
+	// DocumentID is the patched document.
+	DocumentID int
+	// Body is the raw JSON patch payload as received.
+	Body []byte
+}
+
+// Patches returns a copy of every recorded document patch, oldest first.
+func (s *Server) Patches() []DocumentPatch {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	patches := make([]DocumentPatch, 0, len(s.patches))
+	for _, patch := range s.patches {
+		copied := patch
+		copied.Body = slices.Clone(patch.Body)
+		patches = append(patches, copied)
+	}
+
+	return patches
+}
+
+// DeletedDocuments returns the IDs of every document the fake has deleted
+// via the detail route, oldest first.
+func (s *Server) DeletedDocuments() []int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return slices.Clone(s.deletedDocuments)
+}
+
+// documentUpdateWire mirrors the writable subset of Paperless-ngx's
+// document serializer: pointer fields apply only when the patch carries
+// them, and TagIDs replaces the full tag set (DRF many-to-many PATCH
+// semantics).
+type documentUpdateWire struct {
+	Title         *string            `json:"title"`
+	Created       *string            `json:"created"`
+	Correspondent *int               `json:"correspondent"`
+	Tags          []int              `json:"tags"`
+	DocumentType  *int               `json:"document_type"`
+	CustomFields  []CustomFieldValue `json:"custom_fields"`
+}
+
+// routeDocumentDetail serves the per-document routes (PATCH/GET/DELETE on
+// /api/documents/{id}/ and the download route). Unknown documents answer a
+// legitimate 404 (no test failure — clients handle 404s).
+func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) bool {
+	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/documents/"), "/")
+	segments := strings.Split(rest, "/")
+
+	id, err := strconv.Atoi(segments[0])
+	if err != nil {
 		return false
 	}
 
-	if r.Method != http.MethodGet {
-		s.methodNotAllowed(w, r, http.MethodGet)
+	switch {
+	case len(segments) == 2 && segments[1] == "download":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowed(w, r, http.MethodGet)
+
+			return true
+		}
+
+		s.serveDocumentDownload(w, id)
 
 		return true
+	case len(segments) == 1:
+		switch r.Method {
+		case http.MethodPatch:
+			s.handleDocumentPatch(w, r, id)
+
+			return true
+		case http.MethodDelete:
+			s.handleDocumentDelete(w, id)
+
+			return true
+		case http.MethodGet:
+			s.handleDocumentGet(w, id)
+
+			return true
+		default:
+			s.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch, http.MethodDelete)
+
+			return true
+		}
+	default:
+		return false
+	}
+}
+
+// handleDocumentPatch applies and records one metadata patch. The caller
+// must not hold s.mu.
+func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id int) {
+	raw := readBody(r)
+
+	var patch documentUpdateWire
+	if err := json.Unmarshal(raw, &patch); err != nil {
+		s.t.Errorf("paperlesstest: decode document patch: %v", err)
+		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid patch payload"})
+
+		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.writePage(w, r, len(s.documents), func(start, end int) any {
-		return s.documentWires(s.documents[start:end])
+	doc := s.findDocumentLocked(id)
+	if doc == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+
+		return
+	}
+
+	if patch.Title != nil {
+		doc.Title = *patch.Title
+	}
+
+	if patch.Created != nil {
+		doc.Created = parseServedCreated(*patch.Created)
+	}
+
+	if patch.Correspondent != nil {
+		doc.Correspondent = *patch.Correspondent
+	}
+
+	if patch.Tags != nil {
+		doc.TagIDs = patch.Tags
+	}
+
+	if patch.DocumentType != nil {
+		doc.DocumentTypeID = *patch.DocumentType
+	}
+
+	if patch.CustomFields != nil {
+		doc.CustomFields = patch.CustomFields
+	}
+
+	s.patches = append(s.patches, DocumentPatch{DocumentID: id, Body: slices.Clone(raw)})
+
+	s.writeJSON(w, http.StatusOK, s.documentWireFor(doc))
+}
+
+// handleDocumentDelete removes one document and records the deletion.
+func (s *Server) handleDocumentDelete(w http.ResponseWriter, id int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.findDocumentLocked(id) == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+
+		return
+	}
+
+	s.documents = slices.DeleteFunc(s.documents, func(doc *Document) bool {
+		return doc.ID == id
 	})
 
-	return true
+	s.deletedDocuments = append(s.deletedDocuments, id)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleDocumentGet serves one document's serialized form.
+func (s *Server) handleDocumentGet(w http.ResponseWriter, id int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	doc := s.findDocumentLocked(id)
+	if doc == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, s.documentWireFor(doc))
+}
+
+// serveDocumentDownload serves one document's stored original bytes.
+func (s *Server) serveDocumentDownload(w http.ResponseWriter, id int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	doc := s.findDocumentLocked(id)
+	if doc == nil {
+		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
+
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := w.Write(doc.Content); err != nil {
+		s.t.Errorf("paperlesstest: write download body: %v", err)
+	}
+}
+
+// findDocumentLocked locates one stored document by ID, or nil. The caller
+// must hold s.mu.
+func (s *Server) findDocumentLocked(id int) *Document {
+	for _, doc := range s.documents {
+		if doc.ID == id {
+			return doc
+		}
+	}
+
+	return nil
+}
+
+// parseServedCreated parses the created values the fake serves/accepts
+// (RFC 3339 and date-only, mirroring the SDK's parser tolerance).
+func parseServedCreated(raw string) time.Time {
+	for _, layout := range []string{time.RFC3339, time.DateOnly} {
+		if parsed, err := time.Parse(layout, raw); err == nil {
+			return parsed
+		}
+	}
+
+	return time.Time{}
 }
 
 // methodNotAllowed rejects a wrong method on a known path: the test code
