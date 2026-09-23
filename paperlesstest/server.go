@@ -41,6 +41,16 @@ const (
 // Option configures a Server at construction time.
 type Option func(*Server)
 
+// WithToken enforces token authentication on every request: requests
+// without the exact "Authorization: Token <token>" header are answered 401
+// ("Invalid token.") without reaching any endpoint. With the default empty
+// token the fake accepts every request.
+func WithToken(token string) Option {
+	return func(s *Server) {
+		s.token = token
+	}
+}
+
 // WithChecksumShape selects the checksum wire shape the fake serves for
 // stored documents: ChecksumFlat (pre-3.x flat field, the default) or
 // ChecksumVersions (paperless-ngx 3.x versions[] array).
@@ -80,6 +90,8 @@ type Server struct {
 	nextTaskNumber int
 
 	requests []RequestRecord
+	token    string
+	faults   []Fault
 }
 
 // NewServer starts a fake Paperless-ngx server and registers its shutdown
@@ -119,10 +131,34 @@ func (s *Server) URL() string {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.recordRequest(r)
 
+	if s.serveFault(w, r) {
+		return
+	}
+
+	if !s.requestAuthorized(r) {
+		s.writeJSON(w, http.StatusUnauthorized, map[string]string{detailKey: "Invalid token."})
+
+		return
+	}
+
 	if !s.route(w, r) {
 		s.t.Errorf("paperlesstest: unexpected request: %s %s", r.Method, r.URL.Path)
 		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: "Not found."})
 	}
+}
+
+// requestAuthorized reports whether the request may reach an endpoint.
+// With no token configured the fake accepts every request; otherwise the
+// static token scheme must match exactly.
+func (s *Server) requestAuthorized(r *http.Request) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.token == "" {
+		return true
+	}
+
+	return r.Header.Get("Authorization") == "Token "+s.token
 }
 
 // route dispatches one request to the endpoint handlers. It reports whether
