@@ -21,6 +21,7 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
 ## a) FULLY DONE
 
 **paperlesstest package (plan M1–M6, M8–M19)**
+
 - Scaffold: `NewServer(tb, opts...)`, `t.Cleanup` shutdown, 404 +
   `t.Errorf` on unexpected routes, request recording (`Requests()`).
 - Document list: DRF pagination (`page`/`page_size`, short-page stop),
@@ -60,6 +61,7 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
   section, CHANGELOG, FEATURES rows, AGENTS.md conventions bullet.
 
 **Quality gates**
+
 - `nix run .#check` green; package lint 0 issues; `-race` green; full
   `buildflow` run green.
 - **erraudit gate restored**: AGENTS.md said it was broken upstream
@@ -69,6 +71,7 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
   removed.
 
 **Releases**
+
 - v0.4.0 (paperlesstest + previously-unreleased [Unreleased] content),
   v0.4.1 (AddDocument/EditDocument), v0.4.2 (SeedTask + entity
   lookups) — all tagged and pushed; module proxy serves all three.
@@ -77,6 +80,7 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
   on origin — the three-way version contract was silently broken).
 
 **InboxClean (M21/M22) — infrastructure part**
+
 - go-paperless bumped v0.3.2 → v0.4.2.
 - `fakePaperlessServer` (fake 1) fully replaced by a paperlesstest
   wrapper; all `.URL` call sites migrated.

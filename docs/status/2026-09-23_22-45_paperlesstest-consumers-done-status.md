@@ -46,8 +46,8 @@ pushed — and the migration caught two real latent bugs in InboxClean.
      (cancel-vs-in-flight-tick race); shutdown now wins — this also
      de-flakes `TestSyncWatchLoopContinuesThroughErrorsAndStops` under
      `-race`.
-  Plus: the idempotency "repatch" ghost was the test wrapper's `patches()`
-  ignoring `resetPatches` — the command was always idempotent.
+     Plus: the idempotency "repatch" ghost was the test wrapper's `patches()`
+     ignoring `resetPatches` — the command was always idempotent.
 - History cleaned: 10 daemon heuristic commits squashed into `cce98ed`;
   spec (`docs/spec/paperless.md`) and CHANGELOG updated.
 
@@ -58,7 +58,7 @@ pushed — and the migration caught two real latent bugs in InboxClean.
   full form metadata → consumption → ledger record, duplicate-refusal rows,
   consumption-failure rejection, server-fault surfacing, mid-wait
   cancellation, and the ledger checksum reconcile in BOTH wire shapes (flat
-  + 3.x `versions[]`) plus the drift tripwire.
+  - 3.x `versions[]`) plus the drift tripwire.
 - Gates: full suite, `-race` (no flake app exists — ran `go test -race`
   directly), lint 0 issues, flake build green.
 

@@ -119,14 +119,14 @@ paperlesstest.RequireUploadCount(t, srv, 3)
 
 The fake records everything:
 
-| Accessor            | Returns                                                     |
-| ------------------- | ----------------------------------------------------------- |
-| `srv.Requests()`    | Every request (method, path, query, headers, raw body)      |
-| `srv.Uploads()`     | Parsed uploads (filename, content, all form fields)         |
-| `srv.Documents()`   | Stored document fixtures                                    |
-| `srv.Patches()`     | Recorded document PATCHes (ID + raw JSON payload)           |
+| Accessor                 | Returns                                                |
+| ------------------------ | ------------------------------------------------------ |
+| `srv.Requests()`         | Every request (method, path, query, headers, raw body) |
+| `srv.Uploads()`          | Parsed uploads (filename, content, all form fields)    |
+| `srv.Documents()`        | Stored document fixtures                               |
+| `srv.Patches()`          | Recorded document PATCHes (ID + raw JSON payload)      |
 | `srv.DeletedDocuments()` | IDs removed through the detail route                   |
-| `srv.NoteCount(id)` | Notes stored on one document                                |
+| `srv.NoteCount(id)`      | Notes stored on one document                           |
 
 ## Scope
 
