@@ -57,7 +57,7 @@
             inherit version;
             pname = "go-paperless";
             src = self;
-            vendorHash = "sha256-Ox3Wp2tsQCK0tpfvW7V56w7sF8DRE9AYlSgvu/f9BOU=";
+            vendorHash = "sha256-2/zENCqRWYHftsl9gRZ2nj0Lk0j729y2HkmSO3DDcKY=";
             env = {
               CGO_ENABLED = "0";
               GOEXPERIMENT = goExperiment;
