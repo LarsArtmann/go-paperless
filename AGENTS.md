@@ -18,8 +18,13 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
 - Use `flake.nix` apps for everything: `nix run .#check|build|test|test-race|vet|lint|coverage|clean`, `nix fmt`. Bare `nix build` also works (`packages.default`).
 - Machine `go env` (GOCACHE/GOMODCACHE/GOLANGCI_LINT_CACHE) is read-only and may
   point at a dead mount — bare golangci-lint needs fresh temp dirs for all three.
-- Host `erraudit`/`go` invocations run the machine's Go 1.26.7 and hard-fail on
-  this module — run them inside `nix develop`.
+- Host `erraudit`/`go`: the machine profile ships Go 1.27.0 since the
+  2026-10-11 update (was 1.26.7, which hard-failed on this module), but the
+  flake dev shell stays the canonical environment (pinned toolchain,
+  `GOEXPERIMENT=jsonv2`). Caveat: `nix develop -c erraudit …` resolves the
+  binary via the host PATH (`~/.local/bin/erraudit`), not a flake input —
+  the hermetic pin is an open TODO_LIST item. Verify with
+  `nix develop -c sh -c 'which erraudit'`.
 - **BuildFlow**: run it as `nix develop -c buildflow --fix …` (dev shell supplies
   Go 1.27.1 + every BuildFlow-probed tool: go-licenses, govulncheck, lychee,
   dprint, vulnix). From a bare shell, `env -u GOTOOLCHAIN buildflow …` also
@@ -57,7 +62,10 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   - **16 suppressed per line**: `//nolint:branching-flow // reason` works ONLY
     for the panic and phantom analyzers in tool v0.6.4 (dupe/composition
     findings ignore line directives — `cmd/branching-flow/container.go` wires
-    `isSuppressed` solely for panic/phantom). Directives must sit ON the
+    `isSuppressed` solely for panic/phantom). A bare directive (no `:rule`)
+    suppresses ALL branching-flow findings on that line for those two
+    analyzers (suppress-all semantics, `parseNolintComment`); rule-scoped
+    suffixes (`:panic`, `:phantom`) are accepted but unprobed. Directives must sit ON the
     finding line or the line DIRECTLY above; keep anchor lines short or
     `nix fmt` (golines) reflows them and silently breaks suppression — always
     re-run the tool after formatting.
@@ -169,7 +177,7 @@ the compiler walks migrations when they upgrade.
 - **Doc-drift tests are the catalog's CI** (`docs_drift_test.go`):
   `TestErrorCodesAreDocumented` extracts every `paperless.*` code — static
   literals AND the kind-parameterized helper sites (`findNamed`,
-  `createNamed`, ...) resolve to — from client.go and requires a
+  `createNamed`, `findByName`, ...) resolve to — from client.go and requires a
   docs/ERROR_CODES.md row for each; a non-literal kind argument fails the
   test so new sites can't hide codes. `TestREADMEListsLookupVerbs` requires
   every exported `Find*`/`Get*`/`Ensure*` method in README.md.
