@@ -32,14 +32,21 @@ toolchains (the module uses `encoding/json/v2`, see AGENTS.md):
 
 ## Release Checklist (maintainers)
 
-1. Curate `CHANGELOG.md`: `[Unreleased]` → new version header (Keep a
-   Changelog categories; today's date).
+1. Bump the flake `version` and fold `[Unreleased]` into a new CHANGELOG
+   header **inside the release commit** (explicitly committed — the
+   auto-commit daemon must not author release history; the three-place
+   contract — flake version, newest CHANGELOG heading, git tag — is
+   test-pinned by `TestFlakeVersionMatchesChangelog`).
 2. Pre-tag verification: `grep '^replace' go.mod` empty, clean working
-   tree, `nix flake check` green.
+   tree, `nix flake check` green (CI must be green on the exact release
+   commit — never tag onto a red gate).
 3. `git tag -a vX.Y.Z -m "..."` and push the tag.
-4. Verify the module proxy resolves:
-   `go list -m github.com/larsartmann/go-paperless@vX.Y.Z`.
+4. Run the post-release ritual end to end:
+   `nix run .#release-verify -- vX.Y.Z` (tag/CHANGELOG/flake agreement,
+   push status, CI green, pkg.go.dev indexing, race tests).
 5. Create the GitHub Release from the CHANGELOG section.
+6. Bump the consumers (bank-sync, InboxClean) once the proxy serves the
+   new version.
 
 ## Reporting Issues
 

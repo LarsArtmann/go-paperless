@@ -46,7 +46,7 @@
 
 ## c) NOT STARTED
 
-~~1. **CONTRIBUTING release-checklist audit** — I did not verify the maintainer checklist (added in C22) actually contains the steps this release used (CI-green-before-tag, proxy `go get`, pkg.go.dev re-check). It should have been a 2-minute read.~~ → TODO_LIST Low (2026-10-11 harvest): CONTRIBUTING release-checklist audit
+~~1. **CONTRIBUTING release-checklist audit** — I did not verify the maintainer checklist (added in C22) actually contains the steps this release used (CI-green-before-tag, proxy `go get`, pkg.go.dev re-check). It should have been a 2-minute read.~~ done — checklist upgraded with the release-verify ritual + explicit release-commit rule (2026-10-11 docs-health pass)
 ~~2. **git-derived flake version** (TODO row) — the manual bump worked this time; the automation row stays open.~~ done — superseded: the three-place agreement is test-pinned (TestFlakeVersionMatchesChangelog) + release-verify leg
 ~~3. **A scheduled pkg.go.dev re-check** — currently a mental note; the post-release-ritual TODO row exists but nothing was scheduled.~~ done — superseded by the .#release-verify pkg.go.dev leg (CHANGELOG 0.4.0)
 4. Nothing else — release scope was tight and closed.
@@ -75,7 +75,7 @@ Items 1–3 are release residue; 4–26 are the current TODO_LIST (verified this
 | -- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ------ |
 ~~| 1  | Re-check pkg.go.dev for v0.3.1 (indexer lag; request indexing if stalled >2h)                                                                                | Low             | 5m     |~~ done — indexed (all versions live); the release-verify app re-checks per release
 ~~| 2  | Authorize + push bank-sync / InboxClean (green locally on v0.3.0); re-point to v0.3.1 first (one line each, API-identical)                                   | High (consumer) | 15m    |~~ superseded — consumers migrated to v0.4.2 (2026-09-23); current open line is the v0.5.0 migration row
-~~| 3  | Audit CONTRIBUTING's release checklist against this run's actual steps (CI-before-tag, proxy go get, pkg.go.dev re-check, explicit release commit); fix gaps | Med             | 15m    |~~ → TODO_LIST Low (2026-10-11 harvest): CONTRIBUTING release-checklist audit
+~~| 3  | Audit CONTRIBUTING's release checklist against this run's actual steps (CI-before-tag, proxy go get, pkg.go.dev re-check, explicit release commit); fix gaps | Med             | 15m    |~~ done — checklist upgraded with the release-verify ritual + explicit release-commit rule (2026-10-11 docs-health pass)
 ~~| 4  | Integration scaffold e2e: upload → `WaitForTask` → checksums reconcile — TODO_LIST Med                                                                       | Med             | 2h     |~~ done — TestIntegrationUploadReconcile shipped (CHANGELOG 0.4.0); live run awaits credentials
 ~~| 5  | Verify v0.2.0/v0.3.0 tags build clean in-sandbox (red-gate-at-tag question) — TODO_LIST Med                                                                  | Med             | 30m    |~~ done — 17-57 a-14 verified all tags build green in-sandbox (no red gate shipped)
 ~~| 6  | Audit the 8 non-mechanical lint fixes — TODO_LIST Med                                                                                                        | Med             | 1h     |~~ done — 17-57 a-13 audited all 8 fixes as hunks

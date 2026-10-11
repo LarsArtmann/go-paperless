@@ -38,18 +38,18 @@ Both direct dependencies bumped to latest and verified by the full hermetic batt
 
 1. ~~**Upstream diff review completeness.** I viewed 6 of 8 changed root-level `.go` files in error-family v0.10.1 and the retry.go patch only up to a truncation cut. Compensated by the full behavioral suite passing, but the review itself is incomplete (corrections in §Honesty).~~ done at continuation 2026-09-16 ~18:00 — full retry.go patch (78 lines: pure constants extraction, identical values) and both `examples/cmd/*` patches (comment/formatting + additive `WithContext`) viewed; all 8 changed files across both upgrades now reviewed.
 2. ~~**Consumer impact verification.** Reasoned (sound: semver-compatible dep bumps don't change go-paperless's API) rather than measured; afterwards confirmed bank-sync pins `go-paperless v0.3.0`, so consumers see none of this until release+bump anyway. The pin check itself was one command I skipped during the session.~~ done at continuation — measured: bank-sync `go.mod:48` pins `v0.3.0`; TODO_LIST row 1 corroborates (consumer bumps exist locally, unpushed).
-3. **Commit hygiene.** My work is committed, but not by me and not cleanly — see d2.
-4. **Post-CHANGELOG-edit re-verification.** Docs-only change made after the battery; deliberately not re-run, but strictly the "verify after every change" loop wasn't closed on the literal last edit.
+~~3. **Commit hygiene.** My work is committed, but not by me and not cleanly — see d2.~~ done — process debt acknowledged; the release-commit convention now covers release-critical work (AGENTS.md, CONTRIBUTING)
+~~4. **Post-CHANGELOG-edit re-verification.** Docs-only change made after the battery; deliberately not re-run, but strictly the "verify after every change" loop wasn't closed on the literal last edit.~~ done — moot; every later change ran the full battery
 
 ## c) NOT STARTED
 
-- Release/tag of go-paperless carrying the dep bump (v0.3.2 or next) — user didn't request; nothing pushed. → TODO_LIST 2026-09-16 (BLOCKED on §g-2).
-- Consumer sweep: bumping bank-sync's `go-paperless` pin (still v0.3.0) — needs release first. → TODO_LIST 2026-09-16 (rides the release row).
+- ~~Release/tag of go-paperless carrying the dep bump (v0.3.2 or next)~~ done — v0.3.2 released 2026-09-16, v0.4.x followed.
+- ~~Consumer sweep: bumping bank-sync's `go-paperless` pin (still v0.3.0)~~ superseded — consumers migrated to v0.4.2 (2026-09-23); the open line is the v0.5.0 migration row (TODO_LIST).
 - ~~TODO_LIST.md reconciliation (harvest this report's §f; mark any deps item done) — user said WAIT, so parked.~~ done at continuation 2026-09-16 — HARVEST executed: TODO_LIST +5 rows, ROADMAP theme 4.
 - ~~Porting bank-sync's `update-vendor-hash` flake app to go-paperless (manual got:-pasting is currently the only path).~~ Won't implement — BuildFlow coverage landed in-repo 2026-09-16 (`.buildflow.yml`); `buildflow -s nix-hash-fix` owns the dance.
 - ~~Hermetic erraudit in this flake (the documented gate silently relies on the host's PATH erraudit — version unverified).~~ Superseded — erraudit v0.4.0 upstream breakage (go1.26-era x/tools vs go1.27 modules) discovered later 2026-09-16; hermetic pin BLOCKED on the upstream rebuild (TODO_LIST), not pursued into an actively-edited shared worktree.
-- Sibling session's work (integration app, CI changes) — theirs, intentionally untouched by me.
-- `nix flake check --all-systems` (check omitted aarch64-darwin/aarch64-linux/x86_64-darwin with a warning). → TODO_LIST 2026-09-16.
+- ~~Sibling session's work (integration app, CI changes)~~ done — landed, verified, and shipped (integration-vet check, scheduled Fuzz workflow).
+- ~~`nix flake check --all-systems` (check omitted aarch64-darwin/aarch64-linux/x86_64-darwin with a warning)~~ done — 0.4.0 restricted systems (dead x86_64-darwin target dropped); --all-systems green.
 
 ## d) TOTALLY FUCKED UP
 
@@ -94,36 +94,36 @@ No deliberate lies. Two overbroad statements corrected:
 1. ~~[NOW] Re-run `nix flake check` on the sibling's **final** tree — current green certified a mid-edit state.~~ done at continuation ~18:00 — re-ran on the then-current snapshot (client_test.go still mid-edit): **all checks passed**. A truly-final re-run is still owed once the sibling lands.
 2. ~~[NOW] Read the AGENTS.md + docs/ERROR_CODES.md rider diffs inside `5f8d07b` (unreviewed, built upon).~~ done at continuation — riders read: BuildFlow usage notes, samber/lo rejection rationale, race-coverage rationale; docs-only, benign. ERROR_CODES.md was pure table re-alignment.
 3. ~~[NOW] Finish the upstream diff review: paginate retry.go patch; view `examples/cmd/*` patches; then the "behavior-preserving" claim is fully earned.~~ done at continuation — see §Honesty resolutions.
-4. [NOW] Decide + cut release carrying the bump (v0.3.2): CHANGELOG date, tag, proxy-resolution verification (go-release skill). → TODO_LIST (BLOCKED on §g-2).
-5. [NEXT] Bump bank-sync's `go-paperless` pin from v0.3.0 → released version (+ its consumer battery). → TODO_LIST (rides the release row).
+~~4. [NOW] Decide + cut release carrying the bump (v0.3.2): CHANGELOG date, tag, proxy-resolution verification (go-release skill). → TODO_LIST (BLOCKED on §g-2).~~ done — v0.3.2 released 2026-09-16
+~~5. [NEXT] Bump bank-sync's `go-paperless` pin from v0.3.0 → released version (+ its consumer battery). → TODO_LIST (rides the release row).~~ superseded — consumers migrated to v0.4.2 (2026-09-23)
 6. ~~[NEXT] Port `update-vendor-hash` app from bank-sync flake.~~ Won't implement — BuildFlow coverage landed in-repo 2026-09-16; `nix-hash-fix` owns it.
 7. ~~[NEXT] Hermetic erraudit: pin in flake packages + wire as a real flake `checks.erraudit`.~~ Superseded — upstream v0.4.0 breakage first; pin BLOCKED on the rebuild (TODO_LIST).
-8. [NEXT] Parallel-session protocol: jj/worktree convention or busy-handoff rule across the fleet. → ROADMAP (theme 4).
-9. [NEXT] Document dependabot-vs-manual policy (who owns routine bumps; dependabot off for coordinated ones?). → ROADMAP (theme 4) + §g-3.
-10. [NEXT] Verify CI actually runs govulncheck/fuzz (go-paperless ci.yml not audited this session — flagged, not researched per scope). → TODO_LIST.
-11. [NEXT] `nix flake check --all-systems` once, to kill the omitted-systems warning. → TODO_LIST.
+~~8. [NEXT] Parallel-session protocol: jj/worktree convention or busy-handoff rule across the fleet. → ROADMAP (theme 4).~~ routed — ROADMAP theme 4 carries it
+~~9. [NEXT] Document dependabot-vs-manual policy (who owns routine bumps; dependabot off for coordinated ones?). → ROADMAP (theme 4) + §g-3.~~ routed — ROADMAP theme 4 carries it
+~~10. [NEXT] Verify CI actually runs govulncheck/fuzz (go-paperless ci.yml not audited this session — flagged, not researched per scope). → TODO_LIST.~~ done — ci.yml audited (govulncheck ✓, fuzz → scheduled Fuzz workflow, 0.4.0)
+~~11. [NEXT] `nix flake check --all-systems` once, to kill the omitted-systems warning. → TODO_LIST.~~ done — 0.4.0 restricted systems; --all-systems green
 12. ~~[NEXT] docs-health HARVEST of this §f into TODO_LIST/ROADMAP; reconcile any "deps" TODO item.~~ done at continuation 2026-09-16 — TODO_LIST +5 rows (release, erraudit pin, ci.yml audit, --all-systems, simd), ROADMAP theme 4 added; deduped against the sibling's 3 existing rows.
 13. [ROADMAP] CHANGELOG convention: dedicated "Dependencies" subsection instead of Changed-burial. → ROADMAP (theme 4).
 14. [ROADMAP] Weekly freshness guard: `go list -m -u all` report job complementing dependabot. → ROADMAP (theme 4).
 15. [ROADMAP] flake.lock ownership: who runs `nix flake update` and on what cadence (daemon did it today). → ROADMAP (theme 4).
-16. [ROADMAP] Verify `GOEXPERIMENT=jsonv2,simd` — is `simd` still meaningful/current on go1.27? (noticed, not researched). → TODO_LIST.
+~~16. [ROADMAP] Verify `GOEXPERIMENT=jsonv2,simd` — is `simd` still meaningful/current on go1.27? (noticed, not researched). → TODO_LIST.~~ done — simd dropped 2026-09-16 20:59 (only enables the unused simd stdlib package)
 17. [ROADMAP] Wire fuzz targets into CI or document local-only status. → TODO_LIST (folded into the ci.yml audit row).
 18. ~~[ROADMAP] `coverage/` dir in repo root — inspect and clean or ignore.~~ NOT-DO — `coverage/` + `coverage.out` are gitignored local output; nothing to clean.
 19. ~~[ROADMAP] AGENTS.md wording: name erraudit's actual source (host PATH) until item 7 lands.~~ Superseded — the sibling's AGENTS rewrite (erraudit bullet, 2026-09-16) documents the gate state far more thoroughly than the planned one-liner.
-20. [ROADMAP] Add pre-push/CI assertion that `result` symlink & flake `version` stay in sync with the latest tag.
+~~20. [ROADMAP] Add pre-push/CI assertion that `result` symlink & flake `version` stay in sync with the latest tag.~~ done — superseded by TestFlakeVersionMatchesChangelog + the release-verify leg
 21. [ROADMAP] Consider `gomodGuard`-style check: fail CI if go.mod deps trail latest major by >1 minor (policy per repo).
 22. [ROADMAP] Fleet-level: apply this same "latest version" sweep to bank-sync + siblings (same session pattern, per-repo commits).
 23. ~~[ROADMAP] Record erraudit version used for this session's green gate in AGENTS (reproducibility).~~ Superseded — moot: the gate broke hours later (upstream v0.4.0); the rebuild + hermetic pin items in TODO_LIST subsume reproducibility.
-24. [ROADMAP] Add `nix run .#integration` app docs cross-link if the sibling's scaffold lands without docs.
-25. [ROADMAP] Ship-position check: does the repo want a release notes excerpt in GitHub Releases automation (GoReleaser) — bank-sync-class polish.
+~~24. [ROADMAP] Add `nix run .#integration` app docs cross-link if the sibling's scaffold lands without docs.~~ done — README Development block lists .#integration (2026-09-16 20:59)
+~~25. [ROADMAP] Ship-position check: does the repo want a release notes excerpt in GitHub Releases automation (GoReleaser) — bank-sync-class polish.~~ → ROADMAP (2026-10-11 harvest): GoReleaser polish idea
 
 (Items 26–50 deliberately not fabricated: the honest backlog beyond these is in TODO_LIST/ROADMAP, not in this session's observations.)
 
 ## g) Questions only you can answer
 
-1. **Commit authorization & protocol:** In go-paperless, may I commit explicitly per task (beating the daemon), so bump+hash+changelog land as one honest commit? Same for future repos — or is heuristic daemon history acceptable to you there?
-2. **Coordination:** Is the sibling session's integration work still intended for the same release? Should I wait for its completion before cutting v0.3.2, or release the dep bump standalone?
-3. **Dependency policy:** Keep weekly dependabot gomod PRs _and_ do manual sweeps like this one, or restrict dependabot (e.g. security-only) so bumps you care about stay deliberate?
+~~1. **Commit authorization & protocol:** In go-paperless, may I commit explicitly per task (beating the daemon), so bump+hash+changelog land as one honest commit? Same for future repos — or is heuristic daemon history acceptable to you there?~~ done — convention recorded (AGENTS.md release-commit rule; CONTRIBUTING checklist)
+~~2. **Coordination:** Is the sibling session's integration work still intended for the same release? Should I wait for its completion before cutting v0.3.2, or release the dep bump standalone?~~ done — released as v0.3.2 then v0.4.x; coordination question moot
+~~3. **Dependency policy:** Keep weekly dependabot gomod PRs _and_ do manual sweeps like this one, or restrict dependabot (e.g. security-only) so bumps you care about stay deliberate?~~ routed — ROADMAP theme 4 carries the dependabot-policy question
 
 ---
 
