@@ -68,7 +68,7 @@ func (s *Server) Documents() []Document {
 
 	documents := make([]Document, 0, len(s.documents))
 	for _, doc := range s.documents {
-		copied := *doc
+		copied := *doc //nolint:branching-flow // nil deref impossible: appendDocumentLocked only ever appends &stored
 		copied.Content = slices.Clone(doc.Content)
 		copied.TagIDs = slices.Clone(doc.TagIDs)
 		copied.CustomFields = slices.Clone(doc.CustomFields)

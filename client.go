@@ -1359,7 +1359,7 @@ type documentListEntry struct {
 // shapes: the flat field served by older paperless-ngx versions first, then
 // the root version's checksum (3.x), then any non-empty version checksum.
 func (e documentListEntry) effectiveChecksum() string {
-	return checksumFrom(e.Checksum, e.Versions)
+	return checksumFrom(e.Checksum, e.Versions) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
 }
 
 // checksumFrom resolves a document checksum across API shapes; shared by
