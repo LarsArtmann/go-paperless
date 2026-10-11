@@ -155,7 +155,7 @@ func TestMalformedJSONFaultSurfacesCorruption(t *testing.T) {
 		Body:       `{"results":[{"task_id"`,
 	}))
 
-	_, _, err := newTestClient(t, server).GetTask(context.Background(), "task-1")
+	_, _, err := newTestClient(t, server).GetTask(context.Background(), paperless.NewTaskID("task-1"))
 	if err == nil {
 		t.Fatal("GetTask against a truncated body = nil error, want a decode corruption")
 	}

@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 func TestDocumentListServesFlatChecksums(t *testing.T) {
@@ -95,10 +97,10 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 		Title:          "invoice.pdf",
 		Content:        []byte("%PDF-invoice"),
 		Created:        created,
-		Correspondent:  12,
-		TagIDs:         []int{3, 9},
-		DocumentTypeID: 5,
-		CustomFields:   []CustomFieldValue{{Field: 2, Value: "msg-42"}},
+		Correspondent:  paperless.NewCorrespondentID(12),
+		TagIDs:          []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)},
+		DocumentTypeID: paperless.NewDocumentTypeID(5),
+		CustomFields:   []CustomFieldValue{{Field: paperless.NewCustomFieldID(2), Value: "msg-42"}},
 	})
 
 	metas, err := newTestClient(t, server).ListDocumentMetas(context.Background())
@@ -111,7 +113,7 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 	}
 
 	meta := metas[0]
-	if meta.ID != 1 || meta.Title != "invoice.pdf" || meta.Correspondent != 12 {
+	if meta.ID.Get() != 1 || meta.Title != "invoice.pdf" || meta.Correspondent.Get() != 12 {
 		t.Errorf("meta = %+v, want id 1, title invoice.pdf, correspondent 12", meta)
 	}
 
@@ -119,11 +121,11 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 		t.Errorf("created = %v, want %v", meta.Created, created)
 	}
 
-	if !slices.Equal(meta.TagIDs, []int{3, 9}) || meta.DocumentTypeID != 5 {
+	if !slices.Equal(meta.TagIDs, []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)}) || meta.DocumentTypeID.Get() != 5 {
 		t.Errorf("tags/type = %v/%d, want [3 9]/5", meta.TagIDs, meta.DocumentTypeID)
 	}
 
-	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 2 ||
+	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field.Get() != 2 ||
 		meta.CustomFields[0].Value != "msg-42" {
 		t.Errorf("custom fields = %v, want [{2 msg-42}]", meta.CustomFields)
 	}
@@ -159,20 +161,20 @@ func TestAddAndEditDocumentsAtRuntime(t *testing.T) {
 
 	stored := server.AddDocument(Document{Content: []byte("%PDF-runtime")})
 
-	if stored.ID != 1 || stored.Checksum != ChecksumOf([]byte("%PDF-runtime")) {
+	if stored.ID.Get() != 1 || stored.Checksum != ChecksumOf([]byte("%PDF-runtime")) {
 		t.Fatalf("stored = %+v, want id 1 with derived checksum", stored)
 	}
 
-	aged := server.EditDocument(1, func(doc *Document) {
+	aged := server.EditDocument(paperless.NewDocumentID(1), func(doc *Document) {
 		doc.Title = ""
-		doc.Correspondent = 0
+		doc.Correspondent = paperless.CorrespondentID{}
 	})
 
 	if !aged {
 		t.Fatal("EditDocument = false for document 1")
 	}
 
-	if server.EditDocument(99, func(doc *Document) {}) {
+	if server.EditDocument(paperless.NewDocumentID(99), func(doc *Document) {}) {
 		t.Error("EditDocument = true for unknown document 99")
 	}
 

@@ -15,7 +15,7 @@ func TestDocumentNotesRoundTrip(t *testing.T) {
 	client := newTestClient(t, server)
 	ctx := context.Background()
 
-	notes, err := client.ListDocumentNotes(ctx, 1)
+	notes, err := client.ListDocumentNotes(ctx, paperless.NewDocumentID(1))
 	if err != nil {
 		t.Fatalf("ListDocumentNotes: %v", err)
 	}
@@ -24,11 +24,11 @@ func TestDocumentNotesRoundTrip(t *testing.T) {
 		t.Fatalf("fresh document notes = %d, want 0", len(notes))
 	}
 
-	if _, err := client.AddDocumentNote(ctx, 1, "first"); err != nil {
+	if _, err := client.AddDocumentNote(ctx, paperless.NewDocumentID(1), "first"); err != nil {
 		t.Fatalf("AddDocumentNote: %v", err)
 	}
 
-	notes, err = client.AddDocumentNote(ctx, 1, "second")
+	notes, err = client.AddDocumentNote(ctx, paperless.NewDocumentID(1), "second")
 	if err != nil {
 		t.Fatalf("AddDocumentNote second: %v", err)
 	}
@@ -41,11 +41,11 @@ func TestDocumentNotesRoundTrip(t *testing.T) {
 		t.Errorf("note user = %+v, want the fake's default author", notes[0].User)
 	}
 
-	if server.NoteCount(1) != 2 {
-		t.Errorf("fake store note count = %d, want 2", server.NoteCount(1))
+	if server.NoteCount(paperless.NewDocumentID(1)) != 2 {
+		t.Errorf("fake store note count = %d, want 2", server.NoteCount(paperless.NewDocumentID(1)))
 	}
 
-	remaining, err := client.DeleteDocumentNote(ctx, 1, notes[1].ID)
+	remaining, err := client.DeleteDocumentNote(ctx, paperless.NewDocumentID(1), notes[1].ID)
 	if err != nil {
 		t.Fatalf("DeleteDocumentNote: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestNotesOnUnknownDocumentAnswer404(t *testing.T) {
 
 	server := NewServer(t)
 
-	if _, err := newTestClient(t, server).ListDocumentNotes(context.Background(), 99); err == nil {
+	if _, err := newTestClient(t, server).ListDocumentNotes(context.Background(), paperless.NewDocumentID(99)); err == nil {
 		t.Error("ListDocumentNotes on unknown document = nil error, want a client rejection")
 	}
 }
@@ -75,7 +75,7 @@ func TestShareLinksRoundTrip(t *testing.T) {
 	expiration := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)
 
 	link, err := client.CreateShareLink(ctx, paperless.CreateShareLinkRequest{
-		DocumentID:  1,
+		DocumentID:  paperless.NewDocumentID(1),
 		FileVersion: paperless.ShareLinkFileVersionOriginal,
 		Expiration:  &expiration,
 	})
@@ -83,7 +83,7 @@ func TestShareLinksRoundTrip(t *testing.T) {
 		t.Fatalf("CreateShareLink: %v", err)
 	}
 
-	if link.ID != 1 || link.Slug == "" || link.DocumentID != 1 {
+	if link.ID.Get() != 1 || link.Slug == "" || link.DocumentID.Get() != 1 {
 		t.Fatalf("created link = %+v, want id 1, slug set, document 1", link)
 	}
 
@@ -91,7 +91,7 @@ func TestShareLinksRoundTrip(t *testing.T) {
 		t.Errorf("expiration = %v, want %v", link.Expiration, expiration)
 	}
 
-	defaultLink, err := client.CreateShareLink(ctx, paperless.CreateShareLinkRequest{DocumentID: 1})
+	defaultLink, err := client.CreateShareLink(ctx, paperless.CreateShareLinkRequest{DocumentID: paperless.NewDocumentID(1)})
 	if err != nil {
 		t.Fatalf("CreateShareLink default: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestSavedViewsRoundTrip(t *testing.T) {
 		t.Fatalf("CreateSavedView: %v", err)
 	}
 
-	if created != 1 {
+	if created.Get() != 1 {
 		t.Errorf("created id = %d, want 1", created)
 	}
 

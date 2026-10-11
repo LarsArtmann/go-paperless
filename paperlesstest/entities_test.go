@@ -3,6 +3,8 @@ package paperlesstest
 import (
 	"context"
 	"testing"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // storagePathTemplate reads one storage path's template straight from the
@@ -34,7 +36,7 @@ func TestEnsureTagCreatesFindsAndSelfHeals(t *testing.T) {
 		t.Fatalf("EnsureTag create: %v", err)
 	}
 
-	if id != 1 {
+	if id.Get() != 1 {
 		t.Errorf("created tag id = %d, want 1", id)
 	}
 
@@ -60,10 +62,10 @@ func TestEnsureTagCreatesFindsAndSelfHeals(t *testing.T) {
 
 	name, err := client.GetCorrespondentName(
 		ctx,
-		legacy,
-	) // different family, just exercising detail 404 path
+		paperless.NewCorrespondentID(legacy.Get()),
+	) // unknown-family value, exercising the detail 404 path
 	if err == nil {
-		t.Errorf("correspondent lookup on a tag id = %q, want an error", name)
+		t.Errorf("correspondent lookup on an unknown id = %q, want an error", name)
 	}
 }
 
@@ -79,7 +81,7 @@ func TestEnsureCorrespondentAndDocumentType(t *testing.T) {
 		t.Fatalf("EnsureCorrespondent existing: %v", err)
 	}
 
-	if correspondentID != 1 {
+	if correspondentID.Get() != 1 {
 		t.Errorf("correspondent id = %d, want 1", correspondentID)
 	}
 
@@ -88,7 +90,7 @@ func TestEnsureCorrespondentAndDocumentType(t *testing.T) {
 		t.Fatalf("EnsureCorrespondent create: %v", err)
 	}
 
-	if createdCorrespondent != 2 {
+	if createdCorrespondent.Get() != 2 {
 		t.Errorf("new correspondent id = %d, want 2", createdCorrespondent)
 	}
 
@@ -97,7 +99,7 @@ func TestEnsureCorrespondentAndDocumentType(t *testing.T) {
 		t.Fatalf("EnsureDocumentType: %v", err)
 	}
 
-	if typeID != 1 {
+	if typeID.Get() != 1 {
 		t.Errorf("document type id = %d, want 1", typeID)
 	}
 
@@ -132,7 +134,7 @@ func TestFindAndEnsureCustomField(t *testing.T) {
 		t.Fatalf("FindCustomField = (%d, %v, %v), want found", found, ok, err)
 	}
 
-	if found != 1 {
+	if found.Get() != 1 {
 		t.Errorf("found id = %d, want 1", found)
 	}
 
@@ -141,7 +143,7 @@ func TestFindAndEnsureCustomField(t *testing.T) {
 		t.Fatalf("FindCustomField missing: %v", err)
 	}
 
-	if ok || missing != 0 {
+	if ok || missing.Get() != 0 {
 		t.Errorf("FindCustomField missing = (%d, %v), want (0, false)", missing, ok)
 	}
 
@@ -150,7 +152,7 @@ func TestFindAndEnsureCustomField(t *testing.T) {
 		t.Fatalf("EnsureCustomField: %v", err)
 	}
 
-	if ensured != 2 {
+	if ensured.Get() != 2 {
 		t.Errorf("ensured id = %d, want 2 (created after the seeded field)", ensured)
 	}
 }
@@ -175,7 +177,7 @@ func TestFindEnsureAndListStoragePaths(t *testing.T) {
 		t.Fatalf("EnsureStoragePath create: %v", err)
 	}
 
-	if ensured != 2 {
+	if ensured.Get() != 2 {
 		t.Errorf("ensured id = %d, want 2", ensured)
 	}
 

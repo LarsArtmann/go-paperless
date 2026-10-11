@@ -40,7 +40,7 @@ func TestScriptedFailureIsATaskError(t *testing.T) {
 func TestScriptedDuplicateInTrash(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer(t, WithTaskDuplicate(42, true))
+	server := NewServer(t, WithTaskDuplicate(paperless.NewDocumentID(42), true))
 	client := newTestClient(t, server)
 
 	taskID, err := client.Upload(context.Background(), paperless.UploadRequest{
@@ -57,7 +57,7 @@ func TestScriptedDuplicateInTrash(t *testing.T) {
 	}
 
 	duplicateID, inTrash, refused := outcome.Duplicate()
-	if !refused || duplicateID != 42 || !inTrash {
+	if !refused || duplicateID.Get() != 42 || !inTrash {
 		t.Errorf(
 			"duplicate = (id %d, inTrash %v, refused %v), want (42, true, true)",
 			duplicateID,
@@ -72,7 +72,7 @@ func TestScriptedSuccessPointsAtFixtureWithoutStoring(t *testing.T) {
 
 	server := NewServer(t,
 		WithDocuments(Document{Title: "fixture", Content: []byte("%PDF-fixture")}),
-		WithTaskSuccess(1),
+		WithTaskSuccess(paperless.NewDocumentID(1)),
 	)
 	client := newTestClient(t, server)
 
@@ -89,7 +89,7 @@ func TestScriptedSuccessPointsAtFixtureWithoutStoring(t *testing.T) {
 		t.Fatalf("WaitForTask: %v", err)
 	}
 
-	if outcome.Status != paperless.TaskStatusSuccess || outcome.DocumentID != 1 {
+	if outcome.Status != paperless.TaskStatusSuccess || outcome.DocumentID.Get() != 1 {
 		t.Errorf("outcome = %+v, want success pointing at fixture document 1", outcome)
 	}
 
@@ -192,15 +192,15 @@ func TestSeedTaskServesAFixedTaskID(t *testing.T) {
 	t.Parallel()
 
 	server := NewServer(t)
-	server.SeedTask("task-from-past", TaskPlan{Kind: TaskPlanDuplicate, DocumentID: 7})
+	server.SeedTask(paperless.NewTaskID("task-from-past"), TaskPlan{Kind: TaskPlanDuplicate, DocumentID: paperless.NewDocumentID(7)})
 
-	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), "task-from-past")
+	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), paperless.NewTaskID("task-from-past"))
 	if err != nil || !found {
 		t.Fatalf("GetTask = (%+v, %v, %v), want the planted task", outcome, found, err)
 	}
 
 	duplicateID, _, refused := outcome.Duplicate()
-	if !refused || duplicateID != 7 {
+	if !refused || duplicateID.Get() != 7 {
 		t.Errorf("duplicate = (id %d, refused %v), want (7, true)", duplicateID, refused)
 	}
 }

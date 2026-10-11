@@ -23,16 +23,16 @@ func TestUpdateDocumentPatchRoundTrip(t *testing.T) {
 
 	newTitle := "patched"
 	newCreated := time.Date(2024, 12, 24, 0, 0, 0, 0, time.UTC)
-	correspondent := 3
-	documentType := 2
+	correspondent := paperless.NewCorrespondentID(3)
+	documentType := paperless.NewDocumentTypeID(2)
 
-	err := client.UpdateDocument(ctx, 1, paperless.UpdateDocumentRequest{
+	err := client.UpdateDocument(ctx, paperless.NewDocumentID(1), paperless.UpdateDocumentRequest{
 		Title:           &newTitle,
 		Created:         &newCreated,
 		CorrespondentID: &correspondent,
-		TagIDs:          []int{5, 6},
+		TagIDs:          []paperless.TagID{paperless.NewTagID(5), paperless.NewTagID(6)},
 		DocumentTypeID:  &documentType,
-		CustomFields:    []paperless.CustomFieldValue{{Field: 9, Value: "abc"}},
+		CustomFields:    []paperless.CustomFieldValue{{Field: paperless.NewCustomFieldID(9), Value: "abc"}},
 	})
 	if err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
@@ -48,20 +48,20 @@ func TestUpdateDocumentPatchRoundTrip(t *testing.T) {
 	}
 
 	meta := metas[0]
-	if meta.Title != "patched" || meta.Correspondent != 3 || meta.DocumentTypeID != 2 {
+	if meta.Title != "patched" || meta.Correspondent.Get() != 3 || meta.DocumentTypeID.Get() != 2 {
 		t.Errorf("patched meta = %+v, want title patched, correspondent 3, type 2", meta)
 	}
 
-	if !slices.Equal(meta.TagIDs, []int{5, 6}) {
+	if !slices.Equal(meta.TagIDs, []paperless.TagID{paperless.NewTagID(5), paperless.NewTagID(6)}) {
 		t.Errorf("patched tags = %v, want [5 6]", meta.TagIDs)
 	}
 
-	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field != 9 {
+	if len(meta.CustomFields) != 1 || meta.CustomFields[0].Field.Get() != 9 {
 		t.Errorf("patched custom fields = %v, want field 9", meta.CustomFields)
 	}
 
 	patches := server.Patches()
-	if len(patches) != 1 || patches[0].DocumentID != 1 {
+	if len(patches) != 1 || patches[0].DocumentID.Get() != 1 {
 		t.Fatalf("patches = %+v, want one patch against document 1", patches)
 	}
 
@@ -81,20 +81,20 @@ func TestUpdateDocumentLeavesUntouchedFieldsAlone(t *testing.T) {
 	server := NewServer(t, WithDocuments(Document{
 		Title:         "keep",
 		Content:       []byte("%PDF-keep"),
-		Correspondent: 7,
-		TagIDs:        []int{1},
+		Correspondent: paperless.NewCorrespondentID(7),
+		TagIDs:        []paperless.TagID{paperless.NewTagID(1)},
 	}))
 	client := newTestClient(t, server)
 
 	newTitle := "only-title"
-	if err := client.UpdateDocument(context.Background(), 1, paperless.UpdateDocumentRequest{
+	if err := client.UpdateDocument(context.Background(), paperless.NewDocumentID(1), paperless.UpdateDocumentRequest{
 		Title: &newTitle,
 	}); err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
 	}
 
 	stored := server.Documents()[0]
-	if stored.Correspondent != 7 || !slices.Equal(stored.TagIDs, []int{1}) {
+	if stored.Correspondent.Get() != 7 || !slices.Equal(stored.TagIDs, []paperless.TagID{paperless.NewTagID(1)}) {
 		t.Errorf("stored doc = %+v; a title-only patch must not touch correspondent/tags", stored)
 	}
 }
@@ -109,11 +109,11 @@ func TestDeleteDocumentRecordsAndRemoves(t *testing.T) {
 	client := newTestClient(t, server)
 	ctx := context.Background()
 
-	if err := client.DeleteDocument(ctx, 2); err != nil {
+	if err := client.DeleteDocument(ctx, paperless.NewDocumentID(2)); err != nil {
 		t.Fatalf("DeleteDocument: %v", err)
 	}
 
-	if got := server.DeletedDocuments(); !slices.Equal(got, []int{2}) {
+	if got := server.DeletedDocuments(); !slices.Equal(got, []paperless.DocumentID{paperless.NewDocumentID(2)}) {
 		t.Errorf("deleted documents = %v, want [2]", got)
 	}
 
@@ -135,7 +135,7 @@ func TestDownloadDocumentServesStoredContent(t *testing.T) {
 	server := NewServer(t, WithDocuments(Document{Title: "doc", Content: content}))
 	client := newTestClient(t, server)
 
-	downloaded, err := client.DownloadDocument(context.Background(), 1)
+	downloaded, err := client.DownloadDocument(context.Background(), paperless.NewDocumentID(1))
 	if err != nil {
 		t.Fatalf("DownloadDocument: %v", err)
 	}
@@ -152,17 +152,17 @@ func TestDetailRoutesAnswer404ForUnknownDocuments(t *testing.T) {
 	client := newTestClient(t, server)
 	ctx := context.Background()
 
-	if err := client.DeleteDocument(ctx, 99); err == nil {
+	if err := client.DeleteDocument(ctx, paperless.NewDocumentID(99)); err == nil {
 		t.Error("delete of unknown document = nil error, want a client rejection")
 	}
 
-	if err := client.UpdateDocument(ctx, 99, paperless.UpdateDocumentRequest{}); err == nil {
+	if err := client.UpdateDocument(ctx, paperless.NewDocumentID(99), paperless.UpdateDocumentRequest{}); err == nil {
 		t.Error(
 			"update of unknown document = nil error, want either the local empty-update rejection or a 404",
 		)
 	}
 
-	if _, err := client.DownloadDocument(ctx, 99); err == nil {
+	if _, err := client.DownloadDocument(ctx, paperless.NewDocumentID(99)); err == nil {
 		t.Error("download of unknown document = nil error, want a client rejection")
 	}
 }

@@ -59,7 +59,7 @@ func ExampleClient_WaitForTask() {
 	// reaches a terminal state or the context expires.
 	outcome, err := client.WaitForTask(
 		ctx,
-		"0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77",
+		paperless.NewTaskID("0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77"),
 		paperless.DefaultTaskPollInterval,
 	)
 	if err != nil {
@@ -122,7 +122,7 @@ func ExampleClient_Upload() {
 		Filename: "statement-2026-08.pdf",
 		Content:  []byte("%PDF-1.4 ..."),
 		Title:    "Statement August 2026",
-		TagIDs:   []int{tagID},
+		TagIDs:   []paperless.TagID{tagID},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -148,7 +148,7 @@ func ExampleClient_GetTask() {
 
 	ctx := context.Background()
 
-	outcome, found, err := client.GetTask(ctx, "0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77")
+	outcome, found, err := client.GetTask(ctx, paperless.NewTaskID("0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77"))
 	if err != nil {
 		log.Fatal(err)
 	}
