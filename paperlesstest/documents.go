@@ -3,7 +3,7 @@ package paperlesstest
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json/v2"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"

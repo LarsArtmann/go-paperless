@@ -1,7 +1,7 @@
 package paperlesstest
 
 import (
-	"encoding/json/v2"
+	"encoding/json"
 	"net/http"
 	"slices"
 	"strconv"

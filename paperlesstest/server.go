@@ -2,7 +2,7 @@ package paperlesstest
 
 import (
 	"bytes"
-	"encoding/json/v2"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
