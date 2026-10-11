@@ -55,14 +55,14 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 
 ## c) NOT STARTED
 
-1. faults.go restructure (task 1 of v2 plan).
-2. All 5 paperlesstest entity/wire merges.
-3. All 45 suppression comments.
-4. Verification: `all` → 0 active; `--include-suppressed` → 45 marked; `nix fmt` anchor-stability re-run.
-5. Full gates: build / test / race / vet(+integration) / lint / erraudit.
-6. AGENTS.md suppression-convention note + accepted-classes section (and refreshing the now-half-stale branching-flow policy note).
-7. CHANGELOG row for the fake consolidation (expected: no public-surface delta).
-8. All carry-over work from the 03-23 report (BuildFlow run, golden-bytes wire test, FK-clearing PATCH test, v0.5.0 tag + release-verify, consumer migrations, strong-id CI gate, HARVEST of that report's section f, gopls restart).
+~~1. faults.go restructure (task 1 of v2 plan).~~ done — executed 2026-10-11 05:02 (faults.go pointer restructure)
+~~2. All 5 paperlesstest entity/wire merges.~~ done — executed 2026-10-11 05:02 (five pairs merged)
+~~3. All 45 suppression comments.~~ done — landed as 16 line-suppressions + 31 rule-dismissals (dupe/composition ignore line directives in v0.6.4)
+~~4. Verification: `all` → 0 active; `--include-suppressed` → 45 marked; `nix fmt` anchor-stability re-run.~~ done — executed 2026-10-11 05:02 (0 active, 16 suppressed verified)
+~~5. Full gates: build / test / race / vet(+integration) / lint / erraudit.~~ done — executed 2026-10-11 05:02 (all gates green)
+~~6. AGENTS.md suppression-convention note + accepted-classes section (and refreshing the now-half-stale branching-flow policy note).~~ done — executed 2026-10-11 05:02 (AGENTS.md rewritten)
+~~7. CHANGELOG row for the fake consolidation (expected: no public-surface delta).~~ done — executed 2026-10-11 05:02 (CHANGELOG 0.5.0 internal bullet)
+~~8. All carry-over work from the 03-23 report (BuildFlow run, golden-bytes wire test, FK-clearing PATCH test, v0.5.0 tag + release-verify, consumer migrations, strong-id CI gate, HARVEST of that report's section f, gopls restart).~~ routed — carry-overs tracked in the 03-23 report + TODO_LIST (2026-10-11 harvest)
 
 **Zero files were edited this session.**
 
@@ -86,64 +86,64 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 
 **Execute the approved v2 plan:**
 
-1. Pre-flight: diff the 5 entity/wire struct pairs field-by-field (validates merge counts + order).
-2. Pre-flight probe: `//nolint:branching-flow[:RULE]` casing on one finding.
-3. Pre-flight probe: suppression anchoring on a composite-literal line (client.go:1362).
-4. faults.go: `armedFaultLocked` → `*Fault` + `slices.DeleteFunc` identity delete (kills 2 findings, removes sentinel index).
-5. savedviews.go: merge `savedViewRuleEntity`/`savedViewRuleWire` (2 findings).
-6. savedviews.go: merge `savedViewEntity`/`savedViewWire` (1 mixin; after #5).
-7. sharelinks.go: merge `shareLinkEntity`/`shareLinkWire` (3 findings).
-8. entities.go: merge `customFieldEntity`/`customFieldWire` (2 findings).
-9. entities.go: merge `storagePathEntity`/`storagePathWire` (2 findings).
-10. entities.go: merge `namedEntity`/`namedEntityWire` (2 findings).
-11. Run paperlesstest suite (round-trip + TestFakeCoversEveryClientRoute) after each merge.
-12. Suppress NIL_POINTER_DEREF documents.go:71 (invariant: only `&stored` appended).
-13. Suppress 4 PHANTOM-TRANSPOSE (v2 typed-string scope, ROADMAP ref).
-14. Suppress 11 PHANTOM-COLLISION (parse-boundary reason).
-15. Suppress 8 client.go DUPLICATE_TYPE (public-struct-tags = v2 / import cycle).
-16. Suppress remaining ~20 mixins (v2 / cycle / input-vs-response).
-17. Suppress Server ANTI_PATTERN_large-struct (fake state holder).
-18. Verify `branching-flow all` → 0 active findings.
-19. Verify `--include-suppressed` → all 45 marked suppressed (audit mode).
-20. `nix fmt`, then re-run `all` (formatters must not move directives off anchors).
-21. Full gates: build, test, test -race, vet (+integration tag), `nix run .#lint`, erraudit.
-22. AGENTS.md: suppression convention + accepted-finding classes; rewrite the now-stale branching-flow policy note.
-23. CHANGELOG: fake-consolidation row (document explicitly that public surface is unchanged).
-24. TODO_LIST.md: row for this work; mark this report's items executed.
+~~1. Pre-flight: diff the 5 entity/wire struct pairs field-by-field (validates merge counts + order).~~ done — executed 2026-10-11 05:02
+~~2. Pre-flight probe: `//nolint:branching-flow[:RULE]` casing on one finding.~~ done — executed 2026-10-11 05:02
+~~3. Pre-flight probe: suppression anchoring on a composite-literal line (client.go:1362).~~ done — executed 2026-10-11 05:02
+~~4. faults.go: `armedFaultLocked` → `*Fault` + `slices.DeleteFunc` identity delete (kills 2 findings, removes sentinel index).~~ done — executed 2026-10-11 05:02
+~~5. savedviews.go: merge `savedViewRuleEntity`/`savedViewRuleWire` (2 findings).~~ done — executed 2026-10-11 05:02
+~~6. savedviews.go: merge `savedViewEntity`/`savedViewWire` (1 mixin; after #5).~~ done — executed 2026-10-11 05:02
+~~7. sharelinks.go: merge `shareLinkEntity`/`shareLinkWire` (3 findings).~~ done — executed 2026-10-11 05:02
+~~8. entities.go: merge `customFieldEntity`/`customFieldWire` (2 findings).~~ done — executed 2026-10-11 05:02
+~~9. entities.go: merge `storagePathEntity`/`storagePathWire` (2 findings).~~ done — executed 2026-10-11 05:02
+~~10. entities.go: merge `namedEntity`/`namedEntityWire` (2 findings).~~ done — executed 2026-10-11 05:02
+~~11. Run paperlesstest suite (round-trip + TestFakeCoversEveryClientRoute) after each merge.~~ done — executed 2026-10-11 05:02
+~~12. Suppress NIL_POINTER_DEREF documents.go:71 (invariant: only `&stored` appended).~~ done — executed 2026-10-11 05:02
+~~13. Suppress 4 PHANTOM-TRANSPOSE (v2 typed-string scope, ROADMAP ref).~~ done — executed 2026-10-11 05:02
+~~14. Suppress 11 PHANTOM-COLLISION (parse-boundary reason).~~ done — executed 2026-10-11 05:02
+~~15. Suppress 8 client.go DUPLICATE_TYPE (public-struct-tags = v2 / import cycle).~~ done — executed 2026-10-11 05:02
+~~16. Suppress remaining ~20 mixins (v2 / cycle / input-vs-response).~~ done — executed 2026-10-11 05:02
+~~17. Suppress Server ANTI_PATTERN_large-struct (fake state holder).~~ done — executed 2026-10-11 05:02
+~~18. Verify `branching-flow all` → 0 active findings.~~ done — executed 2026-10-11 05:02
+~~19. Verify `--include-suppressed` → all 45 marked suppressed (audit mode).~~ done — executed 2026-10-11 05:02
+~~20. `nix fmt`, then re-run `all` (formatters must not move directives off anchors).~~ done — executed 2026-10-11 05:02
+~~21. Full gates: build, test, test -race, vet (+integration tag), `nix run .#lint`, erraudit.~~ done — executed 2026-10-11 05:02
+~~22. AGENTS.md: suppression convention + accepted-finding classes; rewrite the now-stale branching-flow policy note.~~ done — executed 2026-10-11 05:02
+~~23. CHANGELOG: fake-consolidation row (document explicitly that public surface is unchanged).~~ done — executed 2026-10-11 05:02
+~~24. TODO_LIST.md: row for this work; mark this report's items executed.~~ done — executed 2026-10-11 05:02
 
 **Carry-overs from the 03-23 report (still open, user-gated or unstarted):**
-25. User decision: tag v0.5.0 now or hold for consumer lockstep.
-26. User decision: who migrates bank-sync / InboxClean.
-27. User decision: ADR 0004 paperlesstest contract amendment sign-off.
-28. BuildFlow `--fix` run (license/vuln gates vs go-branded-id v0.7.0).
-29. Golden-bytes wire test pinning `"id":null` create bodies and `"correspondent":null` PATCH.
-30. Explicit FK-clearing null-PATCH test.
-31. Tag v0.5.0 + `nix run .#release-verify -- v0.5.0`.
-32. Migrate bank-sync to v0.5.0 branded IDs (unify with `paperless.DocumentID`).
-33. Migrate InboxClean `internal/papersync`.
-34. Wire `branching-flow strong-id --exit-code` as CI gate.
-35. HARVEST the 03-23 report's section (f) (40 items) into TODO_LIST/ROADMAP (docs-health).
-36. Restart gopls/Crush — stale diagnostics have persisted two sessions.
-37. Re-adjudicate ids.go godoclint warning.
+~~25. User decision: tag v0.5.0 now or hold for consumer lockstep.~~ → TODO_LIST release row (2026-10-11 harvest): owner decision
+~~26. User decision: who migrates bank-sync / InboxClean.~~ already harvested — TODO_LIST consumer-migration row
+~~27. User decision: ADR 0004 paperlesstest contract amendment sign-off.~~ routed — owner decision pending (ADR 0004 amendment shipped in the v0.5.0 state)
+~~28. BuildFlow `--fix` run (license/vuln gates vs go-branded-id v0.7.0).~~ → TODO_LIST (2026-10-11 harvest): BuildFlow run vs go-branded-id
+~~29. Golden-bytes wire test pinning `"id":null` create bodies and `"correspondent":null` PATCH.~~ → TODO_LIST (2026-10-11 harvest): golden-bytes wire test
+~~30. Explicit FK-clearing null-PATCH test.~~ → TODO_LIST (2026-10-11 harvest): FK-clearing PATCH test
+~~31. Tag v0.5.0 + `nix run .#release-verify -- v0.5.0`.~~ → TODO_LIST release row (2026-10-11 harvest)
+~~32. Migrate bank-sync to v0.5.0 branded IDs (unify with `paperless.DocumentID`).~~ already harvested — TODO_LIST consumer-migration row
+~~33. Migrate InboxClean `internal/papersync`.~~ already harvested — TODO_LIST consumer-migration row
+~~34. Wire `branching-flow strong-id --exit-code` as CI gate.~~ → TODO_LIST (2026-10-11 harvest): strong-id CI gate
+~~35. HARVEST the 03-23 report's section (f) (40 items) into TODO_LIST/ROADMAP (docs-health).~~ done — harvested this pass (2026-10-11 docs-health)
+~~36. Restart gopls/Crush — stale diagnostics have persisted two sessions.~~ routed — session-start action (fresh sessions run clean)
+~~37. Re-adjudicate ids.go godoclint warning.~~ → TODO_LIST Low (2026-10-11 harvest): godoclint re-adjudication
 
 **New from this session:**
-38. Resolve the branching-flow 0.6.4 exit-code contradiction (README default-on vs observed exit 0).
-39. Once `all` is clean: evaluate re-enabling branching-flow in `.buildflow.yml` (currently skipped by policy).
-40. Evaluate `--baseline` SARIF as an alternative to inline suppressions for the v2-scope class.
-41. Upstream feedback to branching-flow: the two panic-analyzer FP patterns (guarded sentinel index; range-over-pointer-slice invariant).
-42. Seed a v2 ADR: typed string params/fields — the 15 type-safety suppressions are the ready-made catalog.
-43. v2 decision: JSON tags on public structs (retires the 8 SDK DUPLICATE_TYPE suppressions).
-44. Consider exporting SDK wire payloads for fake reuse (retires cross-package dupe/mixin suppressions; needs an ADR — touches ADR 0004's amendment).
-45. Document the suppression inventory so the v2 migration knows exactly which directives to remove.
-46. Watch `Server` struct growth — revisit field grouping if it keeps accumulating (suppressed now, threshold 15 vs 32 fields).
-47. Check whether branching-flow flags stale/unused suppression directives (hygiene).
-48. Optional: `branching-flow stats` before/after snapshot for the follow-up report.
+~~38. Resolve the branching-flow 0.6.4 exit-code contradiction (README default-on vs observed exit 0).~~ → TODO_LIST (2026-10-11 harvest): exit-code probe
+~~39. Once `all` is clean: evaluate re-enabling branching-flow in `.buildflow.yml` (currently skipped by policy).~~ → TODO_LIST Low (2026-10-11 harvest): re-enable evaluation
+~~40. Evaluate `--baseline` SARIF as an alternative to inline suppressions for the v2-scope class.~~ → ROADMAP (2026-10-11 harvest): SARIF baseline
+~~41. Upstream feedback to branching-flow: the two panic-analyzer FP patterns (guarded sentinel index; range-over-pointer-slice invariant).~~ → TODO_LIST Low (2026-10-11 harvest): upstream FP feedback
+~~42. Seed a v2 ADR: typed string params/fields — the 15 type-safety suppressions are the ready-made catalog.~~ → ROADMAP (2026-10-11 harvest): v2 typed-strings ADR seed
+~~43. v2 decision: JSON tags on public structs (retires the 8 SDK DUPLICATE_TYPE suppressions).~~ already harvested — TODO_LIST v2 row (JSON-tag decision)
+~~44. Consider exporting SDK wire payloads for fake reuse (retires cross-package dupe/mixin suppressions; needs an ADR — touches ADR 0004's amendment).~~ → ROADMAP (2026-10-11 harvest): exported wire payloads
+~~45. Document the suppression inventory so the v2 migration knows exactly which directives to remove.~~ → TODO_LIST Low (2026-10-11 harvest): suppression inventory doc
+~~46. Watch `Server` struct growth — revisit field grouping if it keeps accumulating (suppressed now, threshold 15 vs 32 fields).~~ → TODO_LIST Low (2026-10-11 harvest): Server growth watch
+~~47. Check whether branching-flow flags stale/unused suppression directives (hygiene).~~ → TODO_LIST Low (2026-10-11 harvest): stale-directive check
+~~48. Optional: `branching-flow stats` before/after snapshot for the follow-up report.~~ Won't implement — snapshot noise; the 05-02 report records the counts
 
 ## g) Questions I can NOT figure out myself
 
-1. **Approve the v2 plan as presented (15 fix / 45 suppress)?** Or move a class — e.g., brand the 4 PHANTOM-TRANSPOSE params NOW as a v0.6.0 breaking minor instead of waiting for v2?
-2. **Once `all` reads clean, should it become a hard gate** (CI job and/or re-enabling the skipped branching-flow step in `.buildflow.yml`), or stay advisory?
-3. **Carry-over: tag v0.5.0 now or hold until consumers migrate?** Decides whether this session's work folds into 0.5.0 (internal-only changes; folding is safe) or ships after.
+~~1. **Approve the v2 plan as presented (15 fix / 45 suppress)?** Or move a class — e.g., brand the 4 PHANTOM-TRANSPOSE params NOW as a v0.6.0 breaking minor instead of waiting for v2?~~ done — approved and executed 2026-10-11 05:02 (with the dupe/composition amendment)
+~~2. **Once `all` reads clean, should it become a hard gate** (CI job and/or re-enabling the skipped branching-flow step in `.buildflow.yml`), or stay advisory?~~ → TODO_LIST (2026-10-11 harvest): gate decision, needs the exit-code probe first
+~~3. **Carry-over: tag v0.5.0 now or hold until consumers migrate?** Decides whether this session's work folds into 0.5.0 (internal-only changes; folding is safe) or ships after.~~ → TODO_LIST release row (2026-10-11 harvest)
 
 ---
 
