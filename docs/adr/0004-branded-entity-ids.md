@@ -58,7 +58,7 @@ IDs only.
   import the root `paperless` package for the ID types (fixtures,
   counters, handlers) so a fake `Document.ID` compares equal to a
   `DocumentMeta.ID` without conversions. The stdlib-only contract is
-  amended accordingly: no SDK *logic* is reused, only the ID types; the
+  amended accordingly: no SDK _logic_ is reused, only the ID types; the
   wire protocol remains the fake's source of truth, and the fake's
   shared named-family routing became free generic functions
   (`routeNamedFamily[B]`) because Go methods cannot carry type
@@ -84,7 +84,7 @@ IDs only.
   allows breaking minor bumps). Consumers (bank-sync, InboxClean) keep
   compiling on their pinned v0.4.x until they migrate; the compiler
   then enumerates every conversion site. bank-sync's `archiveMetadata`
-  struct and `TaskOutcome` handling get *simpler* (no more int↔int64
+  struct and `TaskOutcome` handling get _simpler_ (no more int↔int64
   juggling at the `Duplicate()` boundary).
 - Cross-entity ID mixing is now a compile error, not a live incident.
 - `Get()`/`IsZero()`/`Equal()` replace `> 0` guards and `==`/`!=`

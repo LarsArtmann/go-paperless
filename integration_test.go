@@ -83,7 +83,7 @@ func TestIntegrationListMetadatas(t *testing.T) {
 	}
 
 	for _, meta := range metas {
-		if meta.ID == 0 {
+		if meta.ID.IsZero() {
 			t.Fatal("document meta with zero ID")
 		}
 	}
@@ -145,7 +145,7 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 		Filename: fmt.Sprintf("go-paperless-integration-%d.txt", time.Now().UnixNano()),
 		Content:  content,
 		Title:    "go-paperless integration upload",
-		TagIDs:   []int{tagID},
+		TagIDs:   []paperless.TagID{tagID},
 	})
 	if err != nil {
 		t.Fatalf("Upload: %v", err)
@@ -153,27 +153,27 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 
 	outcome, err := client.WaitForTask(ctx, taskID, 2*time.Second)
 	if err != nil {
-		t.Fatalf("WaitForTask(%s): %v", taskID, err)
+		t.Fatalf("WaitForTask(%s): %v", taskID.Get(), err)
 	}
 
 	if _, _, refused := outcome.Duplicate(); refused {
-		t.Fatalf("upload refused as duplicate of %d — content collision?", outcome.DocumentID)
+		t.Fatalf("upload refused as duplicate of %d — content collision?", outcome.DocumentID.Get())
 	}
 
-	if outcome.DocumentID == 0 {
-		t.Fatalf("task %s consumed without a document ID: %+v", taskID, outcome)
+	if outcome.DocumentID.IsZero() {
+		t.Fatalf("task %s consumed without a document ID: %+v", taskID.Get(), outcome)
 	}
 
-	documentID := int(outcome.DocumentID)
+	documentID := outcome.DocumentID
 
-	t.Logf("consumed as document %d", documentID)
+	t.Logf("consumed as document %d", documentID.Get())
 
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
 
 		if err := client.DeleteDocument(cleanupCtx, documentID); err != nil {
-			t.Errorf("cleanup DeleteDocument(%d): %v", documentID, err)
+			t.Errorf("cleanup DeleteDocument(%d): %v", documentID.Get(), err)
 		}
 	})
 
@@ -192,7 +192,7 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 		if metaErr != nil {
 			t.Fatalf(
 				"document %d checksum %q missing from %d listed checksums (meta listing also failed: %v)",
-				documentID,
+				documentID.Get(),
 				wantChecksum,
 				len(checksums),
 				metaErr,
@@ -202,11 +202,11 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 		for _, meta := range metas {
 			if meta.ID == documentID {
 				t.Fatalf("document %d listed with checksum %q, want %q (checksum shapes differ?)",
-					meta.ID, meta.Checksum, wantChecksum)
+					meta.ID.Get(), meta.Checksum, wantChecksum)
 			}
 		}
 
-		t.Fatalf("document %d vanished from the listing entirely", documentID)
+		t.Fatalf("document %d vanished from the listing entirely", documentID.Get())
 	}
 
 	metas, err := client.ListDocumentMetas(ctx)
@@ -224,11 +224,11 @@ func TestIntegrationUploadReconcile(t *testing.T) {
 		}
 
 		if !slices.Contains(meta.TagIDs, tagID) {
-			t.Errorf("tag IDs = %v, want %d among them", meta.TagIDs, tagID)
+			t.Errorf("tag IDs = %v, want %d among them", meta.TagIDs, tagID.Get())
 		}
 
 		return
 	}
 
-	t.Fatalf("document %d missing from the meta listing", documentID)
+	t.Fatalf("document %d missing from the meta listing", documentID.Get())
 }
