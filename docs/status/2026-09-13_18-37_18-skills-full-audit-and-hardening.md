@@ -111,7 +111,7 @@ intent was covered by architecture-review + go-modularize.)
    ~~conversion. Deliberate Verschlimmbesserung-avoidance (a 2,700-line~~
    ~~conversion adds a dependency and churn for zero behavioral gain), but it~~
    ~~means the skill's letter (Ginkgo specs) is not implemented.~~
-2. **library-deep-dive**: usage-vs-capability audit done for the two real
+~~2. **library-deep-dive**: usage-vs-capability audit done for the two real~~ Won't implement — point-in-time audit residue; go-retry's own suite owns the jitter behavior
    dependencies; the "full potential" research leaned on pkg.go.dev summaries.
    The jitter-≤50% claim was NOT verified against go-retry source code.
 3. ~~**go-release**: Phase 0 assessment done (tag v0.2.0 == HEAD; `[Unreleased]`~~ done (done — v0.3.0 cut (2c4726b))
@@ -239,11 +239,11 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 35. ~~Retry-observer hook via go-retry `OnRetry` (only when a consumer asks)~~ **Won't implement — YAGNI — only when a consumer asks.**
 36. ~~`retry.ErrExhausted` fast-path consideration (only when needed)~~ **Won't implement — YAGNI — only when needed.**
 37. ~~README: add a `WithRetry(RetryPolicy)` snippet to the Options section~~ done (done — README Retries section)
-38. README: document `Default*` constants for retry/poll tuning
+~~38. README: document `Default*` constants for retry/poll tuning~~ done — README documents the four DefaultRetry* constants (README Retries section)
 39. ~~ROADMAP.md harvest + review (not touched this session)~~ done (done — 2026-09-14 ROADMAP pass)
 40. ~~PR template (.github/PULL_REQUEST_TEMPLATE.md)~~ done at `35c019b`
 41. ~~Fuzz corpus: commit any interesting crashers found in f-16~~ done (done — zero crashers found (05-24 session))
-42. `ExampleNew_withOptions` — extend to show hooks (redaction reminder)
+~~42. `ExampleNew_withOptions` — extend to show hooks (redaction reminder)~~ → TODO_LIST Low (2026-10-11 harvest): hooks example
 43. ~~Consider `t.Chdir`-free lint? N/A — skip; replace with: review~~ done (done — tightened set; 37 findings cleared (05-24 session))
 ~~`.golangci.yml` linter set against how-to-golang defaults (e.g. add~~
 ~~`gochecksumtype`, `err113`-style rules if desired)~~
@@ -251,7 +251,7 @@ Nothing destructive — but three real self-inflicted wounds, honestly:
 ~~file or document the accepted deviation in a comment~~
 45. ~~Add `checks.test-race` to flake.nix so `nix flake check` runs race in CI~~ done at `35c019b`
 46. ~~Docs: explain the Find/Get/Ensure verb contract in FEATURES or README~~ done (done — README Lookup-verbs table)
-47. Consider publishing the report series as a docs site (website-launch skill)
+~~47. Consider publishing the report series as a docs site (website-launch skill)~~ → ROADMAP (2026-10-11 harvest): docs-site idea (website-launch)
 48. ~~`client.go` file split (transport/tasks/named/documents) at ~3k lines~~ done (open watch item — client.go at 2,371 lines (2026-09-14))
 49. ~~Post-restart: confirm `.crushrc` clears the LSP failures, then close the~~ done (routed to TODO_LIST (restart-gated))
 ~~TODO row~~

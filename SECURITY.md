@@ -18,9 +18,11 @@ Use GitHub's private vulnerability reporting:
 [Report a vulnerability](https://github.com/LarsArtmann/go-paperless/security/advisories/new).
 
 You will get an acknowledgment within 7 days and a fix-or-assessment plan
-for confirmed issues.
+for confirmed issues. Response-time commitment: 7 days for the first
+response; security fixes land on `main` and ship in the next tagged
+release.
 
-## Threat Model Notes
+## Security Practices
 
 This is a client SDK for a self-hosted Paperless-ngx instance. What it
 holds, and what matters:
