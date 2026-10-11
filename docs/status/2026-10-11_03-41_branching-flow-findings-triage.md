@@ -30,14 +30,14 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 
 ## a) FULLY DONE
 
-| # | Item | Evidence |
-|---|------|----------|
-| 1 | Complete inventory of all 60 findings (id, rule, file:line, class) | extracted from shell-output log; every class accounted for |
-| 2 | Root-cause verification of all 3 correctness findings — **all three are analyzer false positives** | `documents.go:71` deref: `s.documents` is `[]*Document` only ever appended as `&stored` (documents.go:133) — nil unrepresentable. `faults.go:66,74`: both accesses sit inside the `if index >= 0` guard (faults.go:65); index is a `range` index or `-1` |
-| 3 | Suppression mechanism fully researched | `//nolint:branching-flow` / `// branching-flow:ignore` line-scoped directives; `--include-suppressed` audit mode (suppressed findings don't fail `--exit-code` gates); `.branching-flow.yml` `disabled_rules` (rejected: loses per-site reasons). Verified in tool README + source (`pkg/roleak`, `pkg/doanalyzerv2`) |
-| 4 | Per-class disposition for all 60 findings, twice | v1 (rejected, see d) and v2 (pending approval, see below) |
-| 5 | Tool surface mapped | 16 subcommands; `all` flags (`--baseline`, `--severity`, `--exit-code`); `panic` analyzer is experimental (source of all 3 FPs) |
-| 6 | Todo tracking created (13 tasks, v1 plan) | — |
+| # | Item                                                                                               | Evidence                                                                                                                                                                                                                                                                                                              |
+| - | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | Complete inventory of all 60 findings (id, rule, file:line, class)                                 | extracted from shell-output log; every class accounted for                                                                                                                                                                                                                                                            |
+| 2 | Root-cause verification of all 3 correctness findings — **all three are analyzer false positives** | `documents.go:71` deref: `s.documents` is `[]*Document` only ever appended as `&stored` (documents.go:133) — nil unrepresentable. `faults.go:66,74`: both accesses sit inside the `if index >= 0` guard (faults.go:65); index is a `range` index or `-1`                                                              |
+| 3 | Suppression mechanism fully researched                                                             | `//nolint:branching-flow` / `// branching-flow:ignore` line-scoped directives; `--include-suppressed` audit mode (suppressed findings don't fail `--exit-code` gates); `.branching-flow.yml` `disabled_rules` (rejected: loses per-site reasons). Verified in tool README + source (`pkg/roleak`, `pkg/doanalyzerv2`) |
+| 4 | Per-class disposition for all 60 findings, twice                                                   | v1 (rejected, see d) and v2 (pending approval, see below)                                                                                                                                                                                                                                                             |
+| 5 | Tool surface mapped                                                                                | 16 subcommands; `all` flags (`--baseline`, `--severity`, `--exit-code`); `panic` analyzer is experimental (source of all 3 FPs)                                                                                                                                                                                       |
+| 6 | Todo tracking created (13 tasks, v1 plan)                                                          | —                                                                                                                                                                                                                                                                                                                     |
 
 **v2 triage (current, awaiting approval): 15 FIX at root / 45 SUPPRESS with reason.**
 
@@ -46,12 +46,12 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 
 ## b) PARTIALLY DONE
 
-| Item | Done | Missing |
-|------|------|---------|
-| Suppression syntax verification | Line-scoped `//nolint:branching-flow` confirmed in tool source | Rule-scoped casing unverified (tool's own tests use lowercase `:phantom`/`:do`; emitted IDs are `PHANTOM-COLLISION` etc.). Needs a 2-min probe before mass application |
-| Entity/wire merge feasibility | Tool's "same signature" grouping known for all 5 pairs | Field-by-field diff NOT done by me — counts in the v2 plan are tool-derived. Known wrinkle: `savedViewEntity`/`savedViewWire` are NOT identical today (FilterRules element types differ) — that merge is conditional on the rule-pair merge landing first |
-| Suppression anchoring on mid-expression lines | — | The 11 PHANTOM-COLLISION sites anchor on composite-literal field lines (client.go:1362/1488/1542, tasks.go:307-338); trailing-comment anchoring there is untested |
-| Tool behavior check | Read README | Contradition unresolved: README says `--exit-code` is ON by default, yet the user's run exited 0 WITH 60 findings (0.6.4 binary vs local repo main?) |
+| Item                                          | Done                                                           | Missing                                                                                                                                                                                                                                                   |
+| --------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Suppression syntax verification               | Line-scoped `//nolint:branching-flow` confirmed in tool source | Rule-scoped casing unverified (tool's own tests use lowercase `:phantom`/`:do`; emitted IDs are `PHANTOM-COLLISION` etc.). Needs a 2-min probe before mass application                                                                                    |
+| Entity/wire merge feasibility                 | Tool's "same signature" grouping known for all 5 pairs         | Field-by-field diff NOT done by me — counts in the v2 plan are tool-derived. Known wrinkle: `savedViewEntity`/`savedViewWire` are NOT identical today (FilterRules element types differ) — that merge is conditional on the rule-pair merge landing first |
+| Suppression anchoring on mid-expression lines | —                                                              | The 11 PHANTOM-COLLISION sites anchor on composite-literal field lines (client.go:1362/1488/1542, tasks.go:307-338); trailing-comment anchoring there is untested                                                                                         |
+| Tool behavior check                           | Read README                                                    | Contradition unresolved: README says `--exit-code` is ON by default, yet the user's run exited 0 WITH 60 findings (0.6.4 binary vs local repo main?)                                                                                                      |
 
 ## c) NOT STARTED
 
@@ -85,6 +85,7 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 ## f) Next things to get done (48, sorted roughly by impact)
 
 **Execute the approved v2 plan:**
+
 1. Pre-flight: diff the 5 entity/wire struct pairs field-by-field (validates merge counts + order).
 2. Pre-flight probe: `//nolint:branching-flow[:RULE]` casing on one finding.
 3. Pre-flight probe: suppression anchoring on a composite-literal line (client.go:1362).
@@ -146,4 +147,4 @@ exit code 0. Full JSON: `.crush/shell-output/output-2363040712.log`.
 
 ---
 
-*Session state: WAITING FOR INSTRUCTIONS. No code modified. Todo list reconciled to the v2 plan (all pending).*
+_Session state: WAITING FOR INSTRUCTIONS. No code modified. Todo list reconciled to the v2 plan (all pending)._
