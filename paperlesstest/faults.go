@@ -49,7 +49,8 @@ func (s *Server) InjectFault(fault Fault) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.faults = append(s.faults, fault)
+	armed := fault
+	s.faults = append(s.faults, &armed)
 }
 
 // serveFault answers one request from an armed fault when one matches. It
@@ -58,27 +59,21 @@ func (s *Server) InjectFault(fault Fault) {
 func (s *Server) serveFault(w http.ResponseWriter, r *http.Request) bool {
 	s.mu.Lock()
 
-	index := s.armedFaultLocked(r)
+	fault := s.armedFaultLocked(r)
 
-	var fault Fault
+	if fault != nil && fault.Times > 0 {
+		fault.Times--
 
-	if index >= 0 {
-		fault = s.faults[index]
-
-		if fault.Times > 0 {
-			fault.Times--
-
-			if fault.Times == 0 {
-				s.faults = slices.Delete(s.faults, index, index+1)
-			} else {
-				s.faults[index] = fault
-			}
+		if fault.Times == 0 {
+			s.faults = slices.DeleteFunc(s.faults, func(armed *Fault) bool {
+				return armed == fault
+			})
 		}
 	}
 
 	s.mu.Unlock()
 
-	if index < 0 {
+	if fault == nil {
 		return false
 	}
 
@@ -101,18 +96,16 @@ func (s *Server) serveFault(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-// armedFaultLocked finds the first fault matching the request. Returns -1
-// when no fault is armed for it. The caller must hold s.mu.
-func (s *Server) armedFaultLocked(r *http.Request) int {
-	for index := range s.faults {
-		fault := &s.faults[index]
-
+// armedFaultLocked finds the first fault matching the request, or nil when
+// none is armed for it. The caller must hold s.mu.
+func (s *Server) armedFaultLocked(r *http.Request) *Fault {
+	for _, fault := range s.faults {
 		if fault.matches(r) {
-			return index
+			return fault
 		}
 	}
 
-	return -1
+	return nil
 }
 
 // matches reports whether the fault applies to the request.

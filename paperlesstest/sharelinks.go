@@ -12,18 +12,9 @@ import (
 	"github.com/larsartmann/go-paperless"
 )
 
-// shareLinkEntity is one share link stored on the fake.
-type shareLinkEntity struct {
-	ID          paperless.ShareLinkID
-	Created     time.Time
-	Expiration  *time.Time
-	Slug        string
-	Document    paperless.DocumentID
-	FileVersion string
-}
-
-// shareLinkWire mirrors the ShareLink serializer fields the SDK relies on.
-type shareLinkWire struct {
+// shareLink is one share link. The fake stores and serves the same shape,
+// so the struct carries the ShareLink serializer's wire tags directly.
+type shareLink struct {
 	ID          paperless.ShareLinkID `json:"id"`
 	Created     time.Time             `json:"created"`
 	Expiration  *time.Time            `json:"expiration"`
@@ -84,12 +75,10 @@ func (s *Server) handleShareLinkList(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 
 	s.writePage(w, r, len(s.shareLinks), func(start, end int) any {
-		wires := make([]shareLinkWire, 0, end-start)
-		for _, link := range s.shareLinks[start:end] {
-			wires = append(wires, shareLinkEntityWire(link))
-		}
+		links := make([]shareLink, 0, end-start)
+		links = append(links, s.shareLinks[start:end]...)
 
-		return wires
+		return links
 	})
 }
 
@@ -123,7 +112,7 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 		fileVersion = "archive"
 	}
 
-	link := shareLinkEntity{
+	link := shareLink{
 		ID:          s.nextShareLinkID,
 		Created:     time.Now().UTC(),
 		Expiration:  payload.Expiration,
@@ -134,7 +123,7 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 
 	s.shareLinks = append(s.shareLinks, link)
 
-	s.writeJSON(w, http.StatusCreated, shareLinkEntityWire(link))
+	s.writeJSON(w, http.StatusCreated, link)
 }
 
 // handleShareLinkDelete revokes one share link.
@@ -144,7 +133,7 @@ func (s *Server) handleShareLinkDelete(w http.ResponseWriter, linkID paperless.S
 
 	before := len(s.shareLinks)
 
-	s.shareLinks = slices.DeleteFunc(s.shareLinks, func(link shareLinkEntity) bool {
+	s.shareLinks = slices.DeleteFunc(s.shareLinks, func(link shareLink) bool {
 		return link.ID.Equal(linkID)
 	})
 
@@ -155,9 +144,4 @@ func (s *Server) handleShareLinkDelete(w http.ResponseWriter, linkID paperless.S
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// shareLinkEntityWire converts the stored link to its wire shape.
-func shareLinkEntityWire(link shareLinkEntity) shareLinkWire {
-	return shareLinkWire(link)
 }

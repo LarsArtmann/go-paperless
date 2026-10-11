@@ -147,14 +147,14 @@ type Server struct {
 
 	notes           map[paperless.DocumentID][]noteEntity
 	nextNoteID      paperless.NoteID
-	shareLinks      []shareLinkEntity
+	shareLinks      []shareLink
 	nextShareLinkID paperless.ShareLinkID
-	savedViews      []savedViewEntity
+	savedViews      []savedView
 	nextSavedViewID paperless.SavedViewID
 
 	requests []RequestRecord
 	token    string
-	faults   []Fault
+	faults   []*Fault
 }
 
 // NewServer starts a fake Paperless-ngx server and registers its shutdown
