@@ -85,6 +85,15 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   treefmt doesn't apply the new plugin's formatting (e.g. markdown table
   padding). When `dprint check` flags files after a plugin bump, fix with
   bare `dprint fmt <file>`; `nix fmt` is a no-op there, so no ping-pong.
+- **Never run bare `dprint fmt` over annotated status reports**
+  (`docs/status/**` with `~~line~~ verdict` table strikes): dprint's
+  markdown table formatter cannot represent a strikethrough spanning
+  cells — it rewrites `~~| 1 | … |~~ done — …` into `| ~~ | 1 | … | ~~ done — …`,
+  destroying the annotations (2026-10-11 incident, 11 files restored from
+  daemon commits). Annotate AFTER formatting, and never re-format an
+  annotated table; `dprint check` flagging those historical files is the
+  accepted state (the canonical `nix flake check` gate runs treefmt, which
+  does not format markdown, so it stays green).
 
 ## Scope
 
