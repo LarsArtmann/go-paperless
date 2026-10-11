@@ -306,10 +306,9 @@ type Client struct {
 // and API token. Returns ErrInvalidConfig when either is empty, the URL is
 // not parseable, or a WithRetry policy is malformed. Options customize the
 // HTTP transport.
-func New(
-	baseURL, token string,
-	opts ...Option,
-) (*Client, error) { //nolint:branching-flow // public API signature; a transposed token fails scheme validation; branded params are the ROADMAP v2 typed-API scope
+
+//nolint:branching-flow // public API signature; a transposed token fails scheme validation; branded params are the ROADMAP v2 typed-API scope
+func New(baseURL, token string, opts ...Option) (*Client, error) {
 	if baseURL == "" || token == "" {
 		return nil, ErrInvalidConfig
 	}
@@ -1111,10 +1110,9 @@ func (c *Client) FindStoragePath(ctx context.Context, name string) (StoragePathI
 // path keeps its configured template — mirroring the document type policy:
 // the template is deliberate user config, and overriding it from a sync
 // pipeline would be wrong.
-func (c *Client) EnsureStoragePath(
-	ctx context.Context,
-	name, path string,
-) (StoragePathID, error) { //nolint:branching-flow // public API signature; distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
+
+//nolint:branching-flow // public API signature; distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
+func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (StoragePathID, error) {
 	if name == "" || path == "" {
 		return StoragePathID{}, errorfamily.NewRejection("paperless.empty_storage_path",
 			"storage path name and directory template are required")
@@ -1365,10 +1363,8 @@ type documentListEntry struct {
 // shapes: the flat field served by older paperless-ngx versions first, then
 // the root version's checksum (3.x), then any non-empty version checksum.
 func (e documentListEntry) effectiveChecksum() string {
-	return checksumFrom(
-		e.Checksum,
-		e.Versions,
-	) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	//nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	return checksumFrom(e.Checksum, e.Versions)
 }
 
 // checksumFrom resolves a document checksum across API shapes; shared by
@@ -1494,10 +1490,8 @@ type documentVersionPayload struct { // SDK↔fake wire-shape mirror is delibera
 // shapes: the flat field served by older paperless-ngx versions first, then
 // the root version's checksum (3.x), then any non-empty version checksum.
 func (p documentMetaPayload) effectiveChecksum() string {
-	return checksumFrom(
-		p.Checksum,
-		p.Versions,
-	) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	//nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	return checksumFrom(p.Checksum, p.Versions)
 }
 
 // parseDocumentCreated parses the created value a stored document serves
@@ -1551,9 +1545,8 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 			ID:            entry.ID,
 			Title:         entry.Title,
 			Correspondent: entry.Correspondent,
-			Created: parseDocumentCreated(
-				entry.Created,
-			), //nolint:branching-flow // RFC3339 wire string parsed at the boundary; branded slots are the v2 typed-API scope
+			//nolint:branching-flow // RFC3339 wire string parsed at the boundary; branded slots are the v2 typed-API scope
+			Created: parseDocumentCreated(entry.Created),
 			TagIDs:         entry.Tags,
 			DocumentTypeID: entry.DocumentType,
 			CustomFields:   customFieldsFromPayload(entry.CustomFields),
