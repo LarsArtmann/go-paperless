@@ -20,47 +20,28 @@ const (
 	prefixStoragePaths   = "/api/storage_paths/"
 )
 
-// namedEntity is one tag, correspondent, or document type on the fake. The
-// brand parameter binds the stored ID to the entity family's branded type.
+// namedEntity is one tag, correspondent, or document type. The fake stores
+// and serves the same shape, so the struct carries the wire tags directly;
+// the brand parameter binds the stored ID to the entity family's branded
+// type.
 type namedEntity[B any] struct {
-	ID                id.ID[B, int]
-	Name              string
-	MatchingAlgorithm int
-}
-
-// namedEntityWire mirrors the create/list subset shared by Paperless-ngx's
-// tag and correspondent objects (id + name + matching algorithm).
-type namedEntityWire[B any] struct {
 	ID                id.ID[B, int] `json:"id"`
 	Name              string        `json:"name"`
 	MatchingAlgorithm int           `json:"matching_algorithm"`
 }
 
-// customFieldEntity is one custom-field definition on the fake.
-type customFieldEntity struct {
-	ID       paperless.CustomFieldID
-	Name     string
-	DataType string
-}
-
-// customFieldWire mirrors one custom field definition.
-type customFieldWire struct {
+// customField is one custom-field definition. The fake stores and serves
+// the same shape, so the struct carries the wire tags directly.
+type customField struct {
 	ID       paperless.CustomFieldID `json:"id"`
 	Name     string                  `json:"name"`
 	DataType string                  `json:"data_type"`
 }
 
-// storagePathEntity is one storage path definition on the fake.
-type storagePathEntity struct {
-	ID   paperless.StoragePathID
-	Slug string
-	Name string
-	Path string
-}
-
-// storagePathWire mirrors Paperless-ngx's storage path serializer fields
-// the SDK relies on.
-type storagePathWire struct {
+// storagePath is one storage path definition. The fake stores and serves
+// the same shape, so the struct carries the wire tags the SDK relies on
+// directly.
+type storagePath struct {
 	ID   paperless.StoragePathID `json:"id"`
 	Slug string                  `json:"slug,omitempty"`
 	Name string                  `json:"name"`
@@ -191,7 +172,7 @@ func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID {
 
 	s.nextCustomFieldID = paperless.NewCustomFieldID(s.nextCustomFieldID.Get() + 1)
 
-	entity := customFieldEntity{ID: s.nextCustomFieldID, Name: name, DataType: dataType}
+	entity := customField{ID: s.nextCustomFieldID, Name: name, DataType: dataType}
 	s.customFields = append(s.customFields, entity)
 
 	return entity.ID
@@ -204,7 +185,7 @@ func (s *Server) AddStoragePath(name, path string) paperless.StoragePathID {
 
 	s.nextStoragePathID = paperless.NewStoragePathID(s.nextStoragePathID.Get() + 1)
 
-	entity := storagePathEntity{
+	entity := storagePath{
 		ID:   s.nextStoragePathID,
 		Slug: fmt.Sprintf("path-%d", s.nextStoragePathID.Get()),
 		Name: name,
@@ -250,7 +231,6 @@ func (s *Server) CustomFieldID(name string) (paperless.CustomFieldID, bool) {
 			return field.ID, true
 		}
 	}
-
 	return paperless.CustomFieldID{}, false
 }
 
@@ -364,12 +344,10 @@ func handleNamedList[B any](
 	}
 
 	server.writePage(w, r, len(matches), func(start, end int) any {
-		wires := make([]namedEntityWire[B], 0, end-start)
-		for _, entity := range matches[start:end] {
-			wires = append(wires, namedEntityWire[B](entity))
-		}
+		entities := make([]namedEntity[B], 0, end-start)
+		entities = append(entities, matches[start:end]...)
 
-		return wires
+		return entities
 	})
 }
 
@@ -382,7 +360,7 @@ func handleNamedCreate[B any](
 	store *[]namedEntity[B],
 	nextID *id.ID[B, int],
 ) {
-	var payload namedEntityWire[B]
+	var payload namedEntity[B]
 	if err := json.Unmarshal(readBody(r), &payload); err != nil {
 		server.t.Errorf("paperlesstest: decode %s create body: %v", r.URL.Path, err)
 		server.writeJSON(
@@ -400,7 +378,7 @@ func handleNamedCreate[B any](
 	*nextID = id.NewID[B](nextID.Get() + 1)
 	payload.ID = *nextID
 
-	*store = append(*store, namedEntity[B](payload))
+	*store = append(*store, payload)
 
 	server.writeJSON(w, http.StatusCreated, payload)
 }
@@ -422,7 +400,7 @@ func handleNamedDetail[B any](
 		return
 	}
 
-	server.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
+	server.writeJSON(w, http.StatusOK, *entity)
 }
 
 // handleNamedPatch applies a matching-algorithm patch (the self-heal
@@ -458,7 +436,7 @@ func handleNamedPatch[B any](
 
 	entity.MatchingAlgorithm = patch.MatchingAlgorithm
 
-	server.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
+	server.writeJSON(w, http.StatusOK, *entity)
 }
 
 // routeCustomFields serves the custom-field definitions family.
@@ -476,7 +454,7 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		matches := make([]customFieldEntity, 0, len(s.customFields))
+		matches := make([]customField, 0, len(s.customFields))
 		for _, field := range s.customFields {
 			if filter == "" || strings.EqualFold(field.Name, filter) {
 				matches = append(matches, field)
@@ -484,17 +462,15 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 		}
 
 		s.writePage(w, r, len(matches), func(start, end int) any {
-			wires := make([]customFieldWire, 0, end-start)
-			for _, field := range matches[start:end] {
-				wires = append(wires, customFieldWire(field))
-			}
+			fields := make([]customField, 0, end-start)
+			fields = append(fields, matches[start:end]...)
 
-			return wires
+			return fields
 		})
 
 		return true
 	case http.MethodPost:
-		var payload customFieldWire
+		var payload customField
 		if err := json.Unmarshal(readBody(r), &payload); err != nil {
 			s.t.Errorf("paperlesstest: decode custom field create body: %v", err)
 			s.writeJSON(
@@ -516,7 +492,7 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 			payload.DataType = "string"
 		}
 
-		s.customFields = append(s.customFields, customFieldEntity(payload))
+		s.customFields = append(s.customFields, payload)
 
 		s.writeJSON(w, http.StatusCreated, payload)
 
@@ -543,7 +519,7 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		matches := make([]storagePathEntity, 0, len(s.storagePaths))
+		matches := make([]storagePath, 0, len(s.storagePaths))
 		for _, path := range s.storagePaths {
 			if filter == "" || strings.EqualFold(path.Name, filter) {
 				matches = append(matches, path)
@@ -551,17 +527,15 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 		}
 
 		s.writePage(w, r, len(matches), func(start, end int) any {
-			wires := make([]storagePathWire, 0, end-start)
-			for _, path := range matches[start:end] {
-				wires = append(wires, storagePathWire(path))
-			}
+			paths := make([]storagePath, 0, end-start)
+			paths = append(paths, matches[start:end]...)
 
-			return wires
+			return paths
 		})
 
 		return true
 	case http.MethodPost:
-		var payload storagePathWire
+		var payload storagePath
 		if err := json.Unmarshal(readBody(r), &payload); err != nil {
 			s.t.Errorf("paperlesstest: decode storage path create body: %v", err)
 			s.writeJSON(
@@ -580,7 +554,7 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 		payload.ID = s.nextStoragePathID
 		payload.Slug = fmt.Sprintf("path-%d", payload.ID.Get())
 
-		s.storagePaths = append(s.storagePaths, storagePathEntity(payload))
+		s.storagePaths = append(s.storagePaths, payload)
 
 		s.writeJSON(w, http.StatusCreated, payload)
 

@@ -140,8 +140,8 @@ type Server struct {
 	nextCorrespondentID paperless.CorrespondentID
 	nextDocumentTypeID  paperless.DocumentTypeID
 
-	customFields      []customFieldEntity
-	storagePaths      []storagePathEntity
+	customFields      []customField
+	storagePaths      []storagePath
 	nextCustomFieldID paperless.CustomFieldID
 	nextStoragePathID paperless.StoragePathID
 
