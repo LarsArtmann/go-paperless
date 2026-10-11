@@ -1,5 +1,18 @@
 # Branching-Flow Findings Triage — Session Status Report
 
+> **EXECUTED 2026-10-11 (same day, follow-up session).** Plan v2 ran with one
+> amendment discovered during execution: tool v0.6.4 honors
+> `//nolint:branching-flow` only for the panic and phantom analyzers — dupe
+> and composition findings ignore line directives entirely — so the 31
+> DUPLICATE_TYPE/COMPOSITION_mixin/large-struct findings are dismissed via
+> `.branching-flow.yml` `disabled_rules` (rationale in the config comment and
+> as doc-comment paragraphs on each flagged declaration) instead of inline
+> nolints. Final state: **0 active findings** (60 → 0); 13 eliminated in code
+> (faults.go pointer restructure + five fake entity/wire struct merges),
+> 16 suppressed per line with reasons, 31 dismissed per rule; all gates green
+> (build, test, race, vet ±integration, lint, erraudit, `nix fmt` stable).
+> Items below describe the state BEFORE execution.
+
 **Date:** 2026-10-11 03:41
 **Scope:** This session only — triage and planning of `branching-flow all .` output (60 findings). No code was modified this session.
 **Predecessor:** `docs/status/2026-10-11_03-23_branded-id-migration-status.md` (migration complete; its 3 open questions remain unanswered — see section g).

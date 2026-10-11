@@ -45,14 +45,32 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   project has no govalid usage (no `go:generate`, no govalid config), so the
   step guards nothing here while keeping every full run red. Remove the skip
   when govalid is adopted or the machine's govalid rebuilds on Go ≥ 1.27.
-- **branching-flow is skipped by policy**: its PHANTOM_TYPE findings land at
-  error severity with no repair path, gating the pipeline on public string
-  fields (`Title`, `Slug`, `Checksum`, ...). The tool's **strong-id**
-  analysis, however, gates at zero since the v0.5.0 branded-ID migration
-  (ADR 0004): every entity reference is `id.ID[Brand, V]` from
-  `go-branded-id`, so `branching-flow strong-id .` must report
-  "All ID parameters use strong types" — keep it there. Re-enable the
-  full tool together with a string-phantom (PHANTOM_TYPE) migration.
+- **branching-flow runs at 0 active findings** (verified 2026-10-11,
+  `branching-flow all . --format finding`). Disposition of the original 60
+  findings (full triage: `docs/status/2026-10-11_03-41_branching-flow-findings-triage.md`):
+  - **13 eliminated in code**: `faults.go` stores `[]*Fault` and disarms via
+    `slices.DeleteFunc` (no more sentinel-index arithmetic); the five fake
+    entity/wire struct pairs merged into single tagged structs
+    (`namedEntity`, `customField`, `storagePath`, `savedView`/`savedViewRule`,
+    `shareLink`) — the fake stores and serves the same shape, deleting ~10
+    structs and all conversion ceremony.
+  - **16 suppressed per line**: `//nolint:branching-flow // reason` works ONLY
+    for the panic and phantom analyzers in tool v0.6.4 (dupe/composition
+    findings ignore line directives — `cmd/branching-flow/container.go` wires
+    `isSuppressed` solely for panic/phantom). Directives must sit ON the
+    finding line or the line DIRECTLY above; keep anchor lines short or
+    `nix fmt` (golines) reflows them and silently breaks suppression — always
+    re-run the tool after formatting.
+  - **31 dismissed per rule** in `.branching-flow.yml` `disabled_rules`
+    (DUPLICATE_TYPE, COMPOSITION_mixin, ANTI_PATTERN_large-struct): these
+    classes cannot be line-suppressed in v0.6.4. Per-site rationale lives as
+    doc-comment paragraphs on the flagged declarations (public structs stay
+    tag-free = compatibility contract; SDK↔fake mirrors = the fake's
+    round-trip contract; input-vs-response shapes diverge by design;
+    `Server` = fixture state under one mutex).
+  - Revisit everything with the v2 typed-API migration (ROADMAP "Growing
+    with the API") and when branching-flow ships line-suppression for
+    dupe/composition. The **strong-id** analysis stays at zero (ADR 0004).
 - **`nix fmt` (treefmt) lags bare `dprint` after plugin bumps**: dprint
   plugins update via `dprint config update` (bumped 2026-09-16 to
   json 0.24.0 / markdown 0.24.0 / dockerfile 0.6.0 / npm-yaml URL), but

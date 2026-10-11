@@ -34,6 +34,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   without conversions. The package's non-test files now import the root
   `paperless` package for the ID vocabulary only (contract amendment,
   ADR 0004); the wire protocol remains the fake's source of truth.
+- **Internal: `paperlesstest` stores and serves the same struct per
+  entity family** — the five entity/wire struct pairs (`namedEntity`,
+  `customField`, `storagePath`, `savedView`+`savedViewRule`,
+  `shareLink`) merged into single wire-tagged structs, deleting ~10
+  internal structs and every conversion between them; `faults.go`
+  disarms consumed faults via pointer identity (`slices.DeleteFunc`)
+  instead of index arithmetic. No public API or wire-shape change; the
+  round-trip and route-coverage suites pin the behavior. Part of the
+  branching-flow findings triage
+  (`docs/status/2026-10-11_03-41_branching-flow-findings-triage.md`):
+  13 of 60 findings fixed in code, the rest suppressed per line
+  (panic/phantom) or dismissed per rule with documented rationale
+  (`.branching-flow.yml`).
 
 ### Fixed
 
