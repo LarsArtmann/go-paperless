@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Report Title</title>
+    <style>
+      /* =========================================================================
+         BAUHAUS DARK — Dashboard template
+         Design language: form follows function. Primary colors on graphite.
+         Zero external dependencies: system fonts, no CDN, no build step.
+         Token architecture: see references/bauhaus-tokens.md
+         ========================================================================= */
+
+      :root {
+        /* --- Primitive palette (Bauhaus Dark) --- */
+        --color-graphite: #0e0e10;
+        --color-graphite-2: #18181d;
+        --color-graphite-3: #16161a;
+        --color-bone: #f4f4f0;
+        --color-red: #ff6b6b;
+        --color-blue: #6eb5ff;
+        --color-yellow: #f4d35e;
+        --color-amber: #ffb347;
+        --color-hairline: rgba(244, 244, 240, 0.12);
+        --color-hairline-strong: rgba(244, 244, 240, 0.25);
+
+        /* --- Semantic layer (shared vocabulary with editorial template) --- */
+        --surface: var(--color-graphite);
+        --surface-raised: var(--color-graphite-2);
+        --surface-sunken: var(--color-graphite-3);
+        --text: var(--color-bone);
+        --text-muted: rgba(244, 244, 240, 0.72);
+        --text-faint: rgba(244, 244, 240, 0.45);
+        --border: var(--color-hairline);
+        --border-strong: var(--color-hairline-strong);
+        --accent: var(--color-amber);
+        --problem: var(--color-red);
+        --solution: var(--color-blue);
+        --warning: var(--color-yellow);
+
+        /* --- Backward-compatible aliases (do not break consumer skills) --- */
+        --bg: var(--surface);
+        --bg-elevated: var(--surface-raised);
+        --bg-sunken: var(--surface-sunken);
+        --bg-card: var(--surface-raised);
+        --bg-code: var(--surface-sunken);
+        --ink: var(--text);
+        --ink-secondary: var(--text-muted);
+        --ink-muted: var(--text-faint);
+        --rose: var(--problem);
+        --rose-glow: color-mix(in srgb, var(--problem) 15%, transparent);
+        --emerald: var(--solution);
+        --emerald-glow: color-mix(in srgb, var(--solution) 15%, transparent);
+        --amber-glow: color-mix(in srgb, var(--warning) 15%, transparent);
+        --coral: var(--problem);
+        --coral-light: color-mix(in srgb, var(--problem) 15%, transparent);
+        --teal: var(--solution);
+        --teal-light: color-mix(in srgb, var(--solution) 15%, transparent);
+        --amber-light: color-mix(in srgb, var(--warning) 20%, transparent);
+
+        /* --- Shape --- */
+        --radius: 0px; /* Bauhaus default: sharp corners */
+        --radius-sm: 0px;
+
+        /* --- Type stacks (system only — zero external fonts) --- */
+        --font-heading:
+          ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --font-body:
+          ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --font-mono:
+          ui-monospace, "Cascadia Code", "Source Code Pro", "JetBrains Mono",
+          Menlo, Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      /* Sticky-header offset for anchor jumps */
+      section[id],
+      [id] {
+        scroll-margin-top: 60px;
+      }
+
+      body {
+        background: var(--surface);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 15px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* --- Accessibility: keyboard focus --- */
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      a:focus-visible {
+        outline-offset: -1px;
+      }
+
+      /* --- Full-bleed top bar --- */
+      .top-bar {
+        background: var(--text);
+        color: var(--surface);
+        padding: 0.6rem 2rem;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* --- Layout: optional sticky sidebar TOC --- */
+      .layout {
+        display: flex;
+        gap: 2.5rem;
+        padding: 2rem;
+      }
+      .sidebar {
+        width: 220px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 1rem;
+        align-self: flex-start;
+        height: calc(100vh - 2rem);
+        overflow-y: auto;
+        display: none;
+      }
+      .sidebar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .sidebar .label {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--accent);
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 2px solid var(--border-strong);
+      }
+      .sidebar a {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 0.45rem 0.75rem;
+        border-left: 2px solid transparent;
+        transition: all 0.15s ease;
+        line-height: 1.4;
+        font-weight: 500;
+      }
+      .sidebar a:hover,
+      .sidebar a.active {
+        color: var(--accent);
+        border-left-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+      }
+      .main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* --- Headings --- */
+      h1,
+      h2,
+      h3,
+      h4 {
+        font-family: var(--font-heading);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      h1 {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        line-height: 1.1;
+        margin: 0 0 0.6rem;
+      }
+      h2 {
+        font-size: 1.4rem;
+        margin: 2.5rem 0 1rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 2px solid var(--border-strong);
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+      }
+      h2 .num {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+      h3 {
+        font-size: 1.1rem;
+        margin: 0 0 0.4rem;
+        font-weight: 700;
+      }
+      h4 {
+        font-size: 0.98rem;
+        margin: 0 0 0.3rem;
+        font-weight: 700;
+      }
+      p {
+        margin: 0 0 1rem;
+      }
+
+      /* --- Hero --- */
+      .hero {
+        padding: 1.5rem 0 1.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--border-strong);
+      }
+      .hero-badge {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--surface);
+        background: var(--accent);
+        padding: 0.3rem 0.7rem;
+        margin-bottom: 0.9rem;
+      }
+      .hero-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-muted);
+        max-width: 70ch;
+        margin: 0;
+      }
+
+      /* Bauhaus signature: geometric shape cluster (optional) */
+      .hero-shapes {
+        position: relative;
+        height: 80px;
+        margin-bottom: 1rem;
+      }
+      .hero-shapes .circle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 56px;
+        height: 56px;
+        background: var(--problem);
+        border-radius: 50%;
+      }
+      .hero-shapes .square {
+        position: absolute;
+        top: 24px;
+        left: 72px;
+        width: 48px;
+        height: 48px;
+        background: var(--solution);
+      }
+      .hero-shapes .tri {
+        position: absolute;
+        top: 8px;
+        left: 140px;
+        width: 0;
+        height: 0;
+        border-left: 28px solid transparent;
+        border-right: 28px solid transparent;
+        border-bottom: 48px solid var(--warning);
+      }
+
+      /* --- General cards --- */
+      .card {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        padding: 1.1rem 1.3rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--border-strong);
+      }
+      .card-problem {
+        border-left-color: var(--problem);
+        background: color-mix(
+          in srgb,
+          var(--problem) 8%,
+          var(--surface-raised)
+        );
+      }
+      .card-solution {
+        border-left-color: var(--solution);
+        background: color-mix(
+          in srgb,
+          var(--solution) 8%,
+          var(--surface-raised)
+        );
+      }
+      .card-warning {
+        border-left-color: var(--warning);
+        background: color-mix(
+          in srgb,
+          var(--warning) 8%,
+          var(--surface-raised)
+        );
+      }
+
+      /* --- Issue cards --- */
+      .issue {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        padding: 1.1rem 1.3rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--border-strong);
+      }
+      .issue-critical {
+        border-left-color: var(--problem);
+        background: color-mix(
+          in srgb,
+          var(--problem) 8%,
+          var(--surface-raised)
+        );
+      }
+      .issue-important {
+        border-left-color: var(--warning);
+        background: color-mix(
+          in srgb,
+          var(--warning) 8%,
+          var(--surface-raised)
+        );
+      }
+      .issue-nice {
+        border-left-color: var(--solution);
+        background: color-mix(
+          in srgb,
+          var(--solution) 8%,
+          var(--surface-raised)
+        );
+      }
+      .issue h3 {
+        margin-bottom: 0.3rem;
+      }
+      .issue .where {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--text-faint);
+        margin: 0.2rem 0 0.6rem;
+      }
+      .issue p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* --- Severity badges (used inside issue cards) --- */
+      .severity {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 0.2rem 0.55rem;
+        margin-bottom: 0.6rem;
+        color: var(--surface);
+      }
+      .severity-critical {
+        background: var(--problem);
+      }
+      .severity-important {
+        background: var(--warning);
+      }
+      .severity-nice {
+        background: var(--solution);
+      }
+
+      /* --- Inline badges (used in tables) --- */
+      .badge {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.18rem 0.5rem;
+        border: 1px solid var(--border-strong);
+        color: var(--text-muted);
+      }
+      .badge-critical {
+        color: var(--problem);
+        border-color: var(--problem);
+      }
+      .badge-high {
+        color: var(--warning);
+        border-color: var(--warning);
+      }
+      .badge-medium {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .badge-low {
+        color: var(--text-muted);
+      }
+      .badge-fixed {
+        color: var(--solution);
+        border-color: var(--solution);
+      }
+
+      /* --- Callouts (used inside issues or standalone) --- */
+      .callout {
+        margin: 0.8rem 0 0;
+        padding: 0.7rem 0.9rem;
+        border-left: 3px solid var(--border-strong);
+        background: color-mix(in srgb, var(--text) 5%, transparent);
+        font-size: 0.9rem;
+      }
+      .callout strong {
+        display: inline-block;
+        margin-right: 0.4rem;
+      }
+      .callout-solution {
+        border-left-color: var(--solution);
+        background: color-mix(in srgb, var(--solution) 10%, transparent);
+      }
+      .callout-warning {
+        border-left-color: var(--warning);
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+
+      /* --- Stat cards / scorecards (aliased vocabulary) --- */
+      .stat-grid,
+      .scorecard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.75rem;
+        margin: 1rem 0 1.5rem;
+      }
+      .stat-card,
+      .score-card {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        padding: 1.1rem 1rem;
+        position: relative;
+      }
+      .stat-card::before,
+      .score-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--border-strong);
+      }
+      .stat-bad,
+      .score-bad {
+        /* default top bar already set */
+      }
+      .stat-bad::before,
+      .score-bad::before {
+        background: var(--problem);
+      }
+      .stat-good::before,
+      .score-good::before {
+        background: var(--solution);
+      }
+      .stat-warn::before,
+      .score-warn::before {
+        background: var(--warning);
+      }
+      .stat-value,
+      .score {
+        font-family: var(--font-heading);
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        color: var(--text);
+      }
+      .stat-bad .stat-value,
+      .score-bad .score {
+        color: var(--problem);
+      }
+      .stat-good .stat-value,
+      .score-good .score {
+        color: var(--solution);
+      }
+      .stat-warn .stat-value,
+      .score-warn .score {
+        color: var(--warning);
+      }
+      .stat-label,
+      .score-card .label {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-faint);
+        margin-top: 0.5rem;
+      }
+
+      /* --- Strengths list --- */
+      .strengths {
+        display: grid;
+        gap: 0.5rem;
+        margin: 1rem 0 1.5rem;
+      }
+      .strength {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.8rem;
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .strength .check {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        color: var(--solution);
+        font-size: 1.1rem;
+        line-height: 1.4;
+      }
+      .strength .text strong {
+        display: block;
+        margin-bottom: 0.15rem;
+      }
+      .strength .text span {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      /* --- Tables --- */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0 1.5rem;
+        font-size: 0.9rem;
+      }
+      th {
+        text-align: left;
+        padding: 0.6rem 0.9rem;
+        background: var(--surface-raised);
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-strong);
+      }
+      td {
+        padding: 0.6rem 0.9rem;
+        border-bottom: 1px solid var(--border);
+      }
+      tr:hover td {
+        background: var(--surface-raised);
+      }
+
+      /* --- Before/After comparison --- */
+      .compare-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin: 1rem 0 0.5rem;
+      }
+      .compare-before,
+      .compare-after {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0.4rem 0.7rem;
+        color: var(--surface);
+      }
+      .compare-before {
+        background: var(--problem);
+      }
+      .compare-after {
+        background: var(--solution);
+      }
+      .compare-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .compare-row pre {
+        margin: 0;
+      }
+
+      /* --- Code blocks + syntax highlighting --- */
+      pre {
+        background: var(--surface-sunken);
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem;
+        margin: 1rem 0;
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        line-height: 1.65;
+        overflow-x: auto;
+      }
+      code {
+        font-family: var(--font-mono);
+      }
+      p code,
+      li code,
+      td code {
+        font-size: 0.88em;
+        background: var(--surface-sunken);
+        padding: 0.1rem 0.35rem;
+      }
+      .tok-keyword {
+        color: var(--accent);
+      } /* func, type, struct, if, return */
+      .tok-type {
+        color: var(--warning);
+      } /* int, string, bool, error */
+      .tok-string {
+        color: var(--solution);
+      } /* "quoted strings" */
+      .tok-comment {
+        color: var(--text-faint);
+        font-style: italic;
+      }
+      .tok-func {
+        color: #74a9ff;
+      } /* function names */
+      .tok-number {
+        color: var(--accent);
+      } /* 42, 3.14 */
+      .tok-generic {
+        color: var(--problem);
+      } /* T, ID in generics */
+      .tok-builtin {
+        color: #4dd9ff;
+      } /* make, len, append */
+      .tok-punct {
+        color: var(--text-muted);
+      } /* { } ( ) ; = : */
+      .tok-attr {
+        color: var(--accent);
+      } /* Nix attribute names */
+
+      /* --- Dependency tree / ASCII diagrams --- */
+      .dep-tree {
+        background: var(--surface-sunken);
+        border: 1px solid var(--border);
+        padding: 1rem 1.2rem;
+        margin: 1rem 0;
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        line-height: 1.7;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      .dep-tree .root {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .dep-tree .ok {
+        color: var(--solution);
+      }
+      .dep-tree .unwanted {
+        color: var(--problem);
+      }
+
+      /* --- Inline node-and-arrow diagrams --- */
+      .diagram {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        margin: 1rem 0;
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+      }
+      .node {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: var(--surface-sunken);
+        border: 1px solid var(--border-strong);
+      }
+      .node-core {
+        background: var(--accent);
+        color: var(--surface);
+        border-color: var(--accent);
+      }
+      .node-problem {
+        background: var(--problem);
+        color: var(--surface);
+        border-color: var(--problem);
+      }
+      .node-good {
+        background: var(--solution);
+        color: var(--surface);
+        border-color: var(--solution);
+      }
+      .arrow {
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+      }
+
+      /* --- Grids (responsive) --- */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+
+      /* --- Inline TOC (alternative to sidebar) --- */
+      .toc {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        padding: 1rem 1.3rem;
+        margin: 1rem 0 1.5rem;
+      }
+      .toc h3 {
+        margin-bottom: 0.5rem;
+      }
+      .toc ul {
+        list-style: none;
+        padding: 0;
+      }
+      .toc li {
+        margin: 0.25rem 0;
+      }
+      .toc a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .toc a:hover {
+        color: var(--accent);
+      }
+
+      /* --- Migration / numbered steps --- */
+      .migration-step {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 1rem;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+      }
+      .migration-num {
+        font-family: var(--font-mono);
+        font-weight: 800;
+        font-size: 1.5rem;
+        color: var(--accent);
+        line-height: 1;
+      }
+      .migration-content h4 {
+        margin-bottom: 0.2rem;
+      }
+      .migration-content p {
+        margin-bottom: 0;
+        color: var(--text-muted);
+        font-size: 0.92rem;
+      }
+
+      /* --- Footer --- */
+      .footer {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.8rem;
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+      }
+
+      /* --- Responsive --- */
+      @media (min-width: 1024px) {
+        .sidebar {
+          display: block;
+        }
+      }
+      @media (max-width: 768px) {
+        .layout {
+          flex-direction: column;
+          padding: 1rem;
+        }
+        .top-bar {
+          padding: 0.6rem 1rem;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+        }
+        .grid-2,
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+        .compare-header,
+        .compare-row {
+          grid-template-columns: 1fr;
+        }
+        .stat-grid,
+        .scorecard {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .migration-step {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+      <!-- Full-bleed top bar (optional — remove for quieter reports) -->
+    <div class="top-bar">
+      <span>PARETO PLAN</span>
+      <span>2026-10-11</span>
+      <span>go-paperless &middot; full code review</span>
+    </div>
+
+    <div class="layout">
+      <!-- Sidebar TOC (hidden below 1024px; use inline .toc if you prefer) -->
+      <aside class="sidebar" data-nav>
+        <nav>
+          <div class="label">Contents</div>
+          <a href="#summary">Summary</a>
+          <a href="#pareto">Pareto Tiers</a>
+          <a href="#tasks">Task Table</a>
+          <a href="#graph">Execution Graph</a>
+          <a href="#steps">Execution Steps</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-shapes">
+            <div class="circle"></div>
+            <div class="square"></div>
+            <div class="tri"></div>
+          </div>
+          <div class="hero-badge">Pareto Plan</div>
+          <h1>Full Code Review — Every File</h1>
+          <p class="hero-subtitle">
+            File-by-file architect review of all 12,926 first-party lines, ranked
+            by impact: the public SDK surface first, the consumer-testing fake
+            second, tests and configs last. Fixes applied on sight, every change
+            gated.
+          </p>
+        </div>
+
+        <!-- Stats Dashboard -->
+        <h2 id="summary"><span class="num">00</span>Summary</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value">37</div>
+            <div class="stat-label">First-party files</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">12,926</div>
+            <div class="stat-label">Lines in scope</div>
+          </div>
+          <div class="stat-card stat-warn">
+            <div class="stat-value">1%</div>
+            <div class="stat-label">client.go = the contract</div>
+          </div>
+          <div class="stat-card stat-good">
+            <div class="stat-value">0</div>
+            <div class="stat-label">branching-flow findings</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4>Starting state</h4>
+          <p>
+            Git clean at <code>335979b</code>. Prior review 2026-09-13 closed 11
+            of 12 findings; TODO_LIST carries one live code-level row (v2
+            typed-API migration, deferred by design). branching-flow v0.6.4
+            reports zero active findings. The review's job is to find what the
+            automated gates structurally cannot: split brains, dishonest
+            names, unrepresentable states, drift between contract and code.
+          </p>
+        </div>
+
+        <!-- Pareto Tiers -->
+        <h2 id="pareto"><span class="num">01</span>Pareto Tiers</h2>
+
+        <div class="card card-problem">
+          <h4>1% &rarr; 51% — client.go (2,671 lines)</h4>
+          <p>
+            The entire public SDK surface and the drop-in compatibility contract
+            for bank-sync. Type safety of payloads vs public types, error-model
+            discipline (ADR 0002), naming honesty, pagination and retry paths.
+            A defect here ships to every consumer.
+          </p>
+        </div>
+
+        <div class="card card-warning">
+          <h4>4% &rarr; 64% — ids.go + paperlesstest core (2,557 lines)</h4>
+          <p>
+            ADR 0004 branded IDs (the compiler-enforced contract) and the fake's
+            routing core (server, entities, documents, tasks). The fake's
+            round-trip fidelity is what makes consumer tests trustworthy;
+            drift here silently weakens every downstream suite.
+          </p>
+        </div>
+
+        <div class="card card-solution">
+          <h4>20% &rarr; 80% — everything else</h4>
+          <p>
+            paperlesstest remainder (notes, savedviews, sharelinks, records,
+            faults) + its 10 test files, root test files (client_test.go in
+            slices, docs_drift, fuzz, integration, example), and the tooling
+            perimeter (.golangci.yml, .branching-flow.yml, .buildflow.yml, CI
+            workflows, dependabot, flake.nix).
+          </p>
+        </div>
+
+        <!-- Task Table -->
+        <h2 id="tasks"><span class="num">02</span>Task Table</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tier</th>
+              <th>Task</th>
+              <th>Scope</th>
+              <th>Gate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><span class="badge badge-critical">1%</span></td>
+              <td>client.go: types, wire payloads, public surface</td>
+              <td>~900 lines</td>
+              <td rowspan="9">
+                <span class="badge badge-fixed">check+test+lint after each fix batch</span>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><span class="badge badge-critical">1%</span></td>
+              <td>client.go: Client core, options, retry/error paths</td>
+              <td>~900 lines</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><span class="badge badge-critical">1%</span></td>
+              <td>client.go: CRUD/lookup/task methods vs docs contract</td>
+              <td>~900 lines</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><span class="badge badge-high">4%</span></td>
+              <td>ids.go branded IDs (ADR 0004)</td>
+              <td>163 lines</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><span class="badge badge-high">4%</span></td>
+              <td>paperlesstest: server, entities, documents, tasks</td>
+              <td>1,957 lines</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><span class="badge badge-medium">20%</span></td>
+              <td>paperlesstest: notes, savedviews, sharelinks, records, faults, doc</td>
+              <td>875 lines</td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td><span class="badge badge-medium">20%</span></td>
+              <td>paperlesstest test files (10) + root test files (5)</td>
+              <td>6,405 lines</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td><span class="badge badge-medium">20%</span></td>
+              <td>Configs: golangci, branching-flow, buildflow, CI, dependabot, flake.nix</td>
+              <td>~780 lines</td>
+            </tr>
+            <tr>
+              <td>9</td>
+              <td><span class="badge badge-fixed">Out</span></td>
+              <td>Review report (HTML) + TODO_LIST harvest + INDEX/series discipline</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Execution Graph -->
+        <h2 id="graph"><span class="num">03</span>Execution Graph</h2>
+        <div style="overflow-x: auto"><?xml version="1.0" encoding="utf-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" viewBox="0 0 4038 450"><svg class="d2-108077562 d2-svg" width="4038" height="450" viewBox="-101 -85 4038 450"><rect x="-101" y="-85" width="4038" height="450" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
+.d2-108077562 .text {
+	font-family: "d2-108077562-font-regular";
+}
+@font-face {
+	font-family: d2-108077562-font-regular;
+	src: url("data:application/font-woff;base64,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");
+}
+.d2-108077562 .text-bold {
+	font-family: "d2-108077562-font-bold";
+}
+@font-face {
+	font-family: d2-108077562-font-bold;
+	src: url("data:application/font-woff;base64,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");
+}]]></style><style type="text/css"><![CDATA[.shape {
+  shape-rendering: geometricPrecision;
+  stroke-linejoin: round;
+}
+.connection {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.blend {
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+
+		.d2-108077562 .fill-N1{fill:#0A0F25;}
+		.d2-108077562 .fill-N7{fill:#FFFFFF;}
+		.d2-108077562 .fill-B1{fill:#0D32B2;}
+		.d2-108077562 .fill-B4{fill:#E3E9FD;}
+		.d2-108077562 .fill-B5{fill:#EDF0FD;}
+		.d2-108077562 .fill-B6{fill:#F7F8FE;}
+		.d2-108077562 .stroke-B1{stroke:#0D32B2;}
+		.d2-108077562 .stroke-B2{stroke:#0D32B2;}.appendix text.text{fill:#0A0F25}.md{--color-fg-default:#0A0F25;--color-fg-muted:#676C7E;--color-fg-subtle:#9499AB;--color-canvas-default:#FFFFFF;--color-canvas-subtle:#EEF1F8;--color-border-default:#0D32B2;--color-border-muted:#0D32B2;--color-neutral-muted:#EEF1F8;--color-accent-fg:#0D32B2;--color-accent-emphasis:#0D32B2;--color-attention-subtle:#676C7E;--color-danger-fg:red;}.light-code{display: block}.dark-code{display: none}]]></style><g class="cGxhbg=="><g class="shape" ><rect x="0" y="168" width="240" height="66" stroke="#0D32B2" fill="#F7F8FE" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="120" y="206.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">Full code review 2026-10-11</text></g><g class="dGllcjE="><g class="shape" ><rect x="360" y="138" width="1033" height="126" stroke="#0D32B2" fill="#E3E9FD" class=" stroke-B1 fill-B4" style="stroke-width:2;" /></g><text x="876.5" y="97" fill="#0A0F25" class="text fill-N1" style="text-anchor:middle;font-size:28px"><tspan x="876.5" dy="0">1% - client.go (2671 lines)</tspan><tspan x="876.5" dy="32">Public SDK surface</tspan></text></g><g class="dGllcjQ="><g class="shape" ><rect x="1533" y="56" width="595" height="152" stroke="#0D32B2" fill="#E3E9FD" class=" stroke-B1 fill-B4" style="stroke-width:2;" /></g><text x="1830.5" y="43" fill="#0A0F25" class="text fill-N1" style="text-anchor:middle;font-size:28px">4% - ADR 0004 + fake core</text></g><g class="dGllcjIw"><g class="shape" ><rect x="2268" y="64" width="891" height="126" stroke="#0D32B2" fill="#E3E9FD" class=" stroke-B1 fill-B4" style="stroke-width:2;" /></g><text x="2713.5" y="51" fill="#0A0F25" class="text fill-N1" style="text-anchor:middle;font-size:28px">20% - full coverage</text></g><g class="Zml4ZXM="><g class="shape" ><rect x="3279" y="86" width="172" height="82" stroke="#0D32B2" fill="#F7F8FE" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="3365" y="124.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px"><tspan x="3365" dy="0">Fix on sight + gate</tspan><tspan x="3365" dy="18.5">(check / test / lint)</tspan></text></g><g class="cmVwb3J0"><g class="shape" ><rect x="3551" y="94" width="285" height="66" stroke="#0D32B2" fill="#F7F8FE" class=" stroke-B1 fill-B6" style="stroke-width:2;" /></g><text x="3693.5" y="132.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">HTML report + TODO_LIST harvest</text></g><g class="dGllcjEudDFh"><g class="shape" ><rect x="390" y="168" width="201" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="490.5" y="206.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">Types + wire payloads</text></g><g class="dGllcjEudDFi"><g class="shape" ><rect x="691" y="168" width="312" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="847" y="206.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">Client core, options, retry/error paths</text></g><g class="dGllcjEudDFj"><g class="shape" ><rect x="1103" y="168" width="260" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="1233" y="206.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">CRUD + lookup + task methods</text></g><g class="dGllcjQudDRh"><g class="shape" ><rect x="1563" y="94" width="177" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="1651.5" y="132.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">ids.go branded IDs</text></g><g class="dGllcjQudDRi"><g class="shape" ><rect x="1840" y="86" width="258" height="82" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="1969" y="124.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px"><tspan x="1969" dy="0">paperlesstest server + entities</tspan><tspan x="1969" dy="18.5">+ documents + tasks</tspan></text></g><g class="dGllcjIwLnQyMGE="><g class="shape" ><rect x="2298" y="94" width="268" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="2432" y="132.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">paperlesstest remainder + tests</text></g><g class="dGllcjIwLnQyMGI="><g class="shape" ><rect x="2666" y="94" width="161" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="2746.5" y="132.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">root test files (5)</text></g><g class="dGllcjIwLnQyMGM="><g class="shape" ><rect x="2927" y="94" width="202" height="66" stroke="#0D32B2" fill="#EDF0FD" class=" stroke-B1 fill-B5" style="stroke-width:2;" /></g><text x="3028" y="132.5" fill="#0A0F25" class="text-bold fill-N1" style="text-anchor:middle;font-size:16px">configs + CI + flake.nix</text></g><g class="KHBsYW4gLSZndDsgdGllcjEpWzBd"><marker id="mk-d2-108077562-3488378134" markerWidth="10" markerHeight="12" refX="7" refY="6" viewBox="0 0 10 12" orient="auto" markerUnits="userSpaceOnUse"> <polygon points="0,0 10,6 0,12" fill="#0D32B2" class="connection fill-B1" stroke-width="2" /> </marker><path d="M 242 201 C 280 201 304 201 356 201" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="KHRpZXIxIC0mZ3Q7IHRpZXI0KVswXQ=="><path d="M 1395 201 C 1449 201 1477 201 1529 201" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="KHRpZXI0IC0mZ3Q7IHRpZXIyMClbMF0="><path d="M 2130 127 C 2184 127 2212 127 2264 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="KHRpZXIyMCAtJmd0OyBmaXhlcylbMF0="><path d="M 3161 127 C 3215 127 3239 127 3275 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="KGZpeGVzIC0mZ3Q7IHJlcG9ydClbMF0="><path d="M 3453 127 C 3491 127 3511 127 3547 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="dGllcjEuKHQxYSAtJmd0OyB0MWIpWzBd"><path d="M 593 201 C 631 201 651 201 687 201" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="dGllcjEuKHQxYiAtJmd0OyB0MWMpWzBd"><path d="M 1005 201 C 1043 201 1063 201 1099 201" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="dGllcjQuKHQ0YSAtJmd0OyB0NGIpWzBd"><path d="M 1742 127 C 1780 127 1800 127 1836 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="dGllcjIwLih0MjBhIC0mZ3Q7IHQyMGIpWzBd"><path d="M 2568 127 C 2606 127 2626 127 2662 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><g class="dGllcjIwLih0MjBiIC0mZ3Q7IHQyMGMpWzBd"><path d="M 2829 127 C 2867 127 2887 127 2923 127" stroke="#0D32B2" fill="none" class="connection stroke-B1" style="stroke-width:2;" marker-end="url(#mk-d2-108077562-3488378134)" mask="url(#d2-108077562)" /></g><mask id="d2-108077562" maskUnits="userSpaceOnUse" x="-101" y="-85" width="4038" height="450">
+<rect x="-101" y="-85" width="4038" height="450" fill="white"></rect>
+
+</mask></svg></svg>
+</div>
+
+        <!-- Execution Steps -->
+        <h2 id="steps"><span class="num">04</span>Execution Steps</h2>
+        <div class="migration-step">
+          <div class="migration-num">1</div>
+          <div class="migration-content">
+            <h4>Review + fix on sight, per tier</h4>
+            <p>
+              Visit every file. Fix type-safety and split-brain findings
+              immediately; log smaller debts as inline TODOs with ticket
+              language. No speculative rewrites, public API byte-stable unless a
+              finding outweighs the contract.
+            </p>
+          </div>
+        </div>
+        <div class="migration-step">
+          <div class="migration-num">2</div>
+          <div class="migration-content">
+            <h4>Gate every fix batch</h4>
+            <p>
+              <code>nix run .#check</code>, <code>nix run .#test</code>,
+              <code>nix run .#lint</code> — plus <code>nix fmt</code>. Nothing
+              merges on a red gate; branching-flow must stay at zero.
+            </p>
+          </div>
+        </div>
+        <div class="migration-step">
+          <div class="migration-num">3</div>
+          <div class="migration-content">
+            <h4>Report + harvest</h4>
+            <p>
+              Write docs/reviews/2026-10-11_*_full-code-review.html from the kit
+              template, cross-referencing the 2026-09-13 episode. Unfixed
+              findings land in TODO_LIST.md, never only in the snapshot.
+            </p>
+          </div>
+        </div>
+
+        <footer class="footer">
+          Generated 2026-10-11 &middot; Plan snapshot — living work tracked in
+          TODO_LIST.md
+        </footer>
+      </main>
+    </div>
+
+    <!-- Progressive-enhancement scrollspy. Nav still works without JS via anchor links. -->
+    <script>
+      (function () {
+        if (!("IntersectionObserver" in window)) return;
+        var nav = document.querySelector("[data-nav]");
+        if (!nav) return;
+        var links = nav.querySelectorAll('a[href^="#"]');
+        var ids = Array.from(links).map(function (l) {
+          return l.getAttribute("href").slice(1);
+        });
+        var sections = ids
+          .map(function (id) {
+            return document.getElementById(id);
+          })
+          .filter(Boolean);
+        if (!sections.length) return;
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                links.forEach(function (link) {
+                  link.classList.toggle(
+                    "active",
+                    link.getAttribute("href") === "#" + entry.target.id,
+                  );
+                });
+              }
+            });
+          },
+          { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
+        );
+        sections.forEach(function (s) {
+          observer.observe(s);
+        });
+      })();
+    </script>
+  </body>
+</html>
