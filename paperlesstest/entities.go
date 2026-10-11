@@ -24,7 +24,7 @@ const (
 // and serves the same shape, so the struct carries the wire tags directly;
 // the brand parameter binds the stored ID to the entity family's branded
 // type.
-type namedEntity[B any] struct {
+type namedEntity[B any] struct { // SDK↔fake wire-shape mirror: the SDK's payload is unexported, so the fake re-declares it; the round-trip contract depends on it
 	ID                id.ID[B, int] `json:"id"`
 	Name              string        `json:"name"`
 	MatchingAlgorithm int           `json:"matching_algorithm"`
@@ -166,7 +166,9 @@ func (s *Server) AddDocumentType(name string, matchingAlgorithm int) paperless.D
 }
 
 // AddCustomField stores one custom-field definition and returns its ID.
-func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID { //nolint:branching-flow // distinct concepts (label vs serializer type tag); branded params are the ROADMAP v2 typed-API scope
+func (s *Server) AddCustomField(
+	name, dataType string,
+) paperless.CustomFieldID { //nolint:branching-flow // distinct concepts (label vs serializer type tag); branded params are the ROADMAP v2 typed-API scope
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -179,7 +181,9 @@ func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID {
 }
 
 // AddStoragePath stores one storage path definition and returns its ID.
-func (s *Server) AddStoragePath(name, path string) paperless.StoragePathID { //nolint:branching-flow // distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
+func (s *Server) AddStoragePath(
+	name, path string,
+) paperless.StoragePathID { //nolint:branching-flow // distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

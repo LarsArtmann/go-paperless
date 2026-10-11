@@ -138,7 +138,7 @@ func (s *Server) appendDocumentLocked(doc Document) *Document {
 // documentWire is the serialized document shape served on the wire. The
 // checksum fields follow the server's ChecksumShape: flat field
 // (pre-3.x) or versions[] array (3.x) — never both.
-type documentWire struct {
+type documentWire struct { // response and PATCH-update shapes diverge by design (partial update body vs full serializer)
 	ID            paperless.DocumentID      `json:"id"`
 	Title         string                    `json:"title"`
 	Correspondent paperless.CorrespondentID `json:"correspondent"`

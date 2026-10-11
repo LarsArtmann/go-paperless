@@ -306,7 +306,10 @@ type Client struct {
 // and API token. Returns ErrInvalidConfig when either is empty, the URL is
 // not parseable, or a WithRetry policy is malformed. Options customize the
 // HTTP transport.
-func New(baseURL, token string, opts ...Option) (*Client, error) { //nolint:branching-flow // public API signature; a transposed token fails scheme validation; branded params are the ROADMAP v2 typed-API scope
+func New(
+	baseURL, token string,
+	opts ...Option,
+) (*Client, error) { //nolint:branching-flow // public API signature; a transposed token fails scheme validation; branded params are the ROADMAP v2 typed-API scope
 	if baseURL == "" || token == "" {
 		return nil, ErrInvalidConfig
 	}
@@ -366,7 +369,7 @@ func defaultTransport() *http.Transport {
 }
 
 // UploadRequest describes one document to hand to Paperless-ngx's consumer.
-type UploadRequest struct {
+type UploadRequest struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	// Filename is the original file name (e.g. "invoice.pdf"). Paperless-ngx
 	// derives the stored document name and archive serial numbering from it.
 	Filename string
@@ -391,7 +394,7 @@ type UploadRequest struct {
 }
 
 // CustomFieldValue assigns a value to one custom field by its definition ID.
-type CustomFieldValue struct {
+type CustomFieldValue struct { // public API struct stays tag-free (exported JSON shape is a compatibility contract); payload mirror stays unexported; unification is the v2 scope
 	Field CustomFieldID
 	Value string
 }
@@ -513,7 +516,7 @@ func (o TaskOutcome) Duplicate() (DocumentID, bool, bool) {
 // (the postrun handler demotes such tasks to failure), and
 // {"error_type", "error_message"} for real failures. Pointers distinguish
 // absent keys from zero values.
-type taskResultData struct {
+type taskResultData struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	DocumentID       *DocumentID `json:"document_id"`
 	DuplicateOf      *DocumentID `json:"duplicate_of"`
 	DuplicateInTrash bool        `json:"duplicate_in_trash"`
@@ -861,7 +864,7 @@ func updateMatchingAlgorithm[
 // namedPayload mirrors the create/list subset shared by Paperless-ngx's tag and
 // correspondent objects (id + name + matching algorithm). The brand
 // parameter binds the decoded ID to one entity family per call site.
-type namedPayload[B any] struct {
+type namedPayload[B any] struct { // unexported wire mirror; the fake re-declares it because unexported types cannot be reused across packages
 	ID                id.ID[B, int] `json:"id"`
 	Name              string        `json:"name"`
 	MatchingAlgorithm int           `json:"matching_algorithm"`
@@ -1066,7 +1069,7 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (CustomFiel
 // StoragePath is one Paperless-ngx storage path definition: the server-side
 // directory template (e.g. "{created_year}/{correspondent}") documents are
 // filed into, addressed by name.
-type StoragePath struct {
+type StoragePath struct { // public API struct stays tag-free (exported JSON shape is a compatibility contract); unification is the v2 typed-API scope
 	ID   StoragePathID
 	Slug string
 	Name string
@@ -1075,7 +1078,7 @@ type StoragePath struct {
 
 // storagePathPayload mirrors Paperless-ngx's storage path serializer fields
 // the SDK relies on.
-type storagePathPayload struct {
+type storagePathPayload struct { // unexported wire mirror of the public struct; tags belong here until v2 unifies the API
 	ID   StoragePathID `json:"id"`
 	Slug string        `json:"slug,omitempty"`
 	Name string        `json:"name"`
@@ -1108,7 +1111,10 @@ func (c *Client) FindStoragePath(ctx context.Context, name string) (StoragePathI
 // path keeps its configured template — mirroring the document type policy:
 // the template is deliberate user config, and overriding it from a sync
 // pipeline would be wrong.
-func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (StoragePathID, error) { //nolint:branching-flow // public API signature; distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
+func (c *Client) EnsureStoragePath(
+	ctx context.Context,
+	name, path string,
+) (StoragePathID, error) { //nolint:branching-flow // public API signature; distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
 	if name == "" || path == "" {
 		return StoragePathID{}, errorfamily.NewRejection("paperless.empty_storage_path",
 			"storage path name and directory template are required")
@@ -1359,7 +1365,10 @@ type documentListEntry struct {
 // shapes: the flat field served by older paperless-ngx versions first, then
 // the root version's checksum (3.x), then any non-empty version checksum.
 func (e documentListEntry) effectiveChecksum() string {
-	return checksumFrom(e.Checksum, e.Versions) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	return checksumFrom(
+		e.Checksum,
+		e.Versions,
+	) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
 }
 
 // checksumFrom resolves a document checksum across API shapes; shared by
@@ -1459,7 +1468,7 @@ func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}
 // the metadata backfill needs. correspondent and tags decode to IDs; a null
 // correspondent decodes as 0. created stays a string so both the datetime
 // form Paperless-ngx serves and legacy date-only values parse.
-type documentMetaPayload struct {
+type documentMetaPayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	ID            DocumentID                `json:"id"`
 	Title         string                    `json:"title"`
 	Correspondent CorrespondentID           `json:"correspondent"`
@@ -1475,7 +1484,7 @@ type documentMetaPayload struct {
 // versions array. Since paperless-ngx 3.x the flat document checksum is no
 // longer part of the serializer fields; the checksum moved into the
 // versions array (is_root marks the current original).
-type documentVersionPayload struct {
+type documentVersionPayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	ID       DocumentVersionID `json:"id"`
 	Checksum string            `json:"checksum"`
 	IsRoot   bool              `json:"is_root"`
@@ -1485,7 +1494,10 @@ type documentVersionPayload struct {
 // shapes: the flat field served by older paperless-ngx versions first, then
 // the root version's checksum (3.x), then any non-empty version checksum.
 func (p documentMetaPayload) effectiveChecksum() string {
-	return checksumFrom(p.Checksum, p.Versions) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
+	return checksumFrom(
+		p.Checksum,
+		p.Versions,
+	) //nolint:branching-flow // wire strings at the parse boundary; branded slots are the v2 typed-API scope (ROADMAP)
 }
 
 // parseDocumentCreated parses the created value a stored document serves
@@ -1510,7 +1522,7 @@ func parseDocumentCreated(raw string) time.Time {
 }
 
 // DocumentMeta is the metadata snapshot of one stored Paperless-ngx document.
-type DocumentMeta struct {
+type DocumentMeta struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	ID             DocumentID
 	Title          string
 	Correspondent  CorrespondentID
@@ -1536,10 +1548,12 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 		entry := &entries[i]
 
 		metas = append(metas, DocumentMeta{
-			ID:             entry.ID,
-			Title:          entry.Title,
-			Correspondent:  entry.Correspondent,
-			Created:        parseDocumentCreated(entry.Created), //nolint:branching-flow // RFC3339 wire string parsed at the boundary; branded slots are the v2 typed-API scope
+			ID:            entry.ID,
+			Title:         entry.Title,
+			Correspondent: entry.Correspondent,
+			Created: parseDocumentCreated(
+				entry.Created,
+			), //nolint:branching-flow // RFC3339 wire string parsed at the boundary; branded slots are the v2 typed-API scope
 			TagIDs:         entry.Tags,
 			DocumentTypeID: entry.DocumentType,
 			CustomFields:   customFieldsFromPayload(entry.CustomFields),
@@ -1553,7 +1567,7 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 // UpdateDocumentRequest carries the fields a metadata backfill may change.
 // Nil pointers leave the field untouched; TagIDs replaces the full tag set
 // (Paperless-ngx PATCH semantics for many-to-many fields).
-type UpdateDocumentRequest struct {
+type UpdateDocumentRequest struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	Title           *string
 	Created         *time.Time
 	CorrespondentID *CorrespondentID
@@ -1602,7 +1616,7 @@ func (c *Client) UpdateDocument(
 // documentUpdatePayload mirrors the writable subset of Paperless-ngx's
 // document serializer. Pointer fields are emitted only when set; an empty
 // TagIDs slice is omitted so other-field updates never touch tags.
-type documentUpdatePayload struct {
+type documentUpdatePayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	Title         *string                   `json:"title,omitempty"`
 	Created       *string                   `json:"created,omitempty"`
 	Correspondent *CorrespondentID          `json:"correspondent,omitempty"`
@@ -1613,7 +1627,7 @@ type documentUpdatePayload struct {
 
 // customFieldValuePayload is the wire shape of one document custom-field
 // value (paperless-ngx 2.x+): the field definition ID plus the value.
-type customFieldValuePayload struct {
+type customFieldValuePayload struct { // unexported wire mirror of the public struct; tags belong here until v2 unifies the API
 	Field CustomFieldID `json:"field"`
 	Value string        `json:"value"`
 }
@@ -2045,7 +2059,7 @@ func classifyStatus(resp *http.Response, snippet []byte, path string, bodyReadEr
 }
 
 // DocumentNoteUser is the (possibly anonymous) author of a document note.
-type DocumentNoteUser struct {
+type DocumentNoteUser struct { // public API struct stays tag-free (exported JSON shape is a compatibility contract); payload mirror stays unexported; unification is the v2 scope
 	ID        UserID
 	Username  string
 	FirstName string
@@ -2053,7 +2067,7 @@ type DocumentNoteUser struct {
 }
 
 // DocumentNote is one operator comment attached to a stored document.
-type DocumentNote struct {
+type DocumentNote struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	ID      NoteID
 	Note    string
 	Created time.Time
@@ -2064,7 +2078,7 @@ type DocumentNote struct {
 
 // documentNoteUserPayload mirrors the BasicUserSerializer the notes
 // endpoint embeds.
-type documentNoteUserPayload struct {
+type documentNoteUserPayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	ID        UserID `json:"id"`
 	Username  string `json:"username"`
 	FirstName string `json:"first_name"`
@@ -2072,7 +2086,7 @@ type documentNoteUserPayload struct {
 }
 
 // documentNotePayload mirrors the Note serializer fields the SDK relies on.
-type documentNotePayload struct {
+type documentNotePayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	ID      NoteID                   `json:"id"`
 	Note    string                   `json:"note"`
 	Created time.Time                `json:"created"`
@@ -2237,7 +2251,7 @@ const (
 
 // ShareLink is one public download link for a document. Slug is
 // server-generated; the full share URL is <base>/share/<slug>.
-type ShareLink struct {
+type ShareLink struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	ID      ShareLinkID
 	Created time.Time
 	// Expiration is when the link stops working; zero means it never
@@ -2252,7 +2266,7 @@ type ShareLink struct {
 
 // shareLinkPayload mirrors the ShareLink serializer fields the SDK relies
 // on (id, created, expiration, slug, document, file_version).
-type shareLinkPayload struct {
+type shareLinkPayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	ID          ShareLinkID `json:"id"`
 	Created     time.Time   `json:"created"`
 	Expiration  *time.Time  `json:"expiration"`
@@ -2438,7 +2452,7 @@ type SavedViewFilterRule struct {
 }
 
 // savedViewFilterRulePayload mirrors the SavedViewFilterRule serializer.
-type savedViewFilterRulePayload struct {
+type savedViewFilterRulePayload struct { // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape
 	RuleType int    `json:"rule_type"`
 	Value    string `json:"value"`
 }
@@ -2447,7 +2461,7 @@ type savedViewFilterRulePayload struct {
 // SDK models the stable core fields; servers add or drop UI fields
 // (icon, page_size, display mode, ...) across versions and unknown JSON
 // fields are ignored.
-type SavedView struct {
+type SavedView struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	ID   SavedViewID
 	Name string
 	// ShowOnDashboard and ShowInSidebar mirror the view's visibility
@@ -2460,7 +2474,7 @@ type SavedView struct {
 }
 
 // savedViewPayload mirrors the SavedView serializer's stable fields.
-type savedViewPayload struct {
+type savedViewPayload struct { // unexported wire mirror; it deliberately differs from the create request (server-assigned fields)
 	ID              SavedViewID                  `json:"id"`
 	Name            string                       `json:"name"`
 	ShowOnDashboard bool                         `json:"show_on_dashboard"`
@@ -2493,7 +2507,7 @@ func (p savedViewPayload) savedView() SavedView {
 
 // CreateSavedViewRequest asks for one saved view. Name is required; the
 // filter rules carry the server's numeric rule types.
-type CreateSavedViewRequest struct {
+type CreateSavedViewRequest struct { // embedding would change the public struct's literal surface; shared fields are the v2 typed-API scope
 	Name            string
 	ShowOnDashboard bool
 	ShowInSidebar   bool

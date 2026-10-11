@@ -1,0 +1,28 @@
+# branching-flow configuration.
+#
+# disabled_rules drops three rule classes whose line-level
+# //nolint:branching-flow directives the v0.6.4 binary cannot honor: only the
+# panic and phantom analyzers consult ignore comments (cmd/branching-flow
+# container.go wires isSuppressed solely for those two linters), so
+# DUPLICATE_TYPE, COMPOSITION_mixin, and ANTI_PATTERN_large-struct findings
+# are dismissed per rule instead of per site. The per-site reasoning lives in
+# trailing rationale comments on the flagged declarations and in
+# docs/status/2026-10-11_03-41_branching-flow-findings-triage.md.
+#
+# Why each class is accepted (re-evaluate with the v2 typed-API migration,
+# see ROADMAP "Growing with the API"):
+#   DUPLICATE_TYPE — public API structs deliberately stay tag-free (the
+#     exported JSON shape is a compatibility contract), so unexported
+#     payload/wire mirrors are intentional; the fake re-declares SDK shapes
+#     because unexported types cannot cross the package boundary.
+#   COMPOSITION_mixin — embedding shared fields into the public structs would
+#     break consumers' composite literals (v2 scope); SDK↔fake wire-shape
+#     mirrors are the fake's round-trip contract; input-vs-response shapes
+#     diverge by design (PATCH partials, server-assigned fields).
+#   ANTI_PATTERN_large-struct — paperlesstest.Server is fixture state: one
+#     mutex guards the per-family stores and ID counters; splitting it would
+#     scatter the lock without reducing complexity.
+disabled_rules:
+  - DUPLICATE_TYPE
+  - COMPOSITION_mixin
+  - ANTI_PATTERN_large-struct

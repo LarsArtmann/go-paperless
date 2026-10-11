@@ -113,7 +113,7 @@ func servedRoutes() []string {
 
 // Server is a stateful in-memory fake of the Paperless-ngx REST API.
 // Construct it with NewServer; the zero value is not usable.
-type Server struct {
+type Server struct { // fixture state: one mutex guards the per-family stores and ID counters; splitting would scatter the lock
 	t    testing.TB
 	http *httptest.Server
 

@@ -301,14 +301,22 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 	}
 
 	stored := s.appendDocumentLocked(Document{
-		Title:          consumptionTitle(upload),
-		Content:        upload.Content,
-		Checksum:       checksum,
-		Created:        parseUploadDate(upload.Created), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		CustomFields:   parseCustomFieldsJSON(upload.CustomFields), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Title:    consumptionTitle(upload),
+		Content:  upload.Content,
+		Checksum: checksum,
+		Created: parseUploadDate(
+			upload.Created,
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Correspondent: paperless.NewCorrespondentID(
+			atoiOrZero(upload.Correspondent),
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		TagIDs: atoiSlice(upload.Tags),
+		DocumentTypeID: paperless.NewDocumentTypeID(
+			atoiOrZero(upload.DocumentType),
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		CustomFields: parseCustomFieldsJSON(
+			upload.CustomFields,
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 	})
 
 	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: stored.ID}
@@ -328,14 +336,22 @@ func (s *Server) resolveConsumptionLocked(upload Upload) paperless.DocumentID {
 	}
 
 	stored := s.appendDocumentLocked(Document{
-		Title:          consumptionTitle(upload),
-		Content:        upload.Content,
-		Checksum:       checksum,
-		Created:        parseUploadDate(upload.Created), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
-		CustomFields:   parseCustomFieldsJSON(upload.CustomFields), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Title:    consumptionTitle(upload),
+		Content:  upload.Content,
+		Checksum: checksum,
+		Created: parseUploadDate(
+			upload.Created,
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Correspondent: paperless.NewCorrespondentID(
+			atoiOrZero(upload.Correspondent),
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		TagIDs: atoiSlice(upload.Tags),
+		DocumentTypeID: paperless.NewDocumentTypeID(
+			atoiOrZero(upload.DocumentType),
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		CustomFields: parseCustomFieldsJSON(
+			upload.CustomFields,
+		), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 	})
 
 	return stored.ID

@@ -13,7 +13,7 @@ import (
 // savedViewRule is one filter rule of a saved view. The fake stores and
 // serves the same shape, so the struct carries the SavedViewFilterRule
 // serializer's wire tags directly.
-type savedViewRule struct {
+type savedViewRule struct { // SDK↔fake wire-shape mirror: the SDK's payload is unexported, so the fake re-declares it; the round-trip contract depends on it
 	RuleType int    `json:"rule_type"`
 	Value    string `json:"value"`
 }
