@@ -30,6 +30,11 @@ toolchains (the module uses `encoding/json/v2`, see AGENTS.md):
     nix fmt              # format
     nix flake check      # all checks (what CI runs)
 
+The error-handling gate runs inside the dev shell (the host binary may
+differ): `erraudit ./... --type-aware --enforce-go-error-family
+--disable-extensions` — see AGENTS.md for the suppression conventions and
+[docs/ERROR_CODES.md](docs/ERROR_CODES.md) for the code catalog.
+
 ## Release Checklist (maintainers)
 
 1. Bump the flake `version` and fold `[Unreleased]` into a new CHANGELOG

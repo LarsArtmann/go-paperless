@@ -26,7 +26,7 @@ pipelines are domain-coupled and stay in the consuming repos.
 - Capability probing (`ProbeCapabilities`) for version differences
 - Respectful retry: `RetryAfterError` carries `Retry-After` hints; opt-in automatic retries via `WithRetry(RetryPolicy)` (transient-only, bodies replay, hints override backoff)
 - Observability hooks: `WithRequestHook` / `WithResponseHook` value snapshots
-- Typed errors via [go-error-family](https://github.com/LarsArtmann/go-error-family)
+- Typed errors via [go-error-family](https://github.com/LarsArtmann/go-error-family) — every error carries a stable code; the catalog lives in [docs/ERROR_CODES.md](docs/ERROR_CODES.md)
 - **Branded entity IDs** ([go-branded-id](https://github.com/LarsArtmann/go-branded-id), ADR 0004): every entity reference — `DocumentID`, `TagID`, `CorrespondentID`, `TaskID`, … — is a distinct compile-time type, so mixing IDs from different entities cannot compile. Construct from raw values with `paperless.NewDocumentID(42)`-style constructors; `.Get()`, `.IsZero()`, and `.Equal()` read, guard, and compare.
 
 ## Installation

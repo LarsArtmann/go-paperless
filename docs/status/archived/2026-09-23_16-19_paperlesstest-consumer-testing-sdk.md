@@ -277,3 +277,14 @@ flowchart TD
 - [x] InboxClean: both hand-rolled fakes deleted, suite green (commit `cce98ed`, pushed)
 - [x] bank-sync: paperlesstest-based unit tests, suite green (commit `37e3ced6`, pushed)
 - [x] Consumer pins bumped and pushed (with owner go — "GET SHIT DONE! The WHOLE TODO LIST!")
+
+---
+
+## Resolution (2026-10-11, docs-health pass)
+
+EXECUTED end-to-end 2026-09-23 (same day): the SDK shipped as
+v0.4.0–v0.4.2 and both consumers (InboxClean, bank-sync) migrated, pinned,
+and pushed — see `docs/status/2026-09-24_00-08_paperlesstest-session-brutal-review.md`
+(the plan's record of state; all 8 Definition-of-done boxes ticked, plan
+amendments noted in the DoD section). Archived to `docs/status/archived/`
+by the 2026-10-11 docs-health pass.
