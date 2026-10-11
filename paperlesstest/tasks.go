@@ -158,9 +158,9 @@ type taskRecord struct {
 // taskWire mirrors the Paperless-ngx v10 task object (TaskSerializerV10)
 // subset the SDK decodes.
 type taskWire struct {
-	TaskID             paperless.TaskID   `json:"task_id"`
-	Status             string             `json:"status"`
-	ResultData         taskResultWire     `json:"result_data"`
+	TaskID             paperless.TaskID       `json:"task_id"`
+	Status             string                 `json:"status"`
+	ResultData         taskResultWire         `json:"result_data"`
 	RelatedDocumentIDs []paperless.DocumentID `json:"related_document_ids"`
 }
 
@@ -170,8 +170,8 @@ type taskWire struct {
 type taskResultWire struct {
 	DocumentID       *paperless.DocumentID `json:"document_id,omitempty"`
 	DuplicateOf      *paperless.DocumentID `json:"duplicate_of,omitempty"`
-	DuplicateInTrash bool                   `json:"duplicate_in_trash"`
-	ErrorMessage     *string                `json:"error_message,omitempty"`
+	DuplicateInTrash bool                  `json:"duplicate_in_trash"`
+	ErrorMessage     *string               `json:"error_message,omitempty"`
 }
 
 // routeUpload serves the post_document upload endpoint. It reports whether

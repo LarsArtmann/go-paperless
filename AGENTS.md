@@ -47,10 +47,12 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   when govalid is adopted or the machine's govalid rebuilds on Go ≥ 1.27.
 - **branching-flow is skipped by policy**: its PHANTOM_TYPE findings land at
   error severity with no repair path, gating the pipeline on public string
-  fields (`Title`, `Slug`, `Checksum`, ...). Typed public fields are a
-  breaking API change under the compatibility contract — v2 scope, tracked in
-  ROADMAP ("Growing with the API"). Re-enable branching-flow together with a
-  typed-API migration.
+  fields (`Title`, `Slug`, `Checksum`, ...). The tool's **strong-id**
+  analysis, however, gates at zero since the v0.5.0 branded-ID migration
+  (ADR 0004): every entity reference is `id.ID[Brand, V]` from
+  `go-branded-id`, so `branching-flow strong-id .` must report
+  "All ID parameters use strong types" — keep it there. Re-enable the
+  full tool together with a string-phantom (PHANTOM_TYPE) migration.
 - **`nix fmt` (treefmt) lags bare `dprint` after plugin bumps**: dprint
   plugins update via `dprint config update` (bumped 2026-09-16 to
   json 0.24.0 / markdown 0.24.0 / dockerfile 0.6.0 / npm-yaml URL), but
@@ -63,17 +65,37 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
 **Client only.** No pipeline abstractions, no ledger/projection code — those are
 domain-coupled and belong to the consumers (InboxClean, bank-sync). Public API
 names are a compatibility contract: bank-sync consumes this as a drop-in
-replacement for its trimmed fork.
+replacement for its trimmed fork. Breaking type changes ship as 0.x minor
+releases (v0.5.0 did for branded IDs, ADR 0004) — consumers pin versions, and
+the compiler walks migrations when they upgrade.
 
 ## Conventions
 
 - Go 1.27+, functional patterns, early returns, descriptive names.
 - Tests are httptest-based (no live server needed).
+- **Branded entity IDs = ADR 0004** (`docs/adr/0004-branded-entity-ids.md`):
+  every entity reference is `TagID`/`CorrespondentID`/`DocumentID`
+  (int64-backed!)/`TaskID` (string-backed)/… from
+  `github.com/larsartmann/go-branded-id`, defined in `ids.go` with exported
+  brands (`Name()` → `tag:7` display) and `NewXxxID` constructors. Rules:
+  error messages/codes format `.Get()` (byte-identical to raw-int output,
+  never the branded `String()`); guards use `.IsZero()`; named-entity
+  plumbing is generic over the brand (`findNamed[B]`, `createNamed[B]`,
+  `namedPayload[B]`) as FREE functions taking `*Client` — the Go 1.27
+  compiler accepts type-parameterized methods but golines (in `nix fmt`)
+  does not parse them, so generic methods are banned here. Zero-value IDs
+  marshal as JSON `null` (create bodies send `"id":null`; paperless-ngx
+  serializers ignore read-only ids).
 - **`paperlesstest/` is the consumer-testing fake** (plan:
   `docs/planning/2026-09-23_16-19_paperlesstest-consumer-testing-sdk.md`).
-  Its non-test files are stdlib-only by contract — never import
-  `paperless` or third-party modules there (round-trip tests live in its
-  `_test.go` files). Every route must be registered in `servedRoutes` AND
+  Its non-test files may import ONLY the root `paperless` package's ID
+  types (ADR 0004 contract amendment) — no SDK logic, no other third-party
+  imports (round-trip tests live in its `_test.go` files); fixtures,
+  counters, and introspection speak the SDK's branded ID vocabulary so
+  fake state compares equal to SDK results. The shared named-family
+  routing is free generic functions (`routeNamedFamily[B]`) because
+  methods cannot carry type parameters onto that reuse. Every route must
+  be registered in `servedRoutes` AND
   round-tripped through the real `Client`;
   `TestFakeCoversEveryClientRoute` enforces set equality with client.go's
   `path*` constants in both directions, so a new SDK endpoint fails the

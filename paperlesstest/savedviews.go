@@ -29,13 +29,13 @@ type savedViewRuleEntity struct {
 
 // savedViewWire mirrors the SavedView serializer's stable fields.
 type savedViewWire struct {
-	ID              paperless.SavedViewID   `json:"id"`
-	Name            string                  `json:"name"`
-	ShowOnDashboard bool                    `json:"show_on_dashboard"`
-	ShowInSidebar   bool                    `json:"show_in_sidebar"`
-	SortField       string                  `json:"sort_field"`
-	SortReverse     bool                    `json:"sort_reverse"`
-	FilterRules     []savedViewRuleWire     `json:"filter_rules"`
+	ID              paperless.SavedViewID `json:"id"`
+	Name            string                `json:"name"`
+	ShowOnDashboard bool                  `json:"show_on_dashboard"`
+	ShowInSidebar   bool                  `json:"show_in_sidebar"`
+	SortField       string                `json:"sort_field"`
+	SortReverse     bool                  `json:"sort_reverse"`
+	FilterRules     []savedViewRuleWire   `json:"filter_rules"`
 }
 
 // savedViewRuleWire mirrors the SavedViewFilterRule serializer.

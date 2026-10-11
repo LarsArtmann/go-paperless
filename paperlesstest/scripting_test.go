@@ -192,9 +192,15 @@ func TestSeedTaskServesAFixedTaskID(t *testing.T) {
 	t.Parallel()
 
 	server := NewServer(t)
-	server.SeedTask(paperless.NewTaskID("task-from-past"), TaskPlan{Kind: TaskPlanDuplicate, DocumentID: paperless.NewDocumentID(7)})
+	server.SeedTask(
+		paperless.NewTaskID("task-from-past"),
+		TaskPlan{Kind: TaskPlanDuplicate, DocumentID: paperless.NewDocumentID(7)},
+	)
 
-	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), paperless.NewTaskID("task-from-past"))
+	outcome, found, err := newTestClient(
+		t,
+		server,
+	).GetTask(context.Background(), paperless.NewTaskID("task-from-past"))
 	if err != nil || !found {
 		t.Fatalf("GetTask = (%+v, %v, %v), want the planted task", outcome, found, err)
 	}

@@ -40,6 +40,14 @@ migrates InboxClean (deleting both fakes) and gives bank-sync real unit tests.
 | D4 | Scope            | Wire protocol only. No ledger/projection helpers — those stay consumer-side per AGENTS.md scope                                                                                                     |
 | D5 | Release          | Ships in the next cut (v0.4.0 or folded into the pending v0.3.2 coordination decision); consumer pins bumped after release                                                                          |
 
+> **Amendment (2026-10-11, ADR 0004):** D1's "stdlib-only" letter changed
+> with the branded-ID migration — the fake's non-test files now import the
+> root `paperless` package for the ID types (and thereby
+> `go-branded-id`) so fixtures speak the SDK's exact ID vocabulary. The
+> intent survives: no SDK logic is reused, the wire protocol stays the
+> fake's source of truth, and consumer `go.mod` graphs gain nothing the
+> SDK itself doesn't already require.
+
 ## Pareto breakdown
 
 ### 1% delivering 51%

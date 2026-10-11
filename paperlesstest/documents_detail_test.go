@@ -32,7 +32,9 @@ func TestUpdateDocumentPatchRoundTrip(t *testing.T) {
 		CorrespondentID: &correspondent,
 		TagIDs:          []paperless.TagID{paperless.NewTagID(5), paperless.NewTagID(6)},
 		DocumentTypeID:  &documentType,
-		CustomFields:    []paperless.CustomFieldValue{{Field: paperless.NewCustomFieldID(9), Value: "abc"}},
+		CustomFields: []paperless.CustomFieldValue{
+			{Field: paperless.NewCustomFieldID(9), Value: "abc"},
+		},
 	})
 	if err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
@@ -87,14 +89,19 @@ func TestUpdateDocumentLeavesUntouchedFieldsAlone(t *testing.T) {
 	client := newTestClient(t, server)
 
 	newTitle := "only-title"
-	if err := client.UpdateDocument(context.Background(), paperless.NewDocumentID(1), paperless.UpdateDocumentRequest{
-		Title: &newTitle,
-	}); err != nil {
+	if err := client.UpdateDocument(
+		context.Background(),
+		paperless.NewDocumentID(1),
+		paperless.UpdateDocumentRequest{
+			Title: &newTitle,
+		},
+	); err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
 	}
 
 	stored := server.Documents()[0]
-	if stored.Correspondent.Get() != 7 || !slices.Equal(stored.TagIDs, []paperless.TagID{paperless.NewTagID(1)}) {
+	if stored.Correspondent.Get() != 7 ||
+		!slices.Equal(stored.TagIDs, []paperless.TagID{paperless.NewTagID(1)}) {
 		t.Errorf("stored doc = %+v; a title-only patch must not touch correspondent/tags", stored)
 	}
 }
@@ -113,7 +120,10 @@ func TestDeleteDocumentRecordsAndRemoves(t *testing.T) {
 		t.Fatalf("DeleteDocument: %v", err)
 	}
 
-	if got := server.DeletedDocuments(); !slices.Equal(got, []paperless.DocumentID{paperless.NewDocumentID(2)}) {
+	if got := server.DeletedDocuments(); !slices.Equal(
+		got,
+		[]paperless.DocumentID{paperless.NewDocumentID(2)},
+	) {
 		t.Errorf("deleted documents = %v, want [2]", got)
 	}
 
@@ -156,7 +166,11 @@ func TestDetailRoutesAnswer404ForUnknownDocuments(t *testing.T) {
 		t.Error("delete of unknown document = nil error, want a client rejection")
 	}
 
-	if err := client.UpdateDocument(ctx, paperless.NewDocumentID(99), paperless.UpdateDocumentRequest{}); err == nil {
+	if err := client.UpdateDocument(
+		ctx,
+		paperless.NewDocumentID(99),
+		paperless.UpdateDocumentRequest{},
+	); err == nil {
 		t.Error(
 			"update of unknown document = nil error, want either the local empty-update rejection or a 404",
 		)

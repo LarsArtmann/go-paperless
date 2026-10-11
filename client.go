@@ -33,9 +33,9 @@ import (
 	"strings"
 	"time"
 
+	id "github.com/larsartmann/go-branded-id"
 	errorfamily "github.com/larsartmann/go-error-family"
 	"github.com/larsartmann/go-retry"
-	id "github.com/larsartmann/go-branded-id"
 )
 
 // Default transport tuning shared by every consumer of this SDK. The default
@@ -777,7 +777,7 @@ func writeCustomFieldsField(writer *multipart.Writer, fields []CustomFieldValue)
 // "none" — the classifier then no longer trains against it. Self-healing is
 // tag-specific on purpose: correspondents deliberately keep "auto".
 func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
-	existing, found, findErr := c.findNamed[TagBrand](ctx, pathTags, "tag", name)
+	existing, found, findErr := findNamed[TagBrand](c, ctx, pathTags, "tag", name)
 	if findErr != nil {
 		return TagID{}, fmt.Errorf(
 			"find tag %q: %w",
@@ -788,7 +788,8 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
 
 	if found {
 		if existing.MatchingAlgorithm == int(matchingAlgorithmAuto) {
-			if err := c.updateMatchingAlgorithm(
+			if err := updateMatchingAlgorithm(
+				c,
 				ctx,
 				pathTags,
 				"tag",
@@ -807,20 +808,23 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
 		return existing.ID, nil
 	}
 
-	return c.createNamed[TagBrand](ctx, pathTags, "tag", name, matchingAlgorithmNone)
+	return createNamed[TagBrand](c, ctx, pathTags, "tag", name, matchingAlgorithmNone)
 }
 
 // updateMatchingAlgorithm PATCHes an existing object's matching algorithm
 // (used to self-heal legacy auto tags down to none). The brand parameter
-// keeps the PATCHed ID within the caller's entity family.
-func (c *Client) updateMatchingAlgorithm[
+// keeps the PATCHed ID within the caller's entity family; it is a free
+// function because the format toolchain (golines) does not parse generic
+// methods even though the Go 1.27 compiler accepts them.
+func updateMatchingAlgorithm[
 	B any,
 ](
+	c *Client,
 	ctx context.Context,
 	endpoint,
 	kind,
 	name string,
-	id id.ID[B, int],
+	entityID id.ID[B, int],
 	algorithm matchingAlgorithm,
 ) error {
 	payload, err := json.Marshal(matchingAlgorithmPatch{MatchingAlgorithm: int(algorithm)})
@@ -835,7 +839,7 @@ func (c *Client) updateMatchingAlgorithm[
 	if _, reqErr := c.doRequest(
 		ctx,
 		http.MethodPatch,
-		endpoint+strconv.Itoa(id.Get())+"/",
+		endpoint+strconv.Itoa(entityID.Get())+"/",
 		"",
 		bytes.NewReader(payload),
 		"application/json",
@@ -912,7 +916,10 @@ func findByName[T any](
 
 // findNamed looks up a Paperless-ngx named object (tag, correspondent) by
 // exact (case-insensitive) name. found is false when no match exists.
-func (c *Client) findNamed[B any](
+// Free generic function: the format toolchain does not parse generic
+// methods.
+func findNamed[B any](
+	c *Client,
 	ctx context.Context,
 	endpoint, kind, name string,
 ) (namedPayload[B], bool, error) {
@@ -928,7 +935,7 @@ func (c *Client) findNamed[B any](
 // (manual scans), and correspondents carry no provenance semantics that
 // auto prediction could corrupt.
 func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (CorrespondentID, error) {
-	return c.ensureNamed[CorrespondentBrand](ctx, pathCorrespondents, "correspondent", name)
+	return ensureNamed[CorrespondentBrand](c, ctx, pathCorrespondents, "correspondent", name)
 }
 
 // EnsureDocumentType returns the ID of the document type with the given
@@ -939,7 +946,13 @@ func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (Correspo
 // configured algorithm — unlike tags there is no legacy-release shape to
 // heal, and overriding a deliberate user config would be wrong.
 func (c *Client) EnsureDocumentType(ctx context.Context, name string) (DocumentTypeID, error) {
-	existing, found, findErr := c.findNamed[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", name)
+	existing, found, findErr := findNamed[DocumentTypeBrand](
+		c,
+		ctx,
+		pathDocumentTypes,
+		"document type",
+		name,
+	)
 	if findErr != nil {
 		return DocumentTypeID{}, fmt.Errorf(
 			"find document type %q: %w",
@@ -952,7 +965,14 @@ func (c *Client) EnsureDocumentType(ctx context.Context, name string) (DocumentT
 		return existing.ID, nil
 	}
 
-	return c.createNamed[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", name, matchingAlgorithmNone)
+	return createNamed[DocumentTypeBrand](
+		c,
+		ctx,
+		pathDocumentTypes,
+		"document type",
+		name,
+		matchingAlgorithmNone,
+	)
 }
 
 // customFieldPayload mirrors one custom field definition.
@@ -1161,29 +1181,34 @@ func (c *Client) ListStoragePaths(ctx context.Context) ([]StoragePath, error) {
 // The backfill needs it to decide whether a document's existing non-null
 // correspondent actually matches the derived sender name — an ID alone
 // cannot answer that question.
-func (c *Client) GetCorrespondentName(ctx context.Context, id CorrespondentID) (string, error) {
-	return c.getNamedDetail[CorrespondentBrand](ctx, pathCorrespondents, "correspondent", id)
+func (c *Client) GetCorrespondentName(
+	ctx context.Context,
+	entityID CorrespondentID,
+) (string, error) {
+	return getNamedDetail[CorrespondentBrand](c, ctx, pathCorrespondents, "correspondent", entityID)
 }
 
 // GetDocumentTypeName resolves a document type ID to its display name, the
 // document-type sibling of GetCorrespondentName: the backfill compares the
 // stored name against the configured type to repair drifted assignments.
-func (c *Client) GetDocumentTypeName(ctx context.Context, id DocumentTypeID) (string, error) {
-	return c.getNamedDetail[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", id)
+func (c *Client) GetDocumentTypeName(ctx context.Context, entityID DocumentTypeID) (string, error) {
+	return getNamedDetail[DocumentTypeBrand](c, ctx, pathDocumentTypes, "document type", entityID)
 }
 
 // getNamedDetail fetches one named Paperless-ngx object (correspondent,
 // document type) by ID and returns its display name. The brand parameter
-// keeps the looked-up ID within the caller's entity family.
-func (c *Client) getNamedDetail[B any](
+// keeps the looked-up ID within the caller's entity family; free function
+// because the format toolchain does not parse generic methods.
+func getNamedDetail[B any](
+	c *Client,
 	ctx context.Context,
 	endpoint, kind string,
-	id id.ID[B, int],
+	entityID id.ID[B, int],
 ) (string, error) {
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodGet,
-		endpoint+strconv.Itoa(id.Get())+"/",
+		endpoint+strconv.Itoa(entityID.Get())+"/",
 		"",
 		nil,
 		"",
@@ -1192,7 +1217,7 @@ func (c *Client) getNamedDetail[B any](
 		return "", fmt.Errorf(
 			"get %s %d: %w",
 			kind,
-			id.Get(),
+			entityID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -1203,7 +1228,7 @@ func (c *Client) getNamedDetail[B any](
 			unmarshalErr,
 			"paperless.decode_"+strings.ReplaceAll(kind, " ", "_"),
 			"could not decode "+kind,
-		).WithContext("id", strconv.Itoa(id.Get()))
+		).WithContext("id", strconv.Itoa(entityID.Get()))
 	}
 
 	return detail.Name, nil
@@ -1212,9 +1237,14 @@ func (c *Client) getNamedDetail[B any](
 // ensureNamed returns the ID of the named Paperless-ngx object (tag,
 // correspondent), creating it with the "auto" matching algorithm when it
 // does not exist yet. kind names the object family for error codes,
-// messages, and log context.
-func (c *Client) ensureNamed[B any](ctx context.Context, endpoint, kind, name string) (id.ID[B, int], error) {
-	existing, found, findErr := c.findNamed[B](ctx, endpoint, kind, name)
+// messages, and log context. Free generic function: the format toolchain
+// does not parse generic methods.
+func ensureNamed[B any](
+	c *Client,
+	ctx context.Context,
+	endpoint, kind, name string,
+) (id.ID[B, int], error) {
+	existing, found, findErr := findNamed[B](c, ctx, endpoint, kind, name)
 	if findErr != nil {
 		return id.ID[B, int]{}, fmt.Errorf(
 			"find %s %q: %w",
@@ -1228,14 +1258,16 @@ func (c *Client) ensureNamed[B any](ctx context.Context, endpoint, kind, name st
 		return existing.ID, nil
 	}
 
-	return c.createNamed[B](ctx, endpoint, kind, name, matchingAlgorithmAuto)
+	return createNamed[B](c, ctx, endpoint, kind, name, matchingAlgorithmAuto)
 }
 
 // createNamed POSTs a new named object with the requested matching
-// algorithm and returns its ID.
-func (c *Client) createNamed[
+// algorithm and returns its ID. Free generic function: the format
+// toolchain does not parse generic methods.
+func createNamed[
 	B any,
 ](
+	c *Client,
 	ctx context.Context,
 	endpoint,
 	kind,
@@ -1427,7 +1459,7 @@ func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}
 type documentMetaPayload struct {
 	ID            DocumentID                `json:"id"`
 	Title         string                    `json:"title"`
-	Correspondent CorrespondentID            `json:"correspondent"`
+	Correspondent CorrespondentID           `json:"correspondent"`
 	Created       string                    `json:"created"`
 	Tags          []TagID                   `json:"tags"`
 	DocumentType  DocumentTypeID            `json:"document_type"`
@@ -2038,8 +2070,8 @@ type documentNoteUserPayload struct {
 
 // documentNotePayload mirrors the Note serializer fields the SDK relies on.
 type documentNotePayload struct {
-	ID      NoteID                    `json:"id"`
-	Note    string                    `json:"note"`
+	ID      NoteID                   `json:"id"`
+	Note    string                   `json:"note"`
 	Created time.Time                `json:"created"`
 	User    *documentNoteUserPayload `json:"user"`
 }
@@ -2079,7 +2111,10 @@ func decodeDocumentNotes(raw []byte) ([]DocumentNote, error) {
 // ListDocumentNotes returns the notes attached to one document, newest
 // first (the server's ordering). The notes endpoint is not paginated —
 // the response is a bare JSON array.
-func (c *Client) ListDocumentNotes(ctx context.Context, documentID DocumentID) ([]DocumentNote, error) {
+func (c *Client) ListDocumentNotes(
+	ctx context.Context,
+	documentID DocumentID,
+) ([]DocumentNote, error) {
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodGet,
@@ -2216,8 +2251,8 @@ type ShareLink struct {
 // on (id, created, expiration, slug, document, file_version).
 type shareLinkPayload struct {
 	ID          ShareLinkID `json:"id"`
-	Created     time.Time  `json:"created"`
-	Expiration  *time.Time `json:"expiration"`
+	Created     time.Time   `json:"created"`
+	Expiration  *time.Time  `json:"expiration"`
 	Slug        string      `json:"slug"`
 	Document    DocumentID  `json:"document"`
 	FileVersion string      `json:"file_version"`
@@ -2423,8 +2458,8 @@ type SavedView struct {
 
 // savedViewPayload mirrors the SavedView serializer's stable fields.
 type savedViewPayload struct {
-	ID              SavedViewID               `json:"id"`
-	Name            string                    `json:"name"`
+	ID              SavedViewID                  `json:"id"`
+	Name            string                       `json:"name"`
 	ShowOnDashboard bool                         `json:"show_on_dashboard"`
 	ShowInSidebar   bool                         `json:"show_in_sidebar"`
 	SortField       string                       `json:"sort_field"`

@@ -148,7 +148,10 @@ func ExampleClient_GetTask() {
 
 	ctx := context.Background()
 
-	outcome, found, err := client.GetTask(ctx, paperless.NewTaskID("0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77"))
+	outcome, found, err := client.GetTask(
+		ctx,
+		paperless.NewTaskID("0198f7a2-9d3f-7c31-b5e4-5f2a9c1d8e77"),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

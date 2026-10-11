@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/larsartmann/go-paperless"
 	id "github.com/larsartmann/go-branded-id"
+	"github.com/larsartmann/go-paperless"
 )
 
 // Route prefixes of the named-entity families the fake serves.
@@ -140,7 +140,11 @@ func (s *Server) AddTag(name string, matchingAlgorithm int) paperless.TagID {
 
 	s.nextTagID = paperless.NewTagID(s.nextTagID.Get() + 1)
 
-	entity := namedEntity[paperless.TagBrand]{ID: s.nextTagID, Name: name, MatchingAlgorithm: matchingAlgorithm}
+	entity := namedEntity[paperless.TagBrand]{
+		ID:                s.nextTagID,
+		Name:              name,
+		MatchingAlgorithm: matchingAlgorithm,
+	}
 	s.tags = append(s.tags, entity)
 
 	return entity.ID
@@ -327,11 +331,11 @@ func routeNamedFamily[B any](
 	case http.MethodGet:
 		handleNamedDetail(s, w, entityID, store)
 
-			return true
+		return true
 	case http.MethodPatch:
 		handleNamedPatch(s, w, r, entityID, store)
 
-			return true
+		return true
 	default:
 		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch)
 
@@ -341,7 +345,12 @@ func routeNamedFamily[B any](
 
 // handleNamedList serves the family's paginated list, honoring the
 // name__iexact filter the SDK's by-name lookups send.
-func handleNamedList[B any](s *Server, w http.ResponseWriter, r *http.Request, store *[]namedEntity[B]) {
+func handleNamedList[B any](
+	s *Server,
+	w http.ResponseWriter,
+	r *http.Request,
+	store *[]namedEntity[B],
+) {
 	filter := r.URL.Query().Get("name__iexact")
 
 	s.mu.Lock()
@@ -388,7 +397,7 @@ func handleNamedCreate[B any](
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	*nextID = id.NewID[B]((*nextID).Get()+1)
+	*nextID = id.NewID[B]((*nextID).Get() + 1)
 	payload.ID = *nextID
 
 	*store = append(*store, namedEntity[B](payload))
@@ -397,7 +406,12 @@ func handleNamedCreate[B any](
 }
 
 // handleNamedDetail serves one named object's payload by ID.
-func handleNamedDetail[B any](s *Server, w http.ResponseWriter, entityID id.ID[B, int], store *[]namedEntity[B]) {
+func handleNamedDetail[B any](
+	s *Server,
+	w http.ResponseWriter,
+	entityID id.ID[B, int],
+	store *[]namedEntity[B],
+) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -491,8 +505,8 @@ func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-	s.nextCustomFieldID = paperless.NewCustomFieldID(s.nextCustomFieldID.Get() + 1)
-	payload.ID = s.nextCustomFieldID
+		s.nextCustomFieldID = paperless.NewCustomFieldID(s.nextCustomFieldID.Get() + 1)
+		payload.ID = s.nextCustomFieldID
 
 		if payload.DataType == "" {
 			payload.DataType = "string"
@@ -558,9 +572,9 @@ func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-	s.nextStoragePathID = paperless.NewStoragePathID(s.nextStoragePathID.Get() + 1)
-	payload.ID = s.nextStoragePathID
-	payload.Slug = fmt.Sprintf("path-%d", payload.ID.Get())
+		s.nextStoragePathID = paperless.NewStoragePathID(s.nextStoragePathID.Get() + 1)
+		payload.ID = s.nextStoragePathID
+		payload.Slug = fmt.Sprintf("path-%d", payload.ID.Get())
 
 		s.storagePaths = append(s.storagePaths, storagePathEntity(payload))
 

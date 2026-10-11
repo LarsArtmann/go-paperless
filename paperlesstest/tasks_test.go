@@ -114,7 +114,10 @@ func TestTaskPollUnknownTaskAnswersNotFound(t *testing.T) {
 
 	server := NewServer(t)
 
-	outcome, found, err := newTestClient(t, server).GetTask(context.Background(), paperless.NewTaskID("task-missing"))
+	outcome, found, err := newTestClient(
+		t,
+		server,
+	).GetTask(context.Background(), paperless.NewTaskID("task-missing"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -140,7 +143,9 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 		CorrespondentID: paperless.NewCorrespondentID(7),
 		TagIDs:          []paperless.TagID{paperless.NewTagID(2), paperless.NewTagID(4)},
 		DocumentTypeID:  paperless.NewDocumentTypeID(3),
-		CustomFields:    []paperless.CustomFieldValue{{Field: paperless.NewCustomFieldID(8), Value: "msg-99"}},
+		CustomFields: []paperless.CustomFieldValue{
+			{Field: paperless.NewCustomFieldID(8), Value: "msg-99"},
+		},
 	})
 	if err != nil {
 		t.Fatalf("Upload: %v", err)
@@ -179,7 +184,8 @@ func TestUploadAppliesFormMetadata(t *testing.T) {
 	}
 
 	meta := metas[0]
-	if meta.Title != "The Letter" || meta.Correspondent.Get() != 7 || meta.DocumentTypeID.Get() != 3 {
+	if meta.Title != "The Letter" || meta.Correspondent.Get() != 7 ||
+		meta.DocumentTypeID.Get() != 3 {
 		t.Errorf("stored meta = %+v, want title The Letter, correspondent 7, type 3", meta)
 	}
 

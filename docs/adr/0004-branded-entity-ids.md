@@ -49,8 +49,11 @@ IDs only.
 - **The named-entity plumbing is generic over the brand**:
   `findNamed[B]`, `ensureNamed[B]`, `createNamed[B]`,
   `updateMatchingAlgorithm[B]`, `getNamedDetail[B]`, and the payload
-  `namedPayload[B]` — one body, three families, distinct ID types.
-  (Go 1.27 methods accept type parameters; this codebase verified it.)
+  `namedPayload[B]` — one body, three families, distinct ID types. They
+  are FREE functions taking `*Client` even though the Go 1.27 compiler
+  accepts type-parameterized methods: the format toolchain (golines,
+  via treefmt/`nix fmt`) parses with an older grammar and fails the
+  pipeline on generic methods.
 - **paperlesstest shares the SDK's ID vocabulary.** Its non-test files
   import the root `paperless` package for the ID types (fixtures,
   counters, handlers) so a fake `Document.ID` compares equal to a

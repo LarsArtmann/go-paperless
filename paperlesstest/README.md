@@ -1,9 +1,14 @@
 # paperlesstest
 
 A stateful in-memory fake of the Paperless-ngx REST API (API version 10)
-for consumer tests. Standard-library-only: it never imports `paperless` or
-any third-party module, so adding it to your tests keeps your `go.mod`
-graph untouched.
+for consumer tests. Beyond the standard library it imports only the root
+`paperless` package's branded ID types (ADR 0004) — fixtures and
+introspection speak the same `DocumentID`/`TagID`/… vocabulary the SDK
+returns, so fake state compares equal to SDK results without conversions.
+No SDK logic is reused, the wire protocol stays this package's source of
+truth, and the ID types' only dependency (`go-branded-id`, zero deps) is
+already required by the SDK itself — your `go.mod` graph gains nothing
+new.
 
 Every route the fake serves is exercised round-trip through the real
 `paperless.Client` inside this module, and an endpoint-coverage test fails

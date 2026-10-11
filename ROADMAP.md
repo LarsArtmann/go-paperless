@@ -46,11 +46,14 @@ Raw ideas:
   consumer needs editing
 - Capability-probe caching — `ProbeCapabilities` performs a full documents
   request per call today; probe once per client lifetime if consumers feel it
-- Typed public fields (phantom/branded types for `Slug`, `Checksum`,
+- Typed public STRING fields (phantom types for `Slug`, `Checksum`,
   `SortField`, ... — the branching-flow analyzer's PHANTOM_TYPE suggestions).
-  Breaking API change: bank-sync consumes this as a drop-in replacement, so a
-  typed-field migration is v2 scope at the earliest. branching-flow is
-  skipped in `.buildflow.yml` until then (rationale there).
+  The ID half shipped in v0.5.0 (ADR 0004, branded entity IDs via
+  go-branded-id); what remains is the string half. Breaking API change:
+  bank-sync consumes this as a drop-in replacement, so a string-phantom
+  migration is v2 scope at the earliest. branching-flow stays skipped in
+  `.buildflow.yml` until then (rationale there; its strong-id analysis
+  already gates at zero).
 
 ### 3. Confidence
 

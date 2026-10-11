@@ -98,7 +98,7 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 		Content:        []byte("%PDF-invoice"),
 		Created:        created,
 		Correspondent:  paperless.NewCorrespondentID(12),
-		TagIDs:          []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)},
+		TagIDs:         []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)},
 		DocumentTypeID: paperless.NewDocumentTypeID(5),
 		CustomFields:   []CustomFieldValue{{Field: paperless.NewCustomFieldID(2), Value: "msg-42"}},
 	})
@@ -121,7 +121,11 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 		t.Errorf("created = %v, want %v", meta.Created, created)
 	}
 
-	if !slices.Equal(meta.TagIDs, []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)}) || meta.DocumentTypeID.Get() != 5 {
+	if !slices.Equal(
+		meta.TagIDs,
+		[]paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)},
+	) ||
+		meta.DocumentTypeID.Get() != 5 {
 		t.Errorf("tags/type = %v/%d, want [3 9]/5", meta.TagIDs, meta.DocumentTypeID)
 	}
 

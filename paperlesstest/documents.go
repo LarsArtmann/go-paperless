@@ -139,13 +139,13 @@ func (s *Server) appendDocumentLocked(doc Document) *Document {
 // checksum fields follow the server's ChecksumShape: flat field
 // (pre-3.x) or versions[] array (3.x) — never both.
 type documentWire struct {
-	ID            paperless.DocumentID        `json:"id"`
-	Title         string                      `json:"title"`
-	Correspondent paperless.CorrespondentID   `json:"correspondent"`
-	Created       string                      `json:"created"`
-	Tags          []paperless.TagID           `json:"tags"`
-	DocumentType  paperless.DocumentTypeID    `json:"document_type"`
-	CustomFields  []CustomFieldValue          `json:"custom_fields"`
+	ID            paperless.DocumentID      `json:"id"`
+	Title         string                    `json:"title"`
+	Correspondent paperless.CorrespondentID `json:"correspondent"`
+	Created       string                    `json:"created"`
+	Tags          []paperless.TagID         `json:"tags"`
+	DocumentType  paperless.DocumentTypeID  `json:"document_type"`
+	CustomFields  []CustomFieldValue        `json:"custom_fields"`
 	// Checksum is the flat legacy checksum field; omitted in the versions[]
 	// shape (paperless-ngx 3.x removed it from the serializer).
 	Checksum string `json:"checksum,omitempty"`
@@ -367,7 +367,11 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 }
 
 // routeDocumentByID serves the PATCH/GET/DELETE surface of one document.
-func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) bool {
+func (s *Server) routeDocumentByID(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) bool {
 	switch r.Method {
 	case http.MethodPatch:
 		s.handleDocumentPatch(w, r, id)
@@ -390,7 +394,11 @@ func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id pa
 
 // routeDocumentNotes serves one document's notes routes under the fake's
 // lock (the notes handlers read the document store directly).
-func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) bool {
+func (s *Server) routeDocumentNotes(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -403,7 +411,11 @@ func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id p
 
 // handleDocumentPatch applies and records one metadata patch. The caller
 // must not hold s.mu.
-func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) {
+func (s *Server) handleDocumentPatch(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) {
 	raw := readBody(r)
 
 	var patch documentUpdateWire

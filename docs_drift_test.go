@@ -177,11 +177,13 @@ func calledName(fun ast.Expr) string {
 }
 
 // kindArgumentPosition maps each kind-parameterized helper to the index of
-// its kind/resource parameter (0-based, after the receiver).
+// its kind/resource parameter (0-based). The named-entity helpers are free
+// generic functions taking (c *Client, ctx, endpoint, kind, ...); fetchAllPages
+// keeps its (ctx, c, path, resource) shape.
 func kindArgumentPosition(callee string) int {
 	switch callee {
 	case "findNamed", "ensureNamed", "createNamed", "getNamedDetail", "updateMatchingAlgorithm":
-		return 2
+		return 3
 	case "fetchAllPages":
 		return 3
 	default:

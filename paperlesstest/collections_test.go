@@ -60,7 +60,10 @@ func TestNotesOnUnknownDocumentAnswer404(t *testing.T) {
 
 	server := NewServer(t)
 
-	if _, err := newTestClient(t, server).ListDocumentNotes(context.Background(), paperless.NewDocumentID(99)); err == nil {
+	if _, err := newTestClient(
+		t,
+		server,
+	).ListDocumentNotes(context.Background(), paperless.NewDocumentID(99)); err == nil {
 		t.Error("ListDocumentNotes on unknown document = nil error, want a client rejection")
 	}
 }
@@ -91,7 +94,10 @@ func TestShareLinksRoundTrip(t *testing.T) {
 		t.Errorf("expiration = %v, want %v", link.Expiration, expiration)
 	}
 
-	defaultLink, err := client.CreateShareLink(ctx, paperless.CreateShareLinkRequest{DocumentID: paperless.NewDocumentID(1)})
+	defaultLink, err := client.CreateShareLink(
+		ctx,
+		paperless.CreateShareLinkRequest{DocumentID: paperless.NewDocumentID(1)},
+	)
 	if err != nil {
 		t.Fatalf("CreateShareLink default: %v", err)
 	}

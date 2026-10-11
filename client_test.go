@@ -1032,7 +1032,7 @@ func TestUpdateDocumentSendsPatchBody(t *testing.T) {
 		Title:           &title,
 		CorrespondentID: &correspondent,
 		Created:         &created,
-		TagIDs:   []TagID{NewTagID(1)},
+		TagIDs:          []TagID{NewTagID(1)},
 	})
 	if err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
@@ -1127,7 +1127,11 @@ func TestUpdateDocumentRejectsEmptyRequest(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := client.UpdateDocument(t.Context(), NewDocumentID(1), UpdateDocumentRequest{}); err == nil {
+	if err := client.UpdateDocument(
+		t.Context(),
+		NewDocumentID(1),
+		UpdateDocumentRequest{},
+	); err == nil {
 		t.Fatal("expected rejection for empty update request")
 	}
 }
@@ -2395,13 +2399,17 @@ func TestTaskOutcomeDuplicateReportsRefusalDetails(t *testing.T) {
 		},
 		{
 			name:        "refused duplicate",
-			outcome: TaskOutcome{DuplicateRefused: true, DocumentID: NewDocumentID(7)},
+			outcome:     TaskOutcome{DuplicateRefused: true, DocumentID: NewDocumentID(7)},
 			wantID:      NewDocumentID(7),
 			wantRefused: true,
 		},
 		{
-			name:        "refused duplicate in trash",
-			outcome: TaskOutcome{DuplicateRefused: true, DuplicateInTrash: true, DocumentID: NewDocumentID(9)},
+			name: "refused duplicate in trash",
+			outcome: TaskOutcome{
+				DuplicateRefused: true,
+				DuplicateInTrash: true,
+				DocumentID:       NewDocumentID(9),
+			},
 			wantID:      NewDocumentID(9),
 			wantInTrash: true,
 			wantRefused: true,
@@ -4025,7 +4033,7 @@ func TestWriteUploadMetadataFieldFailuresCarryCodedErrors(t *testing.T) {
 		},
 		{
 			name:     "tags",
-			req:      UploadRequest{TagIDs:   []TagID{NewTagID(3)}},
+			req:      UploadRequest{TagIDs: []TagID{NewTagID(3)}},
 			wantCode: "paperless.write_tags",
 		},
 		{
@@ -4067,7 +4075,10 @@ func TestWriteCustomFieldsFieldWriteFailureCarriesCodedError(t *testing.T) {
 
 	writer := multipart.NewWriter(failingPartWriter{})
 
-	err := writeCustomFieldsField(writer, []CustomFieldValue{{Field: NewCustomFieldID(1), Value: "gmail-msg-42"}})
+	err := writeCustomFieldsField(
+		writer,
+		[]CustomFieldValue{{Field: NewCustomFieldID(1), Value: "gmail-msg-42"}},
+	)
 	if err == nil {
 		t.Fatal("expected a write failure against the closed writer")
 	}

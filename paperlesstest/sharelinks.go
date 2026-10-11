@@ -25,11 +25,11 @@ type shareLinkEntity struct {
 // shareLinkWire mirrors the ShareLink serializer fields the SDK relies on.
 type shareLinkWire struct {
 	ID          paperless.ShareLinkID `json:"id"`
-	Created     time.Time            `json:"created"`
-	Expiration  *time.Time           `json:"expiration"`
-	Slug        string               `json:"slug"`
-	Document    paperless.DocumentID `json:"document"`
-	FileVersion string               `json:"file_version"`
+	Created     time.Time             `json:"created"`
+	Expiration  *time.Time            `json:"expiration"`
+	Slug        string                `json:"slug"`
+	Document    paperless.DocumentID  `json:"document"`
+	FileVersion string                `json:"file_version"`
 }
 
 // shareLinkCreateWire mirrors the POST body: the server generates the slug

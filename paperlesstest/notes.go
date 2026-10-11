@@ -29,9 +29,9 @@ type noteWire struct {
 // noteUserWire mirrors the BasicUserSerializer the notes endpoint embeds.
 type noteUserWire struct {
 	ID        paperless.UserID `json:"id"`
-	Username  string          `json:"username"`
-	FirstName string          `json:"first_name"`
-	LastName  string          `json:"last_name"`
+	Username  string           `json:"username"`
+	FirstName string           `json:"first_name"`
+	LastName  string           `json:"last_name"`
 }
 
 // defaultNoteUser is the fixed author the fake attaches to every note (a
