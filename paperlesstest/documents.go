@@ -240,7 +240,10 @@ func pageBounds(r *http.Request, total int) (int, int) {
 		size = parsed
 	}
 
-	start := min((page-1)*size, total)
+	start := (page - 1) * size
+	if start < 0 || start > total {
+		start = total
+	}
 
 	return start, min(start+size, total)
 }

@@ -292,30 +292,11 @@ func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 // document), anything else is consumed — the upload becomes a stored
 // document carrying its form metadata. The caller must hold s.mu.
 func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
-	checksum := ChecksumOf(upload.Content)
-
-	for _, doc := range s.documents {
-		if doc.Checksum == checksum {
-			return TaskPlan{Kind: TaskPlanDuplicate, DocumentID: doc.ID}
-		}
+	if duplicate := s.existingDuplicateLocked(upload); duplicate != nil {
+		return TaskPlan{Kind: TaskPlanDuplicate, DocumentID: duplicate.ID}
 	}
 
-	stored := s.appendDocumentLocked(Document{
-		Title:    consumptionTitle(upload),
-		Content:  upload.Content,
-		Checksum: checksum,
-		//nolint:branching-flow // upload form-field wire string parsed at the boundary
-		Created: parseUploadDate(upload.Created),
-		//nolint:branching-flow // upload form-field wire string parsed at the boundary
-		Correspondent: paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
-		TagIDs:        atoiSlice(upload.Tags),
-		//nolint:branching-flow // upload form-field wire string parsed at the boundary
-		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)),
-		//nolint:branching-flow // upload form-field wire string parsed at the boundary
-		CustomFields: parseCustomFieldsJSON(upload.CustomFields),
-	})
-
-	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: stored.ID}
+	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: s.storeConsumedLocked(upload).ID}
 }
 
 // resolveConsumptionLocked resolves one upload's content to a document ID:
@@ -323,18 +304,34 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 // stored (carrying its form metadata) and maps to the new document. The
 // caller must hold s.mu.
 func (s *Server) resolveConsumptionLocked(upload Upload) paperless.DocumentID {
+	if duplicate := s.existingDuplicateLocked(upload); duplicate != nil {
+		return duplicate.ID
+	}
+
+	return s.storeConsumedLocked(upload).ID
+}
+
+// existingDuplicateLocked finds the stored document sharing the upload's
+// content checksum, or nil. The caller must hold s.mu.
+func (s *Server) existingDuplicateLocked(upload Upload) *Document {
 	checksum := ChecksumOf(upload.Content)
 
 	for _, doc := range s.documents {
 		if doc.Checksum == checksum {
-			return doc.ID
+			return doc
 		}
 	}
 
-	stored := s.appendDocumentLocked(Document{
+	return nil
+}
+
+// storeConsumedLocked stores the upload as a consumed document carrying its
+// form metadata. The caller must hold s.mu.
+func (s *Server) storeConsumedLocked(upload Upload) *Document {
+	return s.appendDocumentLocked(Document{
 		Title:    consumptionTitle(upload),
 		Content:  upload.Content,
-		Checksum: checksum,
+		Checksum: ChecksumOf(upload.Content),
 		//nolint:branching-flow // upload form-field wire string parsed at the boundary
 		Created: parseUploadDate(upload.Created),
 		//nolint:branching-flow // upload form-field wire string parsed at the boundary
@@ -345,8 +342,6 @@ func (s *Server) resolveConsumptionLocked(upload Upload) paperless.DocumentID {
 		//nolint:branching-flow // upload form-field wire string parsed at the boundary
 		CustomFields: parseCustomFieldsJSON(upload.CustomFields),
 	})
-
-	return stored.ID
 }
 
 // popScriptLocked removes and returns the next scripted plan, or nil when

@@ -192,14 +192,14 @@ type RetryPolicy struct {
 	// Zero selects DefaultRetryMaxAttempts; negative values are rejected by
 	// New with ErrInvalidConfig.
 	MaxAttempts int
-	// InitialDelay is the pause before the second attempt. Zero selects
-	// DefaultRetryInitialDelay.
+	// InitialDelay is the pause before the second attempt. Zero (or
+	// negative) selects DefaultRetryInitialDelay.
 	InitialDelay time.Duration
-	// MaxDelay caps the backoff between attempts. Zero selects
-	// DefaultRetryMaxDelay.
+	// MaxDelay caps the backoff between attempts. Zero (or negative)
+	// selects DefaultRetryMaxDelay.
 	MaxDelay time.Duration
-	// Multiplier is the exponential backoff factor. Zero selects
-	// DefaultRetryMultiplier.
+	// Multiplier is the exponential backoff factor. Zero (or negative)
+	// selects DefaultRetryMultiplier.
 	Multiplier float64
 }
 
@@ -895,8 +895,8 @@ type matchingAlgorithmPatch struct {
 // can add their own context; decode failures are wrapped as corruption with
 // a kind-derived code ("paperless.decode_<kind with underscores>s").
 func findByName[T any](
-	ctx context.Context,
 	c *Client,
+	ctx context.Context,
 	endpoint, kind, name string,
 ) (T, bool, error) {
 	var zero T
@@ -938,7 +938,7 @@ func findNamed[B any](
 	ctx context.Context,
 	endpoint, kind, name string,
 ) (namedPayload[B], bool, error) {
-	return findByName[namedPayload[B]](ctx, client, endpoint, kind, name)
+	return findByName[namedPayload[B]](client, ctx, endpoint, kind, name)
 }
 
 // EnsureCorrespondent returns the ID of the correspondent with the given
@@ -1002,8 +1002,8 @@ type customFieldPayload struct {
 // backfills to report what they would record without mutating the server.
 func (c *Client) FindCustomField(ctx context.Context, name string) (CustomFieldID, bool, error) {
 	field, found, err := findByName[customFieldPayload](
-		ctx,
 		c,
+		ctx,
 		pathCustomFields,
 		"custom field",
 		name,
@@ -1103,14 +1103,18 @@ type storagePathPayload struct {
 // WITHOUT creating it — the read-only lookup for dry-run reporting.
 func (c *Client) FindStoragePath(ctx context.Context, name string) (StoragePathID, bool, error) {
 	path, found, err := findByName[storagePathPayload](
-		ctx,
 		c,
+		ctx,
 		pathStoragePaths,
 		"storage path",
 		name,
 	)
 	if err != nil {
-		return StoragePathID{}, false, err
+		return StoragePathID{}, false, fmt.Errorf(
+			"find storage path %q: %w",
+			name,
+			err,
+		) //nolint:erraudit // keeps inner code+family
 	}
 
 	if !found {
