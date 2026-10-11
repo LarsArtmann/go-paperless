@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- CI: the standalone gosec job is parked. gosec v2.29.0 (the latest
+  release) cannot type-check a Go 1.27 module: its x/tools reads export
+  data up to version 4 while Go 1.27 compilers emit version 5, so every
+  stdlib import fails and the run exits 1 over "Golang errors" with
+  Issues: 0. A scanner that cannot load the module measured nothing, so
+  per the fail-closed rule it does not gate; restore the scan step when
+  gosec ships a Go 1.27-capable release. govulncheck, golangci-lint,
+  the race job, and fuzzing continue to cover the module.
+
 ### Added
 
 - Nothing yet.

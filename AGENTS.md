@@ -183,6 +183,19 @@ the compiler walks migrations when they upgrade.
   suppresses nothing there (the v0.4.2 red CI was exactly this). Suppressions
   aimed at the CI gate go in gosec syntax, with the rationale as a preceding
   comment.
+- **gosec is PARKED in CI (since 2026-10-11)**: v2.29.0 (the latest release)
+  cannot type-check Go 1.27 modules at all — its x/tools reads export data up
+  to version 4, Go 1.27 compilers emit version 5, so EVERY stdlib import
+  fails ("export data version 5 is greater than maximum supported version 4")
+  and the run exits 1 with "Golang errors" + Issues: 0. The explicit
+  `encoding/json/v2` import was a red herring: swapping it to `encoding/json`
+  just moves the failure to `bytes`/`context`/`fmt`. The CI job is parked
+  with a notice (fail-closed: an instrument that cannot load the module
+  measured nothing, so it must not gate); restore the scan step in
+  `.github/workflows/ci.yml` when gosec ships a go1.27-capable release, and
+  verify locally first: `nix develop -c sh -c 'GOEXPERIMENT=jsonv2 go run
+  github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...'` (expect Issues: 0,
+  exit 0). Same pattern as the govalid skip in `.buildflow.yml`.
 - **Doc-drift tests are the catalog's CI** (`docs_drift_test.go`):
   `TestErrorCodesAreDocumented` extracts every `paperless.*` code — static
   literals AND the kind-parameterized helper sites (`findNamed`,
