@@ -304,11 +304,11 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 		Title:          consumptionTitle(upload),
 		Content:        upload.Content,
 		Checksum:       checksum,
-		Created:        parseUploadDate(upload.Created),
-		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
+		Created:        parseUploadDate(upload.Created), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)),
-		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
+		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		CustomFields:   parseCustomFieldsJSON(upload.CustomFields), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 	})
 
 	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: stored.ID}
@@ -331,11 +331,11 @@ func (s *Server) resolveConsumptionLocked(upload Upload) paperless.DocumentID {
 		Title:          consumptionTitle(upload),
 		Content:        upload.Content,
 		Checksum:       checksum,
-		Created:        parseUploadDate(upload.Created),
-		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
+		Created:        parseUploadDate(upload.Created), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)),
-		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
+		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)), //nolint:branching-flow // upload form-field wire string parsed at the boundary
+		CustomFields:   parseCustomFieldsJSON(upload.CustomFields), //nolint:branching-flow // upload form-field wire string parsed at the boundary
 	})
 
 	return stored.ID

@@ -166,7 +166,7 @@ func (s *Server) AddDocumentType(name string, matchingAlgorithm int) paperless.D
 }
 
 // AddCustomField stores one custom-field definition and returns its ID.
-func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID {
+func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID { //nolint:branching-flow // distinct concepts (label vs serializer type tag); branded params are the ROADMAP v2 typed-API scope
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -179,7 +179,7 @@ func (s *Server) AddCustomField(name, dataType string) paperless.CustomFieldID {
 }
 
 // AddStoragePath stores one storage path definition and returns its ID.
-func (s *Server) AddStoragePath(name, path string) paperless.StoragePathID {
+func (s *Server) AddStoragePath(name, path string) paperless.StoragePathID { //nolint:branching-flow // distinct concepts (label vs directory template); branded params are the ROADMAP v2 typed-API scope
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
