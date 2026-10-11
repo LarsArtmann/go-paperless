@@ -5,6 +5,7 @@ timestamp — re-verify claims against current code before acting on them.
 
 | Date       | Report                                                                                                          | Scope                                 |
 | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 2026-10-11 | [Full code review](2026-10-11_06-10_full-code-review.html)                                                      | File-by-file manual review            |
 | 2026-09-13 | [Code-quality scan](2026-09-13_18-05_code-quality-scan.html)                                                    | Automated build/lint/duplication scan |
 | 2026-09-13 | [Full code review](2026-09-13_18-05_full-code-review.html)                                                      | File-by-file manual review            |
 | 2026-09-13 | [Brutal self-review](2026-09-13_18-05_brutal-self-review.html)                                                  | Honest gap analysis + 50 next tasks   |

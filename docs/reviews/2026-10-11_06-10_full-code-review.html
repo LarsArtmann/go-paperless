@@ -825,208 +825,376 @@
       }
     </style>
   </head>
-  <body>
-    <!-- Full-bleed top bar (optional — remove for quieter reports) -->
+      <!-- Full-bleed top bar -->
     <div class="top-bar">
-      <span>REPORT TYPE</span>
-      <span>YYYY-MM-DD</span>
-      <span>AUTHOR / TEAM</span>
+      <span>FULL CODE REVIEW</span>
+      <span>2026-10-11</span>
+      <span>go-paperless &middot; episode 2</span>
     </div>
 
     <div class="layout">
-      <!-- Sidebar TOC (hidden below 1024px; use inline .toc if you prefer) -->
+      <!-- Sidebar TOC -->
       <aside class="sidebar" data-nav>
         <nav>
           <div class="label">Contents</div>
           <a href="#summary">Summary</a>
-          <a href="#findings">Findings</a>
-          <a href="#issues">Issue Cards</a>
-          <a href="#proposal">Proposal</a>
-          <a href="#plan">Plan</a>
+          <a href="#findings">Fixed On the Spot</a>
+          <a href="#kept">Kept, With Reasons</a>
+          <a href="#strengths">Preserved Strengths</a>
+          <a href="#series">Series</a>
         </nav>
       </aside>
 
       <main class="main">
         <!-- Hero -->
         <div class="hero">
-          <!-- Optional Bauhaus signature: geometric shape cluster. Remove for quieter hero. -->
           <div class="hero-shapes">
             <div class="circle"></div>
             <div class="square"></div>
             <div class="tri"></div>
           </div>
-          <div class="hero-badge">Report Type</div>
-          <h1>Report Title</h1>
+          <div class="hero-badge">Full Code Review</div>
+          <h1>Every File, Reviewed Again</h1>
           <p class="hero-subtitle">
-            One-sentence description of what this report covers.
+            File-by-file architect review of all 37 first-party files (12,926
+            lines) after the branching-flow triage drove the automated scanner
+            to zero. This pass found what scanners structurally cannot: a hole
+            in the error-code drift guard, a duplicated consumption path in the
+            fake, and five smaller honesty/consistency gaps — all fixed on the
+            spot behind a green gate.
           </p>
         </div>
-
-        <!-- Inline TOC (alternative to sidebar; pick one) -->
-        <nav class="toc">
-          <h3>Contents</h3>
-          <ul>
-            <li><a href="#summary">Summary</a></li>
-            <li><a href="#findings">Findings</a></li>
-            <li><a href="#issues">Issue Cards</a></li>
-            <li><a href="#proposal">Proposal</a></li>
-            <li><a href="#plan">Plan</a></li>
-          </ul>
-        </nav>
 
         <!-- Stats Dashboard -->
         <h2 id="summary"><span class="num">00</span>Summary</h2>
         <div class="stat-grid">
           <div class="stat-card">
-            <div class="stat-value">42</div>
-            <div class="stat-label">Total Items</div>
+            <div class="stat-value">37</div>
+            <div class="stat-label">Files visited (100%)</div>
           </div>
-          <div class="stat-card stat-bad">
+          <div class="stat-card">
             <div class="stat-value">7</div>
-            <div class="stat-label">Critical</div>
+            <div class="stat-label">Fixed on the spot</div>
           </div>
           <div class="stat-card stat-warn">
-            <div class="stat-value">12</div>
-            <div class="stat-label">Warnings</div>
+            <div class="stat-value">7</div>
+            <div class="stat-label">Kept, with reasons</div>
           </div>
           <div class="stat-card stat-good">
-            <div class="stat-value">35</div>
-            <div class="stat-label">Resolved</div>
+            <div class="stat-value">0</div>
+            <div class="stat-label">Blockers / branching-flow findings</div>
           </div>
         </div>
 
-        <!-- Findings as Cards -->
-        <h2 id="findings"><span class="num">01</span>Findings</h2>
-
-        <div class="card card-problem">
-          <h4>Critical Issue</h4>
-          <p>Description of the problem and its impact.</p>
+        <div class="card">
+          <h4>Starting state and method</h4>
+          <p>
+            Git clean; branching-flow v0.6.4 at zero findings; prior episode
+            2026-09-13 closed with 11 fixes. This review re-read every file:
+            client.go (2,671), ids.go, the whole paperlesstest fake (10 source
+            + 10 test files), all five root test files, and the tooling
+            perimeter (golangci, branching-flow, buildflow, CI, dependabot,
+            flake.nix). Every fix was gated with <code>nix fmt</code>,
+            <code>nix run .#check</code>, <code>.#test</code>,
+            <code>.#test-race</code>, and <code>.#lint</code> (0 issues), and
+            branching-flow re-verified at zero afterwards. The public API
+            surface is byte-for-byte unchanged — only an unexported helper's
+            parameter order and one error message gained context.
+          </p>
         </div>
 
-        <div class="card card-solution">
-          <h4>Recommended Fix</h4>
-          <p>Description of the solution with rationale.</p>
-        </div>
-
-        <!-- Issue Cards -->
-        <h2 id="issues"><span class="num">02</span>Issue Cards</h2>
+        <!-- Findings -->
+        <h2 id="findings"><span class="num">01</span>Fixed On the Spot</h2>
 
         <div class="issue issue-critical">
-          <span class="severity severity-critical">Blocking</span>
-          <h3>Critical finding title</h3>
-          <div class="where">path/to/file.go:42-58</div>
+          <span class="severity severity-critical">Fixed &middot; drift-guard hole</span>
+          <h3>Error-code drift test could not see findByName's codes</h3>
+          <div class="where">docs_drift_test.go:142-192</div>
           <p>
-            Describe the problem and cite the code or behavior that proves it.
+            The catalog test's promise is that every paperless.* code the SDK
+            can emit needs a docs/ERROR_CODES.md row. findByName constructs
+            <code>paperless.decode_&lt;kind&gt;s</code> from its kind argument,
+            but was absent from kindArgumentPosition — so the codes it emits
+            (decode_custom_fields, decode_storage_paths) survived in the
+            catalog only because a human added them. A future by-name finder
+            would have shipped an undocumented error code, defeating the
+            guard's exact purpose.
           </p>
           <div class="callout callout-solution">
             <strong>Fix</strong>
-            State the concrete recommended action.
+            Added findByName to the tracked helpers (kind at index 3) with an
+            appendDynamicCodes case; all existing literal call sites resolve to
+            catalog rows, so the suite stays green while the hole is closed.
           </div>
         </div>
 
         <div class="issue issue-important">
-          <span class="severity severity-important">Important</span>
-          <h3>Important finding title</h3>
-          <div class="where">path/to/another.go:12-19</div>
+          <span class="severity severity-important">Fixed &middot; duplication</span>
+          <h3>Fake's consumption path stored uploads twice, verbatim</h3>
+          <div class="where">paperlesstest/tasks.go:290-350</div>
           <p>
-            Explain the risk and why a careful reviewer would hesitate before
-            shipping.
+            naturalPlanLocked and resolveConsumptionLocked each carried an
+            identical 14-line appendDocumentLocked block — five
+            //nolint:branching-flow directives duplicated with them. Unlike the
+            accepted art-dupl pairs, this clone had no disposition marker; any
+            future form-field change had to be made twice or the two natural
+            paths would silently diverge.
           </p>
-        </div>
-
-        <div class="issue issue-nice">
-          <span class="severity severity-nice">Nice to have</span>
-          <h3>Polish suggestion</h3>
-          <div class="where">docs/ or config</div>
-          <p>
-            Minor documentation gaps or future-proofing suggestions go here.
-          </p>
-        </div>
-
-        <!-- Strengths -->
-        <h2>Strengths</h2>
-        <div class="strengths">
-          <div class="strength">
-            <div class="check">+</div>
-            <div class="text">
-              <strong>Specific strength</strong>
-              <span>Explain why it matters and what it enables.</span>
-            </div>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            Extracted existingDuplicateLocked and storeConsumedLocked; both
+            helpers keep their names and signatures, each body is now four
+            lines. Behavior identical (round-trip suite green).
           </div>
         </div>
 
-        <!-- Table with Badges -->
-        <h2>Issue Table</h2>
+        <div class="issue issue-important">
+          <span class="severity severity-important">Fixed &middot; error UX inconsistency</span>
+          <h3>FindStoragePath dropped the lookup name from failures</h3>
+          <div class="where">client.go:1104-1121 (vs FindCustomField:1003-1024)</div>
+          <p>
+            Its sibling FindCustomField wraps lookup failures as
+            <code>find custom field %q: %w</code>; FindStoragePath returned the
+            classified error bare, so a failing request never named what was
+            being looked up — weaker diagnostics for the same call shape.
+          </p>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            Wrapped with the same context pattern (coded inner error preserved
+            per ADR 0002; nolint:erraudit annotation added).
+          </div>
+        </div>
+
+        <div class="issue issue-nice">
+          <span class="severity severity-nice">Fixed &middot; robustness</span>
+          <h3>pageBounds could panic on an absurd page number</h3>
+          <div class="where">paperlesstest/documents.go:230-249</div>
+          <p>
+            (page-1)*size overflows int64 for page &asymp; 1e17, wrapping
+            negative; the negative slice offset would panic inside the fake and
+            fail a consumer's test with a stack trace instead of an empty page.
+          </p>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            Clamp: negative or beyond-total offsets become an empty page. No
+            behavior change for sane inputs (min() already handled those).
+          </div>
+        </div>
+
+        <div class="issue issue-nice">
+          <span class="severity severity-nice">Fixed &middot; consistency + doc honesty</span>
+          <h3>findByName took (ctx, client); RetryPolicy docs undersold negatives</h3>
+          <div class="where">client.go:195-203, 897</div>
+          <p>
+            findByName was the only helper taking (ctx, c) where every sibling
+            takes (client, ctx) — and the RetryPolicy field docs said "Zero
+            selects the default" while the implementation selects defaults for
+            anything &le; 0 (only MaxAttempts rejects negatives, which its doc
+            does state).
+          </p>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            Parameter order normalized across the three call sites; docs now
+            say "Zero (or negative) selects…" for InitialDelay, MaxDelay, and
+            Multiplier.
+          </div>
+        </div>
+
+        <div class="issue issue-nice">
+          <span class="severity severity-nice">Fixed &middot; doc drift</span>
+          <h3>.buildflow.yml described a branching-flow state from two days ago</h3>
+          <div class="where">.buildflow.yml:13-16</div>
+          <p>
+            The skip-step comment still claimed "~112 findings at warning/info"
+            from the pre-triage state; since the 2026-10-11 triage the tool
+            runs at zero active findings with a documented suppression
+            inventory.
+          </p>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            Comment rewritten to the triage outcome with a pointer to the
+            triage report.
+          </div>
+        </div>
+
+        <!-- Kept -->
+        <h2 id="kept"><span class="num">02</span>Kept, With Reasons</h2>
+
+        <div class="card card-warning">
+          <h4>Deliberate shapes this review chose not to disturb</h4>
+          <p>
+            Each item below was inspected, judged, and left in place — either
+            because it is correct as-is, or because "fixing" it would break the
+            compatibility contract or trade a real cost for a cosmetic win.
+            The first three fold into the already-tracked v2 typed-API
+            migration (TODO_LIST).
+          </p>
+        </div>
+
         <table>
           <thead>
             <tr>
               <th>#</th>
               <th>Severity</th>
-              <th>Issue</th>
-              <th>Status</th>
+              <th>File</th>
+              <th>Observation</th>
+              <th>Disposition</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>1</td>
-              <td><span class="badge badge-critical">Critical</span></td>
-              <td>Missing error handling</td>
-              <td><span class="badge badge-fixed">Fixed</span></td>
+              <td><span class="badge badge-low">v2 scope</span></td>
+              <td>client.go:510</td>
+              <td>
+                TaskOutcome.Duplicate() returns (DocumentID, bool, bool) — a
+                double-comma-ok. The struct fields are the primary surface and
+                read fine; the accessor is convenience.
+              </td>
+              <td>TODO_LIST v2 row</td>
             </tr>
             <tr>
               <td>2</td>
-              <td><span class="badge badge-high">High</span></td>
-              <td>Race condition</td>
-              <td><span class="badge badge-low">Open</span></td>
+              <td><span class="badge badge-low">v2 scope</span></td>
+              <td>client.go:2531-2549</td>
+              <td>
+                savedView() always makes FilterRules non-nil while
+                customFieldsFromPayload returns nil for empty — nil-vs-empty
+                asymmetry across list mappings.
+              </td>
+              <td>TODO_LIST v2 row (DeepEqual risk for consumers)</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><span class="badge badge-low">v2 scope</span></td>
+              <td>client.go:2369-2377</td>
+              <td>
+                CreateShareLink's zero FileVersion means "server default
+                (archive)" via omitempty — an absent-string protocol, not a
+                typed default.
+              </td>
+              <td>TODO_LIST v2 row</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><span class="badge badge-low">accepted</span></td>
+              <td>client.go:2055-2068</td>
+              <td>
+                classifyStatus attaches the response body for generic 4xx but
+                not 401/403/429. Paperless serves HTML-ish bodies there; adding
+                contexts would alter pinned error surfaces for marginal value.
+              </td>
+              <td>keep</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><span class="badge badge-low">accepted</span></td>
+              <td>paperlesstest/records.go:26</td>
+              <td>
+                Requests() shallow-copies (Header map shared). Records are
+                immutable after append; the type doc already warns consumers to
+                redact; deep-cloning bodies would double test memory.
+              </td>
+              <td>keep</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><span class="badge badge-low">accepted</span></td>
+              <td>client.go:374-396</td>
+              <td>
+                Upload does not pre-validate empty Filename/Content. Inventing
+                client-side rejection without verified server semantics could
+                block valid zero-byte uploads; the fake's task outcome surfaces
+                server refusal honestly.
+              </td>
+              <td>keep, verify server first</td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td><span class="badge badge-low">cosmetic</span></td>
+              <td>paperlesstest/*_test.go</td>
+              <td>
+                Mixed t.Context()/context.Background() across fake tests (also
+                flagged by the 2026-09-13 episode); paperlesstest package
+                convention has settled on context.Background().
+              </td>
+              <td>keep</td>
             </tr>
           </tbody>
         </table>
 
-        <!-- Before/After Comparison -->
-        <h2 id="proposal">Before / After</h2>
-        <div class="compare-header">
-          <div class="compare-before">Before</div>
-          <div class="compare-after">After</div>
-        </div>
-        <div class="compare-row">
-          <div>
-            <pre><code><span class="tok-comment">// Old code</span>
-<span class="tok-keyword">func</span> <span class="tok-func">process</span>(data <span class="tok-type">interface</span>{}) { }</code></pre>
+        <!-- Strengths -->
+        <h2 id="strengths"><span class="num">&diams;</span>Preserved Strengths</h2>
+        <div class="strengths">
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Three independent drift guards, all load-bearing</strong>
+              <span>
+                The endpoint-coverage test enforces set equality between SDK
+                routes and fake routes in both directions; the doc-drift tests
+                parse client.go's AST for codes and README verbs; the fake
+                round-trips every route through the real client. This review's
+                one structural find (findByName) was a hole in one of them —
+                which proves the others work.
+              </span>
+            </div>
           </div>
-          <div>
-            <pre><code><span class="tok-comment">// New code</span>
-<span class="tok-keyword">func</span> <span class="tok-func">process</span>[T <span class="tok-type">any</span>](data T) { }</code></pre>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Incident-pinning tests read like institutional memory</strong>
+              <span>
+                TestPingAgainstHtmlOnlyApiRoot pins the 406-on-JSON-API-root
+                production failure; the self-heal PATCH test asserts the body
+                must NOT re-send the name (the 2026-09-17 live 400). New
+                engineers learn the system's history from the test suite.
+              </span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Error model discipline held under review</strong>
+              <span>
+                Every failure path carries a code at the source with
+                family-appropriate classification; call-site wraps stay
+                uncoded; every suppression directive on the 100+ line sites
+                carries a specific reason. Zero split brains between the code,
+                its catalog, and its error-family wiring.
+              </span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>The fake fails loudly instead of lying</strong>
+              <span>
+                Unknown routes and wrong methods call t.Errorf while still
+                answering realistic DRF bodies — a consumer bug surfaces at the
+                exact request instead of a mysterious 404 five layers deep.
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- ASCII Diagram -->
-        <h2>Dependency Tree</h2>
-        <div class="dep-tree">
-          <span class="root">root</span> ├──
-          <span class="ok">wanted-dep</span> └──
-          <span class="unwanted">unwanted-dep</span>
-        </div>
-
-        <!-- Numbered Steps -->
-        <h2 id="plan"><span class="num">03</span>Migration Plan</h2>
-        <div class="migration-step">
-          <div class="migration-num">1</div>
-          <div class="migration-content">
-            <h4>Add generic type parameter</h4>
-            <p>Update the function signature to accept a type parameter.</p>
-          </div>
-        </div>
-        <div class="migration-step">
-          <div class="migration-num">2</div>
-          <div class="migration-content">
-            <h4>Update all call sites</h4>
-            <p>Pass explicit types at each call site for type safety.</p>
-          </div>
+        <!-- Series -->
+        <h2 id="series"><span class="num">03</span>Series</h2>
+        <div class="card">
+          <h4>Continuity with the 2026-09-13 episode</h4>
+          <p>
+            The prior review's one harvested TODO (typed matching-algorithm
+            enum) remains open as optional; its noted cosmetic (mixed context
+            constructors) is re-observed and re-accepted. Its raw-int-ID
+            acceptance is now superseded by ADR 0004's branded IDs (v0.5.0).
+            Unfixed forward work from this episode folds into the existing
+            TODO_LIST v2 typed-API row rather than new tombstones.
+          </p>
         </div>
 
         <footer class="footer">
-          Generated YYYY-MM-DD &middot; All claims verified against source code
-          where noted
+          Generated 2026-10-11 &middot; Every fix verified by the full gate
+          (check, test, test-race, lint, branching-flow = 0)
         </footer>
       </main>
     </div>
