@@ -28,15 +28,15 @@ no research beyond this session's run.
 
 ## b) PARTIALLY DONE
 
-| # | Work                                                                                 | Done                                             | Missing                                                                                                                                                     |
-| - | ------------------------------------------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-~~| 1 | Verify-suppression discipline for the new `//nolint:erraudit` (FindStoragePath wrap) | Annotation written, lint green                   | **erraudit itself was never run this session** (`nix develop -c erraudit ./… --type-aware --enforce-go-error-family --disable-extensions`)                  |~~ done — erraudit run 2026-10-11 (docs-health pass): exit 0, no violations
-~~| 2 | "Test your fix fails when it should"                                                 | Drift-test change verified green                 | No **negative test** proving the guard now fires for an un-cataloged `findByName` kind                                                                      |~~ → TODO_LIST (2026-10-11 harvest): negative drift test
-~~| 3 | Regression coverage for my own fixes                                                 | Existing suites green                            | `pageBounds` clamp has **no dedicated regression test**; nothing exercises page≈1e17                                                                        |~~ → TODO_LIST (2026-10-11 harvest): pageBounds regression test
-~~| 4 | Local tool breadth                                                                   | check/test/race/lint/fmt/branching-flow          | `.#fuzz` smoke and `.#coverage` not run (fuzz untouched parse paths, coverage baseline unmeasured)                                                          |~~ → TODO_LIST Low (2026-10-11 harvest): fuzz smoke + coverage
-~~| 5 | CHANGELOG discipline                                                                 | Fixes documented in review report + TODO_LIST    | **No `CHANGELOG.md` entry** for the 7 fixes (repo convention: completed work lives there; next release commit must pick them up)                            |~~ done — CHANGELOG [Unreleased] gained the 7 fixes (2026-10-11 docs-health pass)
-~~| 6 | Commit hygiene                                                                       | All work committed (tree clean)                  | Fix-batch commit message lost to the auto-commit daemon (see d-1); history says "auto-commit 3 changed file(s)" instead of the prepared descriptive message |~~ → TODO_LIST Low (2026-10-11 harvest): fuzz smoke
-~~| 7 | docs-health HARVEST loop                                                             | The 3 concrete v2 items harvested into TODO_LIST | This report's section (f) brainstorm is **not** yet harvested (by design: brainstorm ≠ commitment list)                                                     |~~ → TODO_LIST Low (2026-10-11 harvest): coverage vs baseline
+| #  | Work | Done                                                                                 | Missing                                          |
+| -- | ---- | ------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| ~~ | 1    | Verify-suppression discipline for the new `//nolint:erraudit` (FindStoragePath wrap) | Annotation written, lint green                   | **erraudit itself was never run this session** (`nix develop -c erraudit ./… --type-aware --enforce-go-error-family --disable-extensions`) | ~~ done — erraudit run 2026-10-11 (docs-health pass): exit 0, no violations |
+| ~~ | 2    | "Test your fix fails when it should"                                                 | Drift-test change verified green                 | No **negative test** proving the guard now fires for an un-cataloged `findByName` kind | ~~ → TODO_LIST (2026-10-11 harvest): negative drift test |
+| ~~ | 3    | Regression coverage for my own fixes                                                 | Existing suites green                            | `pageBounds` clamp has **no dedicated regression test**; nothing exercises page≈1e17 | ~~ → TODO_LIST (2026-10-11 harvest): pageBounds regression test |
+| ~~ | 4    | Local tool breadth                                                                   | check/test/race/lint/fmt/branching-flow          | `.#fuzz` smoke and `.#coverage` not run (fuzz untouched parse paths, coverage baseline unmeasured) | ~~ → TODO_LIST Low (2026-10-11 harvest): fuzz smoke + coverage |
+| ~~ | 5    | CHANGELOG discipline                                                                 | Fixes documented in review report + TODO_LIST    | **No `CHANGELOG.md` entry** for the 7 fixes (repo convention: completed work lives there; next release commit must pick them up) | ~~ done — CHANGELOG [Unreleased] gained the 7 fixes (2026-10-11 docs-health pass) |
+| ~~ | 6    | Commit hygiene                                                                       | All work committed (tree clean)                  | Fix-batch commit message lost to the auto-commit daemon (see d-1); history says "auto-commit 3 changed file(s)" instead of the prepared descriptive message | ~~ → TODO_LIST Low (2026-10-11 harvest): fuzz smoke |
+| ~~ | 7    | docs-health HARVEST loop                                                             | The 3 concrete v2 items harvested into TODO_LIST | This report's section (f) brainstorm is **not** yet harvested (by design: brainstorm ≠ commitment list) | ~~ → TODO_LIST Low (2026-10-11 harvest): coverage vs baseline |
 
 ## c) NOT STARTED (pre-existing, untouched this session)
 
@@ -108,58 +108,58 @@ work, public API byte-identical. Two hygiene wounds, honestly:
 Sorted by impact; items 1–12 are concrete follow-ups from this session, the rest
 are backlog/brainstorm (ROADMAP fuel, not commitments).
 
-| #  | Task                                                                                                         | Impact | Effort       |
-| -- | ------------------------------------------------------------------------------------------------------------ | ------ | ------------ |
-~~| 1  | Run erraudit in `nix develop` to verify the new nolint anchor survives                                       | High   | 5 min        |~~ done — erraudit exit 0, no violations (2026-10-11 docs-health pass)
-~~| 2  | Negative-verify the drift guard: temp unknown `findByName` kind → expect red → revert                        | High   | 10 min       |~~ → TODO_LIST (2026-10-11 harvest)
-~~| 3  | Add regression test for the `pageBounds` overflow clamp                                                      | High   | 15 min       |~~ → TODO_LIST (2026-10-11 harvest)
-~~| 4  | Add CHANGELOG entry (Unreleased) for the 7 review fixes                                                      | High   | 10 min       |~~ done — CHANGELOG [Unreleased] entry added (2026-10-11 docs-health pass)
-~~| 5  | Fuzz smoke `nix run .#fuzz -- 30s` after this session's edits                                                | Medium | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 6  | `nix run .#coverage` and compare vs ~88.6% baseline                                                          | Medium | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 7  | Decide + pin the nil-vs-empty `FilterRules` contract with a test                                             | Medium | 20 min       |~~ → TODO_LIST (2026-10-11 harvest)
-~~| 8  | Consolidate `parseServedCreated`/`parseUploadDate` in the fake (one parser)                                  | Medium | 15 min       |~~ → TODO_LIST (2026-10-11 harvest)
-~~| 9  | Split client.go by domain (same package, mechanical)                                                         | Medium | 1–2 h        |~~ → TODO_LIST Medium (2026-10-11 harvest)
-~~| 10 | Split client_test.go the same way                                                                            | Medium | 1–2 h        |~~ → TODO_LIST Medium (2026-10-11 harvest)
-~~| 11 | `records.Requests()`: deep-clone Header (cheap consistency with Documents/Patches)                           | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 12 | Fold `newTestClientWithToken` into `newTestClient` (variadic token)                                          | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 13 | Release v0.5.1 with the review fixes (version/CHANGELOG/tag + release-verify)                                | High   | 30 min       |~~ → TODO_LIST release row (2026-10-11 harvest)
-~~| 14 | Migrate bank-sync + InboxClean to v0.5.0 (TODO_LIST row)                                                     | High   | small        |~~ already harvested — TODO_LIST consumer-migration row
-~~| 15 | Give `tbStub` a `Fatalf` that panics so `NewServer(&tbStub{})` misuse fails loudly                           | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 16 | Verify paperless server semantics for zero-byte/empty-filename uploads; then decide Upload pre-validation    | Medium | research     |~~ → TODO_LIST (2026-10-11 harvest)
-~~| 17 | Consider attaching response body context to `auth_failed` (needs consumer/test agreement)                    | Low    | 20 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 18 | Remove the dead `return` after `tb.Fatal` in `RequireAuthorized`                                             | Low    | 2 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 19 | Add a test asserting the fake's fall-through failure mode for non-numeric entity IDs                         | Low    | 15 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 20 | Consider duplicate-name 400 in `handleNamedCreate` (match DRF uniqueness) — decide lenient-vs-honest         | Low    | 20 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 21 | v2: brand `New(baseURL, token)` / `EnsureStoragePath(name, path)` params                                     | Medium | medium       |~~ already harvested — TODO_LIST v2 row (2026-10-11 06:11)
-~~| 22 | v2: unify public structs with wire payloads (JSON-tag decision)                                              | Medium | medium       |~~ already harvested — TODO_LIST v2 row
-~~| 23 | v2: public typed `MatchingAlgorithm` enum                                                                    | Low    | small        |~~ already harvested — TODO_LIST v2 row
-~~| 24 | v2: typed `TaskOutcome.Duplicate()` accessor (replace double-bool)                                           | Low    | small        |~~ already harvested — TODO_LIST v2 row
-~~| 25 | v2: typed ShareLink FileVersion default (replace absent-string)                                              | Low    | small        |~~ already harvested — TODO_LIST v2 row
-~~| 26 | v2: drop `.branching-flow.yml` disabled_rules + nolints when the tool ships line suppression                 | Low    | small        |~~ already harvested — TODO_LIST v2 row
-~~| 27 | Re-run branching-flow triage after v2 (AGENTS.md revisit note)                                               | Low    | small        |~~ already harvested — TODO_LIST v2 row
-~~| 28 | erraudit CI job once the module proxy publishes it (re-verify 404)                                           | Medium | small        |~~ routed — AGENTS.md standing erraudit CI decision (proxy + go1.27 conditions)
-~~| 29 | Unskip govalid-generate when machine govalid rebuilds on Go ≥ 1.27                                           | Low    | small        |~~ routed — AGENTS.md standing govalid skip decision
-~~| 30 | Unify context constructors in paperlesstest tests (`t.Context()`)                                            | Low    | 30 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 31 | Create `docs/DOMAIN_LANGUAGE.md` (named entities, checksum shapes, consumption task, self-heal, dup refusal) | Medium | 1 h          |~~ Won't implement — standing decision: thin API SDK (2026-09-13 13:42 audit)
-~~| 32 | Spot-verify FEATURES.md claims against post-ADR-0004 code                                                    | Low    | 30 min       |~~ done — spot-verified this pass; FEATURES fixtures/introspection row added
-~~| 33 | AGENTS.md: name `findByName` explicitly in the doc-drift test note                                           | Low    | 2 min        |~~ done — AGENTS.md drift-test note names findByName (2026-10-11 docs-health pass)
-~~| 34 | Verify govulncheck pin v1.8.0 is still current; bump if newer exists                                         | Low    | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 35 | Consider flake.lock auto-update workflow (weekly nixpkgs bumps)                                              | Low    | 30 min       |~~ → ROADMAP (2026-10-11 harvest): flake.lock auto-update cadence
-~~| 36 | Periodic benchmark run (Upload/ListChecksums) to catch perf regressions                                      | Low    | 30 min setup |~~ → ROADMAP (2026-10-11 harvest): periodic benchmarks
-~~| 37 | Add runnable examples for UpdateDocument / ListDocumentMetas / EnsureStoragePath                             | Low    | 30 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 38 | Table-driven upload-metadata writer (optional; per-field codes make this debatable)                          | Low    | 40 min       |~~ Won't implement — per-field codes deliberate; revisit with v2 JSON-tag decision
-~~| 39 | Saved-view fake: document lenient rule_type handling as contract (unknown IDs pass through)                  | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 40 | Fuzz seeds: add `Retry-After` overflow edge (seconds > MaxInt64/time.Second)                                 | Low    | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 41 | Harness: assert `RequireAuthorized` message content in its self-test                                         | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 42 | `writeNotes`: share `defaultNoteUser()` per response instead of per note (micro-alloc)                       | Low    | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 43 | Consider `ChecksumShape` as a typed enum with String() (public, v2-adjacent)                                 | Low    | small        |~~ → ROADMAP (2026-10-11 harvest): v2-adjacent typed enum
-~~| 44 | CI: job to run `branching-flow all .` on PRs (currently local + BuildFlow only)                              | Medium | 30 min       |~~ → TODO_LIST Medium (2026-10-11 harvest)
-~~| 45 | CI: cache golangci-lint builds in the lint check (build time)                                                | Low    | 20 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 46 | Docs: link the review series from README (For Contributors section)                                          | Low    | 10 min       |~~ → TODO_LIST Low (2026-10-11 harvest)
-~~| 47 | Roadmap: capture items 15–46 overflow into ROADMAP.md via docs-health HARVEST                                | Low    | 20 min       |~~ done — ROADMAP overflow captured (2026-10-11 docs-health pass)
-~~| 48 | Schedule episode-3 full review after the v2 migration lands                                                  | Low    | —            |~~ → ROADMAP (2026-10-11 harvest): episode 3 after v2
-~~| 49 | Re-verify TODO_LIST/ROADMAP freshness via docs-health VERIFY (post-session)                                  | Low    | 20 min       |~~ done — this pass (docs-health VERIFY over all living docs)
-~~| 50 | Re-run lychee link check over the two new HTML reports                                                       | Low    | 5 min        |~~ → TODO_LIST Low (2026-10-11 harvest)
+| #  | Task | Impact                                                                                                       | Effort |
+| -- | ---- | ------------------------------------------------------------------------------------------------------------ | ------ |
+| ~~ | 1    | Run erraudit in `nix develop` to verify the new nolint anchor survives                                       | High   | 5 min | ~~ done — erraudit exit 0, no violations (2026-10-11 docs-health pass) |
+| ~~ | 2    | Negative-verify the drift guard: temp unknown `findByName` kind → expect red → revert                        | High   | 10 min | ~~ → TODO_LIST (2026-10-11 harvest) |
+| ~~ | 3    | Add regression test for the `pageBounds` overflow clamp                                                      | High   | 15 min | ~~ → TODO_LIST (2026-10-11 harvest) |
+| ~~ | 4    | Add CHANGELOG entry (Unreleased) for the 7 review fixes                                                      | High   | 10 min | ~~ done — CHANGELOG [Unreleased] entry added (2026-10-11 docs-health pass) |
+| ~~ | 5    | Fuzz smoke `nix run .#fuzz -- 30s` after this session's edits                                                | Medium | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 6    | `nix run .#coverage` and compare vs ~88.6% baseline                                                          | Medium | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 7    | Decide + pin the nil-vs-empty `FilterRules` contract with a test                                             | Medium | 20 min | ~~ → TODO_LIST (2026-10-11 harvest) |
+| ~~ | 8    | Consolidate `parseServedCreated`/`parseUploadDate` in the fake (one parser)                                  | Medium | 15 min | ~~ → TODO_LIST (2026-10-11 harvest) |
+| ~~ | 9    | Split client.go by domain (same package, mechanical)                                                         | Medium | 1–2 h | ~~ → TODO_LIST Medium (2026-10-11 harvest) |
+| ~~ | 10   | Split client_test.go the same way                                                                            | Medium | 1–2 h | ~~ → TODO_LIST Medium (2026-10-11 harvest) |
+| ~~ | 11   | `records.Requests()`: deep-clone Header (cheap consistency with Documents/Patches)                           | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 12   | Fold `newTestClientWithToken` into `newTestClient` (variadic token)                                          | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 13   | Release v0.5.1 with the review fixes (version/CHANGELOG/tag + release-verify)                                | High   | 30 min | ~~ → TODO_LIST release row (2026-10-11 harvest) |
+| ~~ | 14   | Migrate bank-sync + InboxClean to v0.5.0 (TODO_LIST row)                                                     | High   | small | ~~ already harvested — TODO_LIST consumer-migration row |
+| ~~ | 15   | Give `tbStub` a `Fatalf` that panics so `NewServer(&tbStub{})` misuse fails loudly                           | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 16   | Verify paperless server semantics for zero-byte/empty-filename uploads; then decide Upload pre-validation    | Medium | research | ~~ → TODO_LIST (2026-10-11 harvest) |
+| ~~ | 17   | Consider attaching response body context to `auth_failed` (needs consumer/test agreement)                    | Low    | 20 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 18   | Remove the dead `return` after `tb.Fatal` in `RequireAuthorized`                                             | Low    | 2 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 19   | Add a test asserting the fake's fall-through failure mode for non-numeric entity IDs                         | Low    | 15 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 20   | Consider duplicate-name 400 in `handleNamedCreate` (match DRF uniqueness) — decide lenient-vs-honest         | Low    | 20 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 21   | v2: brand `New(baseURL, token)` / `EnsureStoragePath(name, path)` params                                     | Medium | medium | ~~ already harvested — TODO_LIST v2 row (2026-10-11 06:11) |
+| ~~ | 22   | v2: unify public structs with wire payloads (JSON-tag decision)                                              | Medium | medium | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 23   | v2: public typed `MatchingAlgorithm` enum                                                                    | Low    | small | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 24   | v2: typed `TaskOutcome.Duplicate()` accessor (replace double-bool)                                           | Low    | small | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 25   | v2: typed ShareLink FileVersion default (replace absent-string)                                              | Low    | small | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 26   | v2: drop `.branching-flow.yml` disabled_rules + nolints when the tool ships line suppression                 | Low    | small | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 27   | Re-run branching-flow triage after v2 (AGENTS.md revisit note)                                               | Low    | small | ~~ already harvested — TODO_LIST v2 row |
+| ~~ | 28   | erraudit CI job once the module proxy publishes it (re-verify 404)                                           | Medium | small | ~~ routed — AGENTS.md standing erraudit CI decision (proxy + go1.27 conditions) |
+| ~~ | 29   | Unskip govalid-generate when machine govalid rebuilds on Go ≥ 1.27                                           | Low    | small | ~~ routed — AGENTS.md standing govalid skip decision |
+| ~~ | 30   | Unify context constructors in paperlesstest tests (`t.Context()`)                                            | Low    | 30 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 31   | Create `docs/DOMAIN_LANGUAGE.md` (named entities, checksum shapes, consumption task, self-heal, dup refusal) | Medium | 1 h | ~~ Won't implement — standing decision: thin API SDK (2026-09-13 13:42 audit) |
+| ~~ | 32   | Spot-verify FEATURES.md claims against post-ADR-0004 code                                                    | Low    | 30 min | ~~ done — spot-verified this pass; FEATURES fixtures/introspection row added |
+| ~~ | 33   | AGENTS.md: name `findByName` explicitly in the doc-drift test note                                           | Low    | 2 min | ~~ done — AGENTS.md drift-test note names findByName (2026-10-11 docs-health pass) |
+| ~~ | 34   | Verify govulncheck pin v1.8.0 is still current; bump if newer exists                                         | Low    | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 35   | Consider flake.lock auto-update workflow (weekly nixpkgs bumps)                                              | Low    | 30 min | ~~ → ROADMAP (2026-10-11 harvest): flake.lock auto-update cadence |
+| ~~ | 36   | Periodic benchmark run (Upload/ListChecksums) to catch perf regressions                                      | Low    | 30 min setup | ~~ → ROADMAP (2026-10-11 harvest): periodic benchmarks |
+| ~~ | 37   | Add runnable examples for UpdateDocument / ListDocumentMetas / EnsureStoragePath                             | Low    | 30 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 38   | Table-driven upload-metadata writer (optional; per-field codes make this debatable)                          | Low    | 40 min | ~~ Won't implement — per-field codes deliberate; revisit with v2 JSON-tag decision |
+| ~~ | 39   | Saved-view fake: document lenient rule_type handling as contract (unknown IDs pass through)                  | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 40   | Fuzz seeds: add `Retry-After` overflow edge (seconds > MaxInt64/time.Second)                                 | Low    | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 41   | Harness: assert `RequireAuthorized` message content in its self-test                                         | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 42   | `writeNotes`: share `defaultNoteUser()` per response instead of per note (micro-alloc)                       | Low    | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 43   | Consider `ChecksumShape` as a typed enum with String() (public, v2-adjacent)                                 | Low    | small | ~~ → ROADMAP (2026-10-11 harvest): v2-adjacent typed enum |
+| ~~ | 44   | CI: job to run `branching-flow all .` on PRs (currently local + BuildFlow only)                              | Medium | 30 min | ~~ → TODO_LIST Medium (2026-10-11 harvest) |
+| ~~ | 45   | CI: cache golangci-lint builds in the lint check (build time)                                                | Low    | 20 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 46   | Docs: link the review series from README (For Contributors section)                                          | Low    | 10 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
+| ~~ | 47   | Roadmap: capture items 15–46 overflow into ROADMAP.md via docs-health HARVEST                                | Low    | 20 min | ~~ done — ROADMAP overflow captured (2026-10-11 docs-health pass) |
+| ~~ | 48   | Schedule episode-3 full review after the v2 migration lands                                                  | Low    | — | ~~ → ROADMAP (2026-10-11 harvest): episode 3 after v2 |
+| ~~ | 49   | Re-verify TODO_LIST/ROADMAP freshness via docs-health VERIFY (post-session)                                  | Low    | 20 min | ~~ done — this pass (docs-health VERIFY over all living docs) |
+| ~~ | 50   | Re-run lychee link check over the two new HTML reports                                                       | Low    | 5 min | ~~ → TODO_LIST Low (2026-10-11 harvest) |
 
 ## g) QUESTIONS I CANNOT FIGURE OUT MYSELF
 
