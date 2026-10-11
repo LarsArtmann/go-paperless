@@ -141,7 +141,7 @@ func literalKind(t *testing.T, fset *token.FileSet, callee string, arg ast.Expr)
 // codes its helper emits, feeding each through add.
 func appendDynamicCodes(callee, kind string, add func(string)) {
 	switch callee {
-	case "findNamed":
+	case "findByName", "findNamed":
 		add("paperless.decode_" + snakeUpper(kind) + "s")
 	case "ensureNamed":
 		add("paperless.decode_" + kind + "s")
@@ -182,7 +182,7 @@ func calledName(fun ast.Expr) string {
 // keeps its (ctx, c, path, resource) shape.
 func kindArgumentPosition(callee string) int {
 	switch callee {
-	case "findNamed", "ensureNamed", "createNamed", "getNamedDetail", "updateMatchingAlgorithm":
+	case "findByName", "findNamed", "ensureNamed", "createNamed", "getNamedDetail", "updateMatchingAlgorithm":
 		return 3
 	case "fetchAllPages":
 		return 3
