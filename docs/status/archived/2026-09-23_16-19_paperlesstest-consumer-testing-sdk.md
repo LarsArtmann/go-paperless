@@ -1,5 +1,8 @@
 # Pareto Plan — `paperlesstest`: consumer testing SDK for go-paperless
 
+> ~~Status: planned.~~ EXECUTED end-to-end 2026-09-23 (shipped v0.4.0–v0.4.2;
+> both consumers migrated and pushed). See the Resolution appendix below.
+
 _Point-in-time execution plan. Created 2026-09-23 16:19. Annotate, never rewrite
 (docs-health ANNOTATE mode)._
 
