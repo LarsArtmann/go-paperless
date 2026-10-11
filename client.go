@@ -411,8 +411,11 @@ func (c *Client) Upload(ctx context.Context, req UploadRequest) (TaskID, error) 
 	}
 
 	if _, writeErr := filePart.Write(req.Content); writeErr != nil {
-		return TaskID{}, errorfamily.WrapInfrastructure(writeErr, "paperless.write_document", "could not write document bytes").
-			WithContext("filename", req.Filename)
+		return TaskID{}, errorfamily.WrapInfrastructure(
+			writeErr,
+			"paperless.write_document",
+			"could not write document bytes",
+		).WithContext("filename", req.Filename)
 	}
 
 	if metaErr := writeUploadMetadata(writer, req); metaErr != nil {
@@ -819,7 +822,7 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
 func updateMatchingAlgorithm[
 	B any,
 ](
-	c *Client,
+	client *Client,
 	ctx context.Context,
 	endpoint,
 	kind,
@@ -836,7 +839,7 @@ func updateMatchingAlgorithm[
 		).WithContext(kind, name)
 	}
 
-	if _, reqErr := c.doRequest(
+	if _, reqErr := client.doRequest(
 		ctx,
 		http.MethodPatch,
 		endpoint+strconv.Itoa(entityID.Get())+"/",
@@ -919,11 +922,11 @@ func findByName[T any](
 // Free generic function: the format toolchain does not parse generic
 // methods.
 func findNamed[B any](
-	c *Client,
+	client *Client,
 	ctx context.Context,
 	endpoint, kind, name string,
 ) (namedPayload[B], bool, error) {
-	return findByName[namedPayload[B]](ctx, c, endpoint, kind, name)
+	return findByName[namedPayload[B]](ctx, client, endpoint, kind, name)
 }
 
 // EnsureCorrespondent returns the ID of the correspondent with the given
@@ -1200,12 +1203,12 @@ func (c *Client) GetDocumentTypeName(ctx context.Context, entityID DocumentTypeI
 // keeps the looked-up ID within the caller's entity family; free function
 // because the format toolchain does not parse generic methods.
 func getNamedDetail[B any](
-	c *Client,
+	client *Client,
 	ctx context.Context,
 	endpoint, kind string,
 	entityID id.ID[B, int],
 ) (string, error) {
-	raw, err := c.doRequest(
+	raw, err := client.doRequest(
 		ctx,
 		http.MethodGet,
 		endpoint+strconv.Itoa(entityID.Get())+"/",
@@ -1240,11 +1243,11 @@ func getNamedDetail[B any](
 // messages, and log context. Free generic function: the format toolchain
 // does not parse generic methods.
 func ensureNamed[B any](
-	c *Client,
+	client *Client,
 	ctx context.Context,
 	endpoint, kind, name string,
 ) (id.ID[B, int], error) {
-	existing, found, findErr := findNamed[B](c, ctx, endpoint, kind, name)
+	existing, found, findErr := findNamed[B](client, ctx, endpoint, kind, name)
 	if findErr != nil {
 		return id.ID[B, int]{}, fmt.Errorf(
 			"find %s %q: %w",
@@ -1258,7 +1261,7 @@ func ensureNamed[B any](
 		return existing.ID, nil
 	}
 
-	return createNamed[B](c, ctx, endpoint, kind, name, matchingAlgorithmAuto)
+	return createNamed[B](client, ctx, endpoint, kind, name, matchingAlgorithmAuto)
 }
 
 // createNamed POSTs a new named object with the requested matching
@@ -1267,7 +1270,7 @@ func ensureNamed[B any](
 func createNamed[
 	B any,
 ](
-	c *Client,
+	client *Client,
 	ctx context.Context,
 	endpoint,
 	kind,
@@ -1283,7 +1286,7 @@ func createNamed[
 		).WithContext(kind, name)
 	}
 
-	raw, err := c.doRequest(
+	raw, err := client.doRequest(
 		ctx,
 		http.MethodPost,
 		endpoint,

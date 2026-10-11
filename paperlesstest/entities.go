@@ -294,7 +294,7 @@ func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {
 // type parameters; the brand binds the family's store and IDs to one
 // entity type.
 func routeNamedFamily[B any](
-	s *Server,
+	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	prefix string,
@@ -306,15 +306,15 @@ func routeNamedFamily[B any](
 	if rest == "" {
 		switch r.Method {
 		case http.MethodGet:
-			handleNamedList(s, w, r, store)
+			handleNamedList(server, w, r, store)
 
 			return true
 		case http.MethodPost:
-			handleNamedCreate(s, w, r, store, nextID)
+			handleNamedCreate(server, w, r, store, nextID)
 
 			return true
 		default:
-			s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+			server.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 
 			return true
 		}
@@ -329,15 +329,15 @@ func routeNamedFamily[B any](
 
 	switch r.Method {
 	case http.MethodGet:
-		handleNamedDetail(s, w, entityID, store)
+		handleNamedDetail(server, w, entityID, store)
 
 		return true
 	case http.MethodPatch:
-		handleNamedPatch(s, w, r, entityID, store)
+		handleNamedPatch(server, w, r, entityID, store)
 
 		return true
 	default:
-		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch)
+		server.methodNotAllowed(w, r, http.MethodGet, http.MethodPatch)
 
 		return true
 	}
@@ -346,15 +346,15 @@ func routeNamedFamily[B any](
 // handleNamedList serves the family's paginated list, honoring the
 // name__iexact filter the SDK's by-name lookups send.
 func handleNamedList[B any](
-	s *Server,
+	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	store *[]namedEntity[B],
 ) {
 	filter := r.URL.Query().Get("name__iexact")
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	server.mu.Lock()
+	defer server.mu.Unlock()
 
 	matches := make([]namedEntity[B], 0, len(*store))
 	for _, entity := range *store {
@@ -363,7 +363,7 @@ func handleNamedList[B any](
 		}
 	}
 
-	s.writePage(w, r, len(matches), func(start, end int) any {
+	server.writePage(w, r, len(matches), func(start, end int) any {
 		wires := make([]namedEntityWire[B], 0, end-start)
 		for _, entity := range matches[start:end] {
 			wires = append(wires, namedEntityWire[B](entity))
@@ -376,7 +376,7 @@ func handleNamedList[B any](
 // handleNamedCreate stores one named object and answers the created
 // payload.
 func handleNamedCreate[B any](
-	s *Server,
+	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	store *[]namedEntity[B],
@@ -384,8 +384,8 @@ func handleNamedCreate[B any](
 ) {
 	var payload namedEntityWire[B]
 	if err := json.Unmarshal(readBody(r), &payload); err != nil {
-		s.t.Errorf("paperlesstest: decode %s create body: %v", r.URL.Path, err)
-		s.writeJSON(
+		server.t.Errorf("paperlesstest: decode %s create body: %v", r.URL.Path, err)
+		server.writeJSON(
 			w,
 			http.StatusBadRequest,
 			map[string]string{detailKey: invalidCreateDetail},
@@ -394,41 +394,41 @@ func handleNamedCreate[B any](
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	server.mu.Lock()
+	defer server.mu.Unlock()
 
-	*nextID = id.NewID[B]((*nextID).Get() + 1)
+	*nextID = id.NewID[B](nextID.Get() + 1)
 	payload.ID = *nextID
 
 	*store = append(*store, namedEntity[B](payload))
 
-	s.writeJSON(w, http.StatusCreated, payload)
+	server.writeJSON(w, http.StatusCreated, payload)
 }
 
 // handleNamedDetail serves one named object's payload by ID.
 func handleNamedDetail[B any](
-	s *Server,
+	server *Server,
 	w http.ResponseWriter,
 	entityID id.ID[B, int],
 	store *[]namedEntity[B],
 ) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	server.mu.Lock()
+	defer server.mu.Unlock()
 
 	entity := findNamedLocked(*store, entityID)
 	if entity == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+		server.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
 
-	s.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
+	server.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
 }
 
 // handleNamedPatch applies a matching-algorithm patch (the self-heal
 // flow's write).
 func handleNamedPatch[B any](
-	s *Server,
+	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	entityID id.ID[B, int],
@@ -436,25 +436,29 @@ func handleNamedPatch[B any](
 ) {
 	var patch matchingAlgorithmWire
 	if err := json.Unmarshal(readBody(r), &patch); err != nil {
-		s.t.Errorf("paperlesstest: decode %s patch body: %v", r.URL.Path, err)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid patch payload"})
+		server.t.Errorf("paperlesstest: decode %s patch body: %v", r.URL.Path, err)
+		server.writeJSON(
+			w,
+			http.StatusBadRequest,
+			map[string]string{detailKey: "invalid patch payload"},
+		)
 
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	server.mu.Lock()
+	defer server.mu.Unlock()
 
 	entity := findNamedLocked(*store, entityID)
 	if entity == nil {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+		server.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
 		return
 	}
 
 	entity.MatchingAlgorithm = patch.MatchingAlgorithm
 
-	s.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
+	server.writeJSON(w, http.StatusOK, namedEntityWire[B](*entity))
 }
 
 // routeCustomFields serves the custom-field definitions family.
