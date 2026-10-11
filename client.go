@@ -35,6 +35,7 @@ import (
 
 	errorfamily "github.com/larsartmann/go-error-family"
 	"github.com/larsartmann/go-retry"
+	id "github.com/larsartmann/go-branded-id"
 )
 
 // Default transport tuning shared by every consumer of this SDK. The default
@@ -378,12 +379,12 @@ type UploadRequest struct {
 	Created time.Time
 	// CorrespondentID is the Paperless-ngx correspondent (e.g. the email
 	// sender) assigned on consumption. Zero leaves the field unset.
-	CorrespondentID int
+	CorrespondentID CorrespondentID
 	// TagIDs are Paperless-ngx tag IDs applied on consumption.
-	TagIDs []int
+	TagIDs []TagID
 	// DocumentTypeID is the Paperless-ngx document type (e.g. "Email")
 	// applied on consumption. Zero leaves the type unset.
-	DocumentTypeID int
+	DocumentTypeID DocumentTypeID
 	// CustomFields are custom-field values applied on consumption, e.g. the
 	// provenance field carrying the Gmail message ID. Nil leaves them unset.
 	CustomFields []CustomFieldValue
@@ -391,35 +392,35 @@ type UploadRequest struct {
 
 // CustomFieldValue assigns a value to one custom field by its definition ID.
 type CustomFieldValue struct {
-	Field int
+	Field CustomFieldID
 	Value string
 }
 
 // Upload posts a document to the consumption queue. It returns the task ID
 // (UUID) Paperless-ngx assigned; consumption itself is asynchronous — the
 // caller can poll `/api/tasks/?task_id=<id>` for the resulting document.
-func (c *Client) Upload(ctx context.Context, req UploadRequest) (string, error) {
+func (c *Client) Upload(ctx context.Context, req UploadRequest) (TaskID, error) {
 	var body bytes.Buffer
 
 	writer := multipart.NewWriter(&body)
 
 	filePart, err := writer.CreateFormFile("document", req.Filename)
 	if err != nil {
-		return "", errorfamily.WrapInfrastructure(err, "paperless.build_multipart", "could not build upload form").
+		return TaskID{}, errorfamily.WrapInfrastructure(err, "paperless.build_multipart", "could not build upload form").
 			WithContext("filename", req.Filename)
 	}
 
 	if _, writeErr := filePart.Write(req.Content); writeErr != nil {
-		return "", errorfamily.WrapInfrastructure(writeErr, "paperless.write_document", "could not write document bytes").
+		return TaskID{}, errorfamily.WrapInfrastructure(writeErr, "paperless.write_document", "could not write document bytes").
 			WithContext("filename", req.Filename)
 	}
 
 	if metaErr := writeUploadMetadata(writer, req); metaErr != nil {
-		return "", metaErr
+		return TaskID{}, metaErr
 	}
 
 	if closeErr := writer.Close(); closeErr != nil {
-		return "", errorfamily.WrapInfrastructure(
+		return TaskID{}, errorfamily.WrapInfrastructure(
 			closeErr,
 			"paperless.close_multipart",
 			"could not finalize upload form",
@@ -435,16 +436,16 @@ func (c *Client) Upload(ctx context.Context, req UploadRequest) (string, error) 
 		writer.FormDataContentType(),
 	)
 	if err != nil {
-		return "", fmt.Errorf(
+		return TaskID{}, fmt.Errorf(
 			"upload %q: %w",
 			req.Filename,
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
 
-	taskID := strings.Trim(strings.TrimSpace(string(taskIDBytes)), `"'`)
-	if taskID == "" {
-		return "", errorfamily.NewCorruption("paperless.missing_task_id",
+	taskID := NewTaskID(strings.Trim(strings.TrimSpace(string(taskIDBytes)), `"'`))
+	if taskID.IsZero() {
+		return TaskID{}, errorfamily.NewCorruption("paperless.missing_task_id",
 			"Paperless-ngx accepted the upload but returned no task ID").
 			WithContext("filename", req.Filename)
 	}
@@ -478,7 +479,7 @@ type TaskOutcome struct {
 	// DocumentID is the server document this task points at: the newly
 	// created document after a successful consumption, or the pre-existing
 	// duplicate when the server refused the upload. Zero when unknown.
-	DocumentID int64
+	DocumentID DocumentID
 	// DuplicateRefused is true when the consumer rejected the upload because
 	// an identical document already exists (checksum dedup). The ledger uses
 	// this to separate honest refusals from real failures.
@@ -495,9 +496,9 @@ type TaskOutcome struct {
 // already exists (checksum dedup); documentID is that pre-existing duplicate
 // and inTrash says whether it sits in the trash (the server treats trash
 // duplicates as re-consumable). For non-refusals all returns are zero.
-func (o TaskOutcome) Duplicate() (int64, bool, bool) {
+func (o TaskOutcome) Duplicate() (DocumentID, bool, bool) {
 	if !o.DuplicateRefused {
-		return 0, false, false
+		return DocumentID{}, false, false
 	}
 
 	return o.DocumentID, o.DuplicateInTrash, true
@@ -510,18 +511,18 @@ func (o TaskOutcome) Duplicate() (int64, bool, bool) {
 // {"error_type", "error_message"} for real failures. Pointers distinguish
 // absent keys from zero values.
 type taskResultData struct {
-	DocumentID       *int64  `json:"document_id"`
-	DuplicateOf      *int64  `json:"duplicate_of"`
-	DuplicateInTrash bool    `json:"duplicate_in_trash"`
-	ErrorMessage     *string `json:"error_message"`
+	DocumentID       *DocumentID `json:"document_id"`
+	DuplicateOf      *DocumentID `json:"duplicate_of"`
+	DuplicateInTrash bool        `json:"duplicate_in_trash"`
+	ErrorMessage     *string     `json:"error_message"`
 }
 
 // taskPayload mirrors the Paperless-ngx v10 task object (TaskSerializerV10).
 type taskPayload struct {
-	TaskID             string         `json:"task_id"`
+	TaskID             TaskID         `json:"task_id"`
 	Status             string         `json:"status"`
 	ResultData         taskResultData `json:"result_data"`
-	RelatedDocumentIDs []int64        `json:"related_document_ids"`
+	RelatedDocumentIDs []DocumentID   `json:"related_document_ids"`
 }
 
 // classifyTask turns the server's task payload into the classified outcome.
@@ -557,15 +558,15 @@ func classifyTask(payload taskPayload) TaskOutcome {
 // The response is expected in the v10 paginated envelope
 // (`{"results": [...]}`); a bare JSON array is tolerated defensively for
 // deployments that predate pagination.
-func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool, error) {
+func (c *Client) GetTask(ctx context.Context, taskID TaskID) (TaskOutcome, bool, error) {
 	query := url.Values{}
-	query.Set("task_id", taskID)
+	query.Set("task_id", taskID.Get())
 
 	raw, reqErr := c.doRequest(ctx, http.MethodGet, pathTasks, query.Encode(), nil, "")
 	if reqErr != nil {
 		return TaskOutcome{}, false, fmt.Errorf(
 			"get task %s: %w",
-			taskID,
+			taskID.Get(),
 			reqErr,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -589,7 +590,7 @@ func (c *Client) GetTask(ctx context.Context, taskID string) (TaskOutcome, bool,
 				unmarshalErr,
 				"paperless.decode_task",
 				"could not decode task poll result",
-			).WithContext("task_id", taskID)
+			).WithContext("task_id", taskID.Get())
 		}
 	}
 
@@ -621,12 +622,12 @@ const DefaultTaskPollInterval = 2 * time.Second
 // duplicate refusals are honest outcomes, not errors).
 func (c *Client) WaitForTask(
 	ctx context.Context,
-	taskID string,
+	taskID TaskID,
 	interval time.Duration,
 ) (TaskOutcome, error) {
-	if taskID == "" {
+	if taskID.IsZero() {
 		return TaskOutcome{}, errorfamily.Newf(errorfamily.Rejection, "paperless.empty_task_id",
-			"task ID is required to poll a consumption task, got %q", taskID)
+			"task ID is required to poll a consumption task, got %q", taskID.Get())
 	}
 
 	if interval <= 0 {
@@ -643,7 +644,7 @@ func (c *Client) WaitForTask(
 			if outcome.Status == TaskStatusFailure && !outcome.DuplicateRefused {
 				return outcome, errorfamily.NewRejection("paperless.task_failed",
 					"Paperless-ngx consumption task failed").
-					WithContext("task_id", taskID).
+					WithContext("task_id", taskID.Get()).
 					WithContextAny("error_message", outcome.ErrorMessage)
 			}
 
@@ -655,12 +656,12 @@ func (c *Client) WaitForTask(
 			reason := errorfamily.WrapInfrastructure(ctx.Err(),
 				"paperless.task_poll_abandoned",
 				"gave up waiting for the consumption task",
-			).WithContext("task_id", taskID)
+			).WithContext("task_id", taskID.Get())
 
 			if lastErr != nil {
 				return TaskOutcome{}, fmt.Errorf(
 					"wait for task %s: %w (last poll error: %w)",
-					taskID,
+					taskID.Get(),
 					reason,
 					lastErr,
 				) //nolint:erraudit // dual %w keeps both coded chains reachable
@@ -694,10 +695,10 @@ func writeUploadMetadata(writer *multipart.Writer, req UploadRequest) error {
 		}
 	}
 
-	if req.CorrespondentID > 0 {
+	if !req.CorrespondentID.IsZero() {
 		if err := writer.WriteField(
 			"correspondent",
-			strconv.Itoa(req.CorrespondentID),
+			strconv.Itoa(req.CorrespondentID.Get()),
 		); err != nil {
 			return errorfamily.WrapInfrastructure(
 				err,
@@ -708,19 +709,19 @@ func writeUploadMetadata(writer *multipart.Writer, req UploadRequest) error {
 	}
 
 	for _, tagID := range req.TagIDs {
-		if err := writer.WriteField("tags", strconv.Itoa(tagID)); err != nil {
+		if err := writer.WriteField("tags", strconv.Itoa(tagID.Get())); err != nil {
 			return errorfamily.WrapInfrastructure(
 				err,
 				"paperless.write_tags",
 				"could not write tags field",
-			).WithContext("tag_id", strconv.Itoa(tagID))
+			).WithContext("tag_id", strconv.Itoa(tagID.Get()))
 		}
 	}
 
-	if req.DocumentTypeID > 0 {
+	if !req.DocumentTypeID.IsZero() {
 		if err := writer.WriteField(
 			"document_type",
-			strconv.Itoa(req.DocumentTypeID),
+			strconv.Itoa(req.DocumentTypeID.Get()),
 		); err != nil {
 			return errorfamily.WrapInfrastructure(
 				err,
@@ -775,10 +776,10 @@ func writeCustomFieldsField(writer *multipart.Writer, fields []CustomFieldValue)
 // carrying "auto" (created by older InboxClean versions) is self-healed to
 // "none" — the classifier then no longer trains against it. Self-healing is
 // tag-specific on purpose: correspondents deliberately keep "auto".
-func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
-	existing, found, findErr := c.findNamed(ctx, pathTags, "tag", name)
+func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
+	existing, found, findErr := c.findNamed[TagBrand](ctx, pathTags, "tag", name)
 	if findErr != nil {
-		return 0, fmt.Errorf(
+		return TagID{}, fmt.Errorf(
 			"find tag %q: %w",
 			name,
 			findErr,
@@ -795,7 +796,7 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
 				existing.ID,
 				matchingAlgorithmNone,
 			); err != nil {
-				return 0, fmt.Errorf(
+				return TagID{}, fmt.Errorf(
 					"demote auto tag %q: %w",
 					name,
 					err,
@@ -806,17 +807,20 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (int, error) {
 		return existing.ID, nil
 	}
 
-	return c.createNamed(ctx, pathTags, "tag", name, matchingAlgorithmNone)
+	return c.createNamed[TagBrand](ctx, pathTags, "tag", name, matchingAlgorithmNone)
 }
 
 // updateMatchingAlgorithm PATCHes an existing object's matching algorithm
-// (used to self-heal legacy auto tags down to none).
-func (c *Client) updateMatchingAlgorithm(
+// (used to self-heal legacy auto tags down to none). The brand parameter
+// keeps the PATCHed ID within the caller's entity family.
+func (c *Client) updateMatchingAlgorithm[
+	B any,
+](
 	ctx context.Context,
 	endpoint,
 	kind,
 	name string,
-	id int,
+	id id.ID[B, int],
 	algorithm matchingAlgorithm,
 ) error {
 	payload, err := json.Marshal(matchingAlgorithmPatch{MatchingAlgorithm: int(algorithm)})
@@ -831,7 +835,7 @@ func (c *Client) updateMatchingAlgorithm(
 	if _, reqErr := c.doRequest(
 		ctx,
 		http.MethodPatch,
-		endpoint+strconv.Itoa(id)+"/",
+		endpoint+strconv.Itoa(id.Get())+"/",
 		"",
 		bytes.NewReader(payload),
 		"application/json",
@@ -848,11 +852,12 @@ func (c *Client) updateMatchingAlgorithm(
 }
 
 // namedPayload mirrors the create/list subset shared by Paperless-ngx's tag and
-// correspondent objects (id + name + matching algorithm).
-type namedPayload struct {
-	ID                int    `json:"id"`
-	Name              string `json:"name"`
-	MatchingAlgorithm int    `json:"matching_algorithm"`
+// correspondent objects (id + name + matching algorithm). The brand
+// parameter binds the decoded ID to one entity family per call site.
+type namedPayload[B any] struct {
+	ID                id.ID[B, int] `json:"id"`
+	Name              string        `json:"name"`
+	MatchingAlgorithm int           `json:"matching_algorithm"`
 }
 
 // matchingAlgorithmPatch is the updateMatchingAlgorithm request body. It
@@ -907,11 +912,11 @@ func findByName[T any](
 
 // findNamed looks up a Paperless-ngx named object (tag, correspondent) by
 // exact (case-insensitive) name. found is false when no match exists.
-func (c *Client) findNamed(
+func (c *Client) findNamed[B any](
 	ctx context.Context,
 	endpoint, kind, name string,
-) (namedPayload, bool, error) {
-	return findByName[namedPayload](ctx, c, endpoint, kind, name)
+) (namedPayload[B], bool, error) {
+	return findByName[namedPayload[B]](ctx, c, endpoint, kind, name)
 }
 
 // EnsureCorrespondent returns the ID of the correspondent with the given
@@ -922,8 +927,8 @@ func (c *Client) findNamed(
 // value auto matching adds for documents NOT uploaded by this pipeline
 // (manual scans), and correspondents carry no provenance semantics that
 // auto prediction could corrupt.
-func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (int, error) {
-	return c.ensureNamed(ctx, pathCorrespondents, "correspondent", name)
+func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (CorrespondentID, error) {
+	return c.ensureNamed[CorrespondentBrand](ctx, pathCorrespondents, "correspondent", name)
 }
 
 // EnsureDocumentType returns the ID of the document type with the given
@@ -933,10 +938,10 @@ func (c *Client) EnsureCorrespondent(ctx context.Context, name string) (int, err
 // scans, mirroring the tags rationale. An EXISTING type keeps its
 // configured algorithm — unlike tags there is no legacy-release shape to
 // heal, and overriding a deliberate user config would be wrong.
-func (c *Client) EnsureDocumentType(ctx context.Context, name string) (int, error) {
-	existing, found, findErr := c.findNamed(ctx, pathDocumentTypes, "document type", name)
+func (c *Client) EnsureDocumentType(ctx context.Context, name string) (DocumentTypeID, error) {
+	existing, found, findErr := c.findNamed[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", name)
 	if findErr != nil {
-		return 0, fmt.Errorf(
+		return DocumentTypeID{}, fmt.Errorf(
 			"find document type %q: %w",
 			name,
 			findErr,
@@ -947,20 +952,20 @@ func (c *Client) EnsureDocumentType(ctx context.Context, name string) (int, erro
 		return existing.ID, nil
 	}
 
-	return c.createNamed(ctx, pathDocumentTypes, "document type", name, matchingAlgorithmNone)
+	return c.createNamed[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", name, matchingAlgorithmNone)
 }
 
 // customFieldPayload mirrors one custom field definition.
 type customFieldPayload struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	DataType string `json:"data_type"`
+	ID       CustomFieldID `json:"id"`
+	Name     string        `json:"name"`
+	DataType string        `json:"data_type"`
 }
 
 // FindCustomField looks up a custom field definition by name WITHOUT
 // creating it — the read-only half of EnsureCustomField, used by dry-run
 // backfills to report what they would record without mutating the server.
-func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, error) {
+func (c *Client) FindCustomField(ctx context.Context, name string) (CustomFieldID, bool, error) {
 	field, found, err := findByName[customFieldPayload](
 		ctx,
 		c,
@@ -969,7 +974,7 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 		name,
 	)
 	if err != nil {
-		return 0, false, fmt.Errorf(
+		return CustomFieldID{}, false, fmt.Errorf(
 			"find custom field %q: %w",
 			name,
 			err,
@@ -977,7 +982,7 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 	}
 
 	if !found {
-		return 0, false, nil
+		return CustomFieldID{}, false, nil
 	}
 
 	return field.ID, true, nil //art-dupl:accept parallel tail of the shared findByName skeleton
@@ -988,10 +993,10 @@ func (c *Client) FindCustomField(ctx context.Context, name string) (int, bool, e
 // custom fields). Used for the provenance field carrying the Gmail message
 // ID. An existing definition of any data type is kept — the caller decides
 // whether a non-string field is acceptable by the value it assigns.
-func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error) {
+func (c *Client) EnsureCustomField(ctx context.Context, name string) (CustomFieldID, error) {
 	fieldID, found, findErr := c.FindCustomField(ctx, name)
 	if findErr != nil {
-		return 0, findErr
+		return CustomFieldID{}, findErr
 	}
 
 	if found {
@@ -1000,7 +1005,7 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 
 	payload, err := json.Marshal(customFieldPayload{Name: name, DataType: "string"})
 	if err != nil {
-		return 0, errorfamily.WrapInfrastructure(
+		return CustomFieldID{}, errorfamily.WrapInfrastructure(
 			err,
 			"paperless.marshal_custom_field",
 			"could not encode custom field payload",
@@ -1016,7 +1021,7 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf(
+		return CustomFieldID{}, fmt.Errorf(
 			"create custom field %q: %w",
 			name,
 			err,
@@ -1025,7 +1030,7 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 
 	created := customFieldPayload{}
 	if unmarshalErr := json.Unmarshal(raw, &created); unmarshalErr != nil {
-		return 0, errorfamily.WrapCorruption(
+		return CustomFieldID{}, errorfamily.WrapCorruption(
 			unmarshalErr,
 			"paperless.decode_custom_field",
 			"could not decode created custom field",
@@ -1039,7 +1044,7 @@ func (c *Client) EnsureCustomField(ctx context.Context, name string) (int, error
 // directory template (e.g. "{created_year}/{correspondent}") documents are
 // filed into, addressed by name.
 type StoragePath struct {
-	ID   int
+	ID   StoragePathID
 	Slug string
 	Name string
 	Path string
@@ -1048,15 +1053,15 @@ type StoragePath struct {
 // storagePathPayload mirrors Paperless-ngx's storage path serializer fields
 // the SDK relies on.
 type storagePathPayload struct {
-	ID   int    `json:"id"`
-	Slug string `json:"slug,omitempty"`
-	Name string `json:"name"`
-	Path string `json:"path"`
+	ID   StoragePathID `json:"id"`
+	Slug string        `json:"slug,omitempty"`
+	Name string        `json:"name"`
+	Path string        `json:"path"`
 }
 
 // FindStoragePath looks up a storage path by exact (case-insensitive) name
 // WITHOUT creating it — the read-only lookup for dry-run reporting.
-func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, error) {
+func (c *Client) FindStoragePath(ctx context.Context, name string) (StoragePathID, bool, error) {
 	path, found, err := findByName[storagePathPayload](
 		ctx,
 		c,
@@ -1065,11 +1070,11 @@ func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, e
 		name,
 	)
 	if err != nil {
-		return 0, false, err
+		return StoragePathID{}, false, err
 	}
 
 	if !found {
-		return 0, false, nil
+		return StoragePathID{}, false, nil
 	}
 
 	return path.ID, true, nil //art-dupl:accept parallel tail of the shared findByName skeleton
@@ -1080,15 +1085,15 @@ func (c *Client) FindStoragePath(ctx context.Context, name string) (int, bool, e
 // path keeps its configured template — mirroring the document type policy:
 // the template is deliberate user config, and overriding it from a sync
 // pipeline would be wrong.
-func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int, error) {
+func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (StoragePathID, error) {
 	if name == "" || path == "" {
-		return 0, errorfamily.NewRejection("paperless.empty_storage_path",
+		return StoragePathID{}, errorfamily.NewRejection("paperless.empty_storage_path",
 			"storage path name and directory template are required")
 	}
 
 	existing, found, findErr := c.FindStoragePath(ctx, name)
 	if findErr != nil {
-		return 0, fmt.Errorf(
+		return StoragePathID{}, fmt.Errorf(
 			"find storage path %q: %w",
 			name,
 			findErr,
@@ -1101,7 +1106,7 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 
 	payload, err := json.Marshal(storagePathPayload{Name: name, Path: path})
 	if err != nil {
-		return 0, errorfamily.WrapInfrastructure(
+		return StoragePathID{}, errorfamily.WrapInfrastructure(
 			err,
 			"paperless.marshal_storage_path",
 			"could not encode storage path payload",
@@ -1117,7 +1122,7 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf(
+		return StoragePathID{}, fmt.Errorf(
 			"create storage path %q: %w",
 			name,
 			err,
@@ -1126,7 +1131,7 @@ func (c *Client) EnsureStoragePath(ctx context.Context, name, path string) (int,
 
 	created := storagePathPayload{}
 	if unmarshalErr := json.Unmarshal(raw, &created); unmarshalErr != nil {
-		return 0, errorfamily.WrapCorruption(
+		return StoragePathID{}, errorfamily.WrapCorruption(
 			unmarshalErr,
 			"paperless.decode_storage_path",
 			"could not decode created storage path",
@@ -1156,28 +1161,29 @@ func (c *Client) ListStoragePaths(ctx context.Context) ([]StoragePath, error) {
 // The backfill needs it to decide whether a document's existing non-null
 // correspondent actually matches the derived sender name — an ID alone
 // cannot answer that question.
-func (c *Client) GetCorrespondentName(ctx context.Context, id int) (string, error) {
-	return c.getNamedDetail(ctx, pathCorrespondents, "correspondent", id)
+func (c *Client) GetCorrespondentName(ctx context.Context, id CorrespondentID) (string, error) {
+	return c.getNamedDetail[CorrespondentBrand](ctx, pathCorrespondents, "correspondent", id)
 }
 
 // GetDocumentTypeName resolves a document type ID to its display name, the
 // document-type sibling of GetCorrespondentName: the backfill compares the
 // stored name against the configured type to repair drifted assignments.
-func (c *Client) GetDocumentTypeName(ctx context.Context, id int) (string, error) {
-	return c.getNamedDetail(ctx, pathDocumentTypes, "document type", id)
+func (c *Client) GetDocumentTypeName(ctx context.Context, id DocumentTypeID) (string, error) {
+	return c.getNamedDetail[DocumentTypeBrand](ctx, pathDocumentTypes, "document type", id)
 }
 
 // getNamedDetail fetches one named Paperless-ngx object (correspondent,
-// document type) by ID and returns its display name.
-func (c *Client) getNamedDetail(
+// document type) by ID and returns its display name. The brand parameter
+// keeps the looked-up ID within the caller's entity family.
+func (c *Client) getNamedDetail[B any](
 	ctx context.Context,
 	endpoint, kind string,
-	id int,
+	id id.ID[B, int],
 ) (string, error) {
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodGet,
-		endpoint+strconv.Itoa(id)+"/",
+		endpoint+strconv.Itoa(id.Get())+"/",
 		"",
 		nil,
 		"",
@@ -1186,18 +1192,18 @@ func (c *Client) getNamedDetail(
 		return "", fmt.Errorf(
 			"get %s %d: %w",
 			kind,
-			id,
+			id.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
 
-	detail := namedPayload{}
+	detail := namedPayload[B]{}
 	if unmarshalErr := json.Unmarshal(raw, &detail); unmarshalErr != nil {
 		return "", errorfamily.WrapCorruption(
 			unmarshalErr,
 			"paperless.decode_"+strings.ReplaceAll(kind, " ", "_"),
 			"could not decode "+kind,
-		).WithContext("id", strconv.Itoa(id))
+		).WithContext("id", strconv.Itoa(id.Get()))
 	}
 
 	return detail.Name, nil
@@ -1207,10 +1213,10 @@ func (c *Client) getNamedDetail(
 // correspondent), creating it with the "auto" matching algorithm when it
 // does not exist yet. kind names the object family for error codes,
 // messages, and log context.
-func (c *Client) ensureNamed(ctx context.Context, endpoint, kind, name string) (int, error) {
-	existing, found, findErr := c.findNamed(ctx, endpoint, kind, name)
+func (c *Client) ensureNamed[B any](ctx context.Context, endpoint, kind, name string) (id.ID[B, int], error) {
+	existing, found, findErr := c.findNamed[B](ctx, endpoint, kind, name)
 	if findErr != nil {
-		return 0, fmt.Errorf(
+		return id.ID[B, int]{}, fmt.Errorf(
 			"find %s %q: %w",
 			kind,
 			name,
@@ -1222,21 +1228,23 @@ func (c *Client) ensureNamed(ctx context.Context, endpoint, kind, name string) (
 		return existing.ID, nil
 	}
 
-	return c.createNamed(ctx, endpoint, kind, name, matchingAlgorithmAuto)
+	return c.createNamed[B](ctx, endpoint, kind, name, matchingAlgorithmAuto)
 }
 
 // createNamed POSTs a new named object with the requested matching
 // algorithm and returns its ID.
-func (c *Client) createNamed(
+func (c *Client) createNamed[
+	B any,
+](
 	ctx context.Context,
 	endpoint,
 	kind,
 	name string,
 	algorithm matchingAlgorithm,
-) (int, error) {
-	payload, err := json.Marshal(namedPayload{Name: name, MatchingAlgorithm: int(algorithm)})
+) (id.ID[B, int], error) {
+	payload, err := json.Marshal(namedPayload[B]{Name: name, MatchingAlgorithm: int(algorithm)})
 	if err != nil {
-		return 0, errorfamily.WrapInfrastructure(
+		return id.ID[B, int]{}, errorfamily.WrapInfrastructure(
 			err,
 			"paperless.marshal_"+kind,
 			"could not encode "+kind+" payload",
@@ -1252,7 +1260,7 @@ func (c *Client) createNamed(
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf(
+		return id.ID[B, int]{}, fmt.Errorf(
 			"create %s %q: %w",
 			kind,
 			name,
@@ -1260,9 +1268,9 @@ func (c *Client) createNamed(
 		) //nolint:erraudit // keeps inner code+family
 	}
 
-	created := namedPayload{}
+	created := namedPayload[B]{}
 	if err := json.Unmarshal(raw, &created); err != nil {
-		return 0, errorfamily.WrapCorruption(
+		return id.ID[B, int]{}, errorfamily.WrapCorruption(
 			err,
 			"paperless.decode_"+kind,
 			"could not decode created "+kind,
@@ -1417,12 +1425,12 @@ func (c *Client) ListDocumentChecksums(ctx context.Context) (map[string]struct{}
 // correspondent decodes as 0. created stays a string so both the datetime
 // form Paperless-ngx serves and legacy date-only values parse.
 type documentMetaPayload struct {
-	ID            int                       `json:"id"`
+	ID            DocumentID                `json:"id"`
 	Title         string                    `json:"title"`
-	Correspondent int                       `json:"correspondent"`
+	Correspondent CorrespondentID            `json:"correspondent"`
 	Created       string                    `json:"created"`
-	Tags          []int                     `json:"tags"`
-	DocumentType  int                       `json:"document_type"`
+	Tags          []TagID                   `json:"tags"`
+	DocumentType  DocumentTypeID            `json:"document_type"`
 	CustomFields  []customFieldValuePayload `json:"custom_fields"`
 	Checksum      string                    `json:"checksum"`
 	Versions      []documentVersionPayload  `json:"versions"`
@@ -1433,9 +1441,9 @@ type documentMetaPayload struct {
 // longer part of the serializer fields; the checksum moved into the
 // versions array (is_root marks the current original).
 type documentVersionPayload struct {
-	ID       int    `json:"id"`
-	Checksum string `json:"checksum"`
-	IsRoot   bool   `json:"is_root"`
+	ID       DocumentVersionID `json:"id"`
+	Checksum string            `json:"checksum"`
+	IsRoot   bool              `json:"is_root"`
 }
 
 // effectiveChecksum returns the document's content checksum across API
@@ -1468,12 +1476,12 @@ func parseDocumentCreated(raw string) time.Time {
 
 // DocumentMeta is the metadata snapshot of one stored Paperless-ngx document.
 type DocumentMeta struct {
-	ID             int
+	ID             DocumentID
 	Title          string
-	Correspondent  int
+	Correspondent  CorrespondentID
 	Created        time.Time
-	TagIDs         []int
-	DocumentTypeID int
+	TagIDs         []TagID
+	DocumentTypeID DocumentTypeID
 	CustomFields   []CustomFieldValue
 	Checksum       string
 }
@@ -1513,9 +1521,9 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 type UpdateDocumentRequest struct {
 	Title           *string
 	Created         *time.Time
-	CorrespondentID *int
-	TagIDs          []int
-	DocumentTypeID  *int
+	CorrespondentID *CorrespondentID
+	TagIDs          []TagID
+	DocumentTypeID  *DocumentTypeID
 	CustomFields    []CustomFieldValue
 }
 
@@ -1523,32 +1531,32 @@ type UpdateDocumentRequest struct {
 // rejected so callers never burn a round trip on a no-op.
 func (c *Client) UpdateDocument(
 	ctx context.Context,
-	documentID int,
+	documentID DocumentID,
 	req UpdateDocumentRequest,
 ) error {
 	if req.Title == nil && req.Created == nil && req.CorrespondentID == nil && req.TagIDs == nil &&
 		req.DocumentTypeID == nil && req.CustomFields == nil {
 		return errorfamily.NewRejection("paperless.empty_update", "no metadata fields to update").
-			WithContext("document_id", strconv.Itoa(documentID))
+			WithContext("document_id", strconv.FormatInt(documentID.Get(), 10))
 	}
 
 	body, err := json.Marshal(buildDocumentUpdatePayload(req))
 	if err != nil {
 		return errorfamily.WrapInfrastructure(err, "paperless.marshal_document_update", "could not encode document update").
-			WithContext("document_id", strconv.Itoa(documentID))
+			WithContext("document_id", strconv.FormatInt(documentID.Get(), 10))
 	}
 
 	if _, err := c.doRequest(
 		ctx,
 		http.MethodPatch,
-		fmt.Sprintf(pathDocumentDetail, documentID),
+		fmt.Sprintf(pathDocumentDetail, documentID.Get()),
 		"",
 		bytes.NewReader(body),
 		"application/json",
 	); err != nil {
 		return fmt.Errorf(
 			"update document %d: %w",
-			documentID,
+			documentID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -1562,17 +1570,17 @@ func (c *Client) UpdateDocument(
 type documentUpdatePayload struct {
 	Title         *string                   `json:"title,omitempty"`
 	Created       *string                   `json:"created,omitempty"`
-	Correspondent *int                      `json:"correspondent,omitempty"`
-	TagIDs        []int                     `json:"tags,omitempty"`
-	DocumentType  *int                      `json:"document_type,omitempty"`
+	Correspondent *CorrespondentID          `json:"correspondent,omitempty"`
+	TagIDs        []TagID                   `json:"tags,omitempty"`
+	DocumentType  *DocumentTypeID           `json:"document_type,omitempty"`
 	CustomFields  []customFieldValuePayload `json:"custom_fields,omitempty"`
 }
 
 // customFieldValuePayload is the wire shape of one document custom-field
 // value (paperless-ngx 2.x+): the field definition ID plus the value.
 type customFieldValuePayload struct {
-	Field int    `json:"field"`
-	Value string `json:"value"`
+	Field CustomFieldID `json:"field"`
+	Value string        `json:"value"`
 }
 
 // customFieldsFromPayload converts the wire shape to the public type.
@@ -1628,18 +1636,18 @@ func buildDocumentUpdatePayload(req UpdateDocumentRequest) documentUpdatePayload
 // DeleteDocument permanently removes one document from Paperless-ngx.
 // Used by the backfill's --prune to drop duplicate server-side copies;
 // callers own the destructive-action decision.
-func (c *Client) DeleteDocument(ctx context.Context, documentID int) error {
+func (c *Client) DeleteDocument(ctx context.Context, documentID DocumentID) error {
 	if _, err := c.doRequest(
 		ctx,
 		http.MethodDelete,
-		fmt.Sprintf(pathDocumentDetail, documentID),
+		fmt.Sprintf(pathDocumentDetail, documentID.Get()),
 		"",
 		nil,
 		"",
 	); err != nil {
 		return fmt.Errorf(
 			"delete document %d: %w",
-			documentID,
+			documentID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -1650,11 +1658,11 @@ func (c *Client) DeleteDocument(ctx context.Context, documentID int) error {
 // DownloadDocument fetches one document's stored ORIGINAL file bytes
 // (GET /api/documents/{id}/download/ — not the archive rendition). The
 // decrypt-repair scans them for the /Encrypt trailer before replacing.
-func (c *Client) DownloadDocument(ctx context.Context, documentID int) ([]byte, error) {
+func (c *Client) DownloadDocument(ctx context.Context, documentID DocumentID) ([]byte, error) {
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodGet,
-		fmt.Sprintf(pathDocumentDownload, documentID),
+		fmt.Sprintf(pathDocumentDownload, documentID.Get()),
 		"",
 		nil,
 		"",
@@ -1662,7 +1670,7 @@ func (c *Client) DownloadDocument(ctx context.Context, documentID int) ([]byte, 
 	if err != nil {
 		return nil, fmt.Errorf(
 			"download document %d: %w",
-			documentID,
+			documentID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -2003,7 +2011,7 @@ func classifyStatus(resp *http.Response, snippet []byte, path string, bodyReadEr
 
 // DocumentNoteUser is the (possibly anonymous) author of a document note.
 type DocumentNoteUser struct {
-	ID        int
+	ID        UserID
 	Username  string
 	FirstName string
 	LastName  string
@@ -2011,7 +2019,7 @@ type DocumentNoteUser struct {
 
 // DocumentNote is one operator comment attached to a stored document.
 type DocumentNote struct {
-	ID      int
+	ID      NoteID
 	Note    string
 	Created time.Time
 	// User is the note's author, or nil when the server cannot resolve it
@@ -2022,7 +2030,7 @@ type DocumentNote struct {
 // documentNoteUserPayload mirrors the BasicUserSerializer the notes
 // endpoint embeds.
 type documentNoteUserPayload struct {
-	ID        int    `json:"id"`
+	ID        UserID `json:"id"`
 	Username  string `json:"username"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -2030,8 +2038,8 @@ type documentNoteUserPayload struct {
 
 // documentNotePayload mirrors the Note serializer fields the SDK relies on.
 type documentNotePayload struct {
-	ID      int                      `json:"id"`
-	Note    string                   `json:"note"`
+	ID      NoteID                    `json:"id"`
+	Note    string                    `json:"note"`
 	Created time.Time                `json:"created"`
 	User    *documentNoteUserPayload `json:"user"`
 }
@@ -2071,11 +2079,11 @@ func decodeDocumentNotes(raw []byte) ([]DocumentNote, error) {
 // ListDocumentNotes returns the notes attached to one document, newest
 // first (the server's ordering). The notes endpoint is not paginated —
 // the response is a bare JSON array.
-func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]DocumentNote, error) {
+func (c *Client) ListDocumentNotes(ctx context.Context, documentID DocumentID) ([]DocumentNote, error) {
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodGet,
-		fmt.Sprintf(pathDocumentNotes, documentID),
+		fmt.Sprintf(pathDocumentNotes, documentID.Get()),
 		"",
 		nil,
 		"",
@@ -2083,7 +2091,7 @@ func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]Docum
 	if err != nil {
 		return nil, fmt.Errorf(
 			"list document notes (document %d): %w",
-			documentID,
+			documentID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -2096,10 +2104,10 @@ func (c *Client) ListDocumentNotes(ctx context.Context, documentID int) ([]Docum
 // full remaining list, newest first).
 func (c *Client) AddDocumentNote(
 	ctx context.Context,
-	documentID int,
+	documentID DocumentID,
 	note string,
 ) ([]DocumentNote, error) {
-	if documentID <= 0 {
+	if documentID.IsZero() {
 		return nil, errorfamily.NewRejection("paperless.empty_document_id",
 			"document ID is required to add a note")
 	}
@@ -2120,7 +2128,7 @@ func (c *Client) AddDocumentNote(
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf(pathDocumentNotes, documentID),
+		fmt.Sprintf(pathDocumentNotes, documentID.Get()),
 		"",
 		bytes.NewReader(payload),
 		"application/json",
@@ -2128,7 +2136,7 @@ func (c *Client) AddDocumentNote(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"add document note (document %d): %w",
-			documentID,
+			documentID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -2141,25 +2149,26 @@ func (c *Client) AddDocumentNote(
 // parameter the endpoint expects (DELETE .../notes/?id=<noteID>).
 func (c *Client) DeleteDocumentNote(
 	ctx context.Context,
-	documentID, noteID int,
+	documentID DocumentID,
+	noteID NoteID,
 ) ([]DocumentNote, error) {
-	if documentID <= 0 {
+	if documentID.IsZero() {
 		return nil, errorfamily.NewRejection("paperless.empty_document_id",
 			"document ID is required to delete a note")
 	}
 
-	if noteID <= 0 {
+	if noteID.IsZero() {
 		return nil, errorfamily.NewRejection("paperless.empty_note_id",
 			"note ID is required to delete a note")
 	}
 
 	query := url.Values{}
-	query.Set("id", strconv.Itoa(noteID))
+	query.Set("id", strconv.Itoa(noteID.Get()))
 
 	raw, err := c.doRequest(
 		ctx,
 		http.MethodDelete,
-		fmt.Sprintf(pathDocumentNotes, documentID),
+		fmt.Sprintf(pathDocumentNotes, documentID.Get()),
 		query.Encode(),
 		nil,
 		"",
@@ -2167,8 +2176,8 @@ func (c *Client) DeleteDocumentNote(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"delete document note (document %d, note %d): %w", //nolint:erraudit // keeps inner code+family
-			documentID,
-			noteID,
+			documentID.Get(),
+			noteID.Get(),
 			err,
 		)
 	}
@@ -2191,13 +2200,13 @@ const (
 // ShareLink is one public download link for a document. Slug is
 // server-generated; the full share URL is <base>/share/<slug>.
 type ShareLink struct {
-	ID      int
+	ID      ShareLinkID
 	Created time.Time
 	// Expiration is when the link stops working; zero means it never
 	// expires.
 	Expiration time.Time
 	Slug       string
-	DocumentID int
+	DocumentID DocumentID
 	// FileVersion says which rendition the link serves (archive or
 	// original).
 	FileVersion ShareLinkFileVersion
@@ -2206,12 +2215,12 @@ type ShareLink struct {
 // shareLinkPayload mirrors the ShareLink serializer fields the SDK relies
 // on (id, created, expiration, slug, document, file_version).
 type shareLinkPayload struct {
-	ID          int        `json:"id"`
+	ID          ShareLinkID `json:"id"`
 	Created     time.Time  `json:"created"`
 	Expiration  *time.Time `json:"expiration"`
-	Slug        string     `json:"slug"`
-	Document    int        `json:"document"`
-	FileVersion string     `json:"file_version"`
+	Slug        string      `json:"slug"`
+	Document    DocumentID  `json:"document"`
+	FileVersion string      `json:"file_version"`
 }
 
 func (p shareLinkPayload) shareLink() ShareLink {
@@ -2234,7 +2243,7 @@ func (p shareLinkPayload) shareLink() ShareLink {
 // omitted from the POST so the server applies its default (archive); a
 // nil Expiration means the link never expires.
 type CreateShareLinkRequest struct {
-	DocumentID  int
+	DocumentID  DocumentID
 	FileVersion ShareLinkFileVersion
 	Expiration  *time.Time
 }
@@ -2263,13 +2272,13 @@ func (c *Client) CreateShareLink(
 	ctx context.Context,
 	req CreateShareLinkRequest,
 ) (ShareLink, error) {
-	if req.DocumentID <= 0 {
+	if req.DocumentID.IsZero() {
 		return ShareLink{}, errorfamily.NewRejection("paperless.empty_document_id",
 			"document ID is required to create a share link")
 	}
 
 	payload, err := json.Marshal(struct {
-		Document    int                  `json:"document"`
+		Document    DocumentID           `json:"document"`
 		FileVersion ShareLinkFileVersion `json:"file_version,omitempty"`
 		Expiration  *time.Time           `json:"expiration,omitempty"`
 	}{
@@ -2280,7 +2289,7 @@ func (c *Client) CreateShareLink(
 	if err != nil {
 		return ShareLink{}, errorfamily.WrapInfrastructure(err, "paperless.marshal_share_link",
 			"could not encode the share link payload").
-			WithContext("document", strconv.Itoa(req.DocumentID))
+			WithContext("document", strconv.FormatInt(req.DocumentID.Get(), 10))
 	}
 
 	raw, err := c.doRequest(
@@ -2294,7 +2303,7 @@ func (c *Client) CreateShareLink(
 	if err != nil {
 		return ShareLink{}, fmt.Errorf(
 			"create share link (document %d): %w", //nolint:erraudit // keeps inner code+family
-			req.DocumentID,
+			req.DocumentID.Get(),
 			err,
 		)
 	}
@@ -2303,7 +2312,7 @@ func (c *Client) CreateShareLink(
 	if err := json.Unmarshal(raw, &created); err != nil {
 		return ShareLink{}, errorfamily.WrapCorruption(err, "paperless.decode_share_link",
 			"could not decode the created share link").
-			WithContext("document", strconv.Itoa(req.DocumentID))
+			WithContext("document", strconv.FormatInt(req.DocumentID.Get(), 10))
 	}
 
 	return created.shareLink(), nil
@@ -2311,8 +2320,8 @@ func (c *Client) CreateShareLink(
 
 // DeleteShareLink revokes one public link; every consumer of the slug
 // loses access immediately.
-func (c *Client) DeleteShareLink(ctx context.Context, linkID int) error {
-	if linkID <= 0 {
+func (c *Client) DeleteShareLink(ctx context.Context, linkID ShareLinkID) error {
+	if linkID.IsZero() {
 		return errorfamily.NewRejection("paperless.empty_share_link_id",
 			"share link ID is required to delete a share link")
 	}
@@ -2320,14 +2329,14 @@ func (c *Client) DeleteShareLink(ctx context.Context, linkID int) error {
 	if _, err := c.doRequest(
 		ctx,
 		http.MethodDelete,
-		pathShareLinks+strconv.Itoa(linkID)+"/",
+		pathShareLinks+strconv.Itoa(linkID.Get())+"/",
 		"",
 		nil,
 		"",
 	); err != nil {
 		return fmt.Errorf(
 			"delete share link %d: %w",
-			linkID,
+			linkID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
@@ -2401,7 +2410,7 @@ type savedViewFilterRulePayload struct {
 // (icon, page_size, display mode, ...) across versions and unknown JSON
 // fields are ignored.
 type SavedView struct {
-	ID   int
+	ID   SavedViewID
 	Name string
 	// ShowOnDashboard and ShowInSidebar mirror the view's visibility
 	// flags; a server that no longer serves them decodes as false.
@@ -2414,8 +2423,8 @@ type SavedView struct {
 
 // savedViewPayload mirrors the SavedView serializer's stable fields.
 type savedViewPayload struct {
-	ID              int                          `json:"id"`
-	Name            string                       `json:"name"`
+	ID              SavedViewID               `json:"id"`
+	Name            string                    `json:"name"`
 	ShowOnDashboard bool                         `json:"show_on_dashboard"`
 	ShowInSidebar   bool                         `json:"show_in_sidebar"`
 	SortField       string                       `json:"sort_field"`
@@ -2476,9 +2485,9 @@ func (c *Client) ListSavedViews(ctx context.Context) ([]SavedView, error) {
 func (c *Client) CreateSavedView(
 	ctx context.Context,
 	req CreateSavedViewRequest,
-) (int, error) {
+) (SavedViewID, error) {
 	if req.Name == "" {
-		return 0, errorfamily.NewRejection("paperless.empty_saved_view",
+		return SavedViewID{}, errorfamily.NewRejection("paperless.empty_saved_view",
 			"saved view name is required")
 	}
 
@@ -2506,7 +2515,7 @@ func (c *Client) CreateSavedView(
 		FilterRules:     rules,
 	})
 	if err != nil {
-		return 0, errorfamily.WrapInfrastructure(err, "paperless.marshal_saved_view",
+		return SavedViewID{}, errorfamily.WrapInfrastructure(err, "paperless.marshal_saved_view",
 			"could not encode the saved view payload").
 			WithContext("name", req.Name)
 	}
@@ -2520,7 +2529,7 @@ func (c *Client) CreateSavedView(
 		"application/json",
 	)
 	if err != nil {
-		return 0, fmt.Errorf(
+		return SavedViewID{}, fmt.Errorf(
 			"create saved view %q: %w",
 			req.Name,
 			err,
@@ -2529,7 +2538,7 @@ func (c *Client) CreateSavedView(
 
 	var created savedViewPayload
 	if err := json.Unmarshal(raw, &created); err != nil {
-		return 0, errorfamily.WrapCorruption(err, "paperless.decode_saved_view",
+		return SavedViewID{}, errorfamily.WrapCorruption(err, "paperless.decode_saved_view",
 			"could not decode the created saved view").
 			WithContext("name", req.Name)
 	}
@@ -2538,8 +2547,8 @@ func (c *Client) CreateSavedView(
 }
 
 // DeleteSavedView removes one saved view from the server.
-func (c *Client) DeleteSavedView(ctx context.Context, viewID int) error {
-	if viewID <= 0 {
+func (c *Client) DeleteSavedView(ctx context.Context, viewID SavedViewID) error {
+	if viewID.IsZero() {
 		return errorfamily.NewRejection("paperless.empty_saved_view_id",
 			"saved view ID is required to delete a saved view")
 	}
@@ -2547,14 +2556,14 @@ func (c *Client) DeleteSavedView(ctx context.Context, viewID int) error {
 	if _, err := c.doRequest(
 		ctx,
 		http.MethodDelete,
-		pathSavedViews+strconv.Itoa(viewID)+"/",
+		pathSavedViews+strconv.Itoa(viewID.Get())+"/",
 		"",
 		nil,
 		"",
 	); err != nil {
 		return fmt.Errorf(
 			"delete saved view %d: %w",
-			viewID,
+			viewID.Get(),
 			err,
 		) //nolint:erraudit // keeps inner code+family
 	}
