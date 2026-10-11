@@ -14,7 +14,10 @@ import (
 
 // shareLink is one share link. The fake stores and serves the same shape,
 // so the struct carries the ShareLink serializer's wire tags directly.
-type shareLink struct { // create input omits server-assigned fields (id, created, slug); input vs response shapes by design
+//
+// The create input omits server-assigned fields (id, created, slug); input and response shapes differ by
+// design.
+type shareLink struct {
 	ID          paperless.ShareLinkID `json:"id"`
 	Created     time.Time             `json:"created"`
 	Expiration  *time.Time            `json:"expiration"`
