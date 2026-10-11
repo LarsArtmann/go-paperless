@@ -47,7 +47,8 @@ func FuzzParseDocumentCreated(f *testing.F) {
 			return
 		}
 
-		if reparsed := parseDocumentCreated(parsed.Format(time.RFC3339)); !reparsed.Equal(parsed) {
+		reparsed := parseDocumentCreated(parsed.Format(time.RFC3339Nano))
+		if !reparsed.Equal(parsed) {
 			t.Fatalf("parseDocumentCreated is not stable for %q: %v then %v", raw, parsed, reparsed)
 		}
 	})

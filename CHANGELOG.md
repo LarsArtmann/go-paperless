@@ -92,6 +92,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `paperlesstest`: `pageBounds` clamps absurd `page` values so they can
   no longer wrap negative and panic inside the fake (regression test
   pins the int64-overflow boundary).
+- The `FuzzParseDocumentCreated` oracle round-trips through
+  `time.RFC3339Nano`: plain `RFC3339` drops sub-second precision, so a
+  fractional input (e.g. a comma-decimal timestamp) was flagged as
+  unstable although the parser preserves fractions correctly. The
+  failing input stays in the fuzz corpus as a regression seed.
 
 ## [0.4.2] - 2026-09-23
 
