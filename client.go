@@ -8,11 +8,9 @@
 //
 // # Requirements
 //
-// Go 1.27 or newer. Decoding runs on the encoding/json v2 engine, the
-// standard library's default there (on Go 1.26 or older it only exists
-// behind `GOEXPERIMENT=jsonv2`). The sources import the plain
-// `encoding/json` package: under the v2 default it is the same engine,
-// and pre-1.27 tooling (e.g. gosec's loader) resolves that path.
+// Go 1.27 or newer. The module decodes with `encoding/json/v2`, which is
+// part of the standard library there. On a Go 1.26 or older toolchain it
+// only exists behind `GOEXPERIMENT=jsonv2` and builds fail without it.
 //
 // # Options
 //
@@ -23,7 +21,7 @@ package paperless
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
