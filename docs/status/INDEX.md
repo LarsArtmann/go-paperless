@@ -7,13 +7,14 @@ acting on them.
 
 ## Open reports
 
-| Date       | Report                                                                                         | State                                                                                 |
-| ---------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 2026-09-24 | [paperlesstest session brutal review](2026-09-24_00-08_paperlesstest-session-brutal-review.md) | Terminal report of the paperlesstest arc; open items are consumer-repo + billing work |
-| 2026-10-11 | [branded-ID migration](2026-10-11_03-23_branded-id-migration-status.md)                        | Annotated 2026-10-11 (docs-health); v0.5.0 release-ready, tag pending owner call      |
-| 2026-10-11 | [branching-flow findings triage](2026-10-11_03-41_branching-flow-findings-triage.md)           | Annotated EXECUTED + HARVESTED (executed by the 05:02 session)                        |
-| 2026-10-11 | [branching-flow execution](2026-10-11_05-02_branching-flow-execution-status.md)                | Annotated + harvested 2026-10-11 (docs-health)                                        |
-| 2026-10-11 | [full-code-review session](2026-10-11_06-36_full-code-review-session-status.md)                | Annotated + harvested 2026-10-11 (docs-health)                                        |
+| Date       | Report                                                                                                  | State                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 2026-09-24 | [paperlesstest session brutal review](2026-09-24_00-08_paperlesstest-session-brutal-review.md)          | Terminal report of the paperlesstest arc; open items are consumer-repo + billing work |
+| 2026-10-11 | [branded-ID migration](2026-10-11_03-23_branded-id-migration-status.md)                                 | Annotated 2026-10-11 (docs-health); v0.5.0 release-ready, tag pending owner call      |
+| 2026-10-11 | [branching-flow findings triage](2026-10-11_03-41_branching-flow-findings-triage.md)                    | Annotated EXECUTED + HARVESTED (executed by the 05:02 session)                        |
+| 2026-10-11 | [branching-flow execution](2026-10-11_05-02_branching-flow-execution-status.md)                         | Annotated + harvested 2026-10-11 (docs-health)                                        |
+| 2026-10-11 | [full-code-review session](2026-10-11_06-36_full-code-review-session-status.md)                         | Annotated + harvested 2026-10-11 (docs-health)                                        |
+| 2026-10-11 | [docs-health audit: full backlog dispatch](2026-10-11_09-37_docs-health-audit-full-backlog-dispatch.md) | This pass's report: 19 archives, living-docs polish, dprint incident, owner questions |
 
 ## Archived (fully resolved — every item carries a verdict)
 
