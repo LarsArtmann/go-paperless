@@ -189,7 +189,7 @@ nix fmt              # format
 nix flake check      # all checks (CI equivalent)
 # Opt-in, needs a live server / released tag:
 nix run .#integration            # real-server integration tests
-nix run .#release-verify -- v0.3.1  # post-release ritual
+nix run .#release-verify -- vX.Y.Z  # post-release ritual
 ```
 
 ## License

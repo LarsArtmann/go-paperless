@@ -70,32 +70,32 @@ Code and gates (all verified in-session):
 ## (b) PARTIALLY DONE
 
 ~~1. **Harvest items considered and dismissed this session** (recorded here, not~~ done — dismissal notes recorded via this pass's annotations (items #19/#37)
-   yet in ROADMAP as dismissal notes): #19 error-family representative test
-   (families already asserted in behavior tests; the catalog organizes by
-   family sections and links ADR 0002 — a per-section Classify test duplicates
-   existing coverage); #37 erraudit placeholder check (`nix flake check` has no
-   "skip" concept — an always-pass placeholder is noise; the AGENTS.md note is
-   the durable record). Effort to route: S.
+yet in ROADMAP as dismissal notes): #19 error-family representative test
+(families already asserted in behavior tests; the catalog organizes by
+family sections and links ADR 0002 — a per-section Classify test duplicates
+existing coverage); #37 erraudit placeholder check (`nix flake check` has no
+"skip" concept — an always-pass placeholder is noise; the AGENTS.md note is
+the durable record). Effort to route: S.
 ~~2. **Fuzz depth**: the new `.#fuzz` app makes deeper budgets one command away,~~ → TODO_LIST Low (2026-10-11 harvest): deeper fuzz budgets
-   but no long run has happened yet (15s/target smoke runs only this session).
+but no long run has happened yet (15s/target smoke runs only this session).
 ~~3. **The 5 BLOCKED rows** are verified still blocked (see (c)) — the release~~ done — v0.3.2 released 2026-09-16; v0.4.x followed
-   prep itself (version bump + tag plan) is unstarted pending the user's
-   versioning call.
+prep itself (version bump + tag plan) is unstarted pending the user's
+versioning call.
 
 ## (c) NOT STARTED (all deliberately blocked or demand-gated)
 
 ~~1. **Cut the release** (v0.3.2 vs v0.4.0 — user decision): CHANGELOG is~~ done — v0.3.2 released 2026-09-16
-   written; consumers (bank-sync pins v0.3.0) wait.
+written; consumers (bank-sync pins v0.3.0) wait.
 ~~2. **Push consumer bumps** (bank-sync, InboxClean): pushing is excluded without~~ done — pushed 2026-09-23
-   explicit instruction.
+explicit instruction.
 ~~3. **erraudit upstream rebuild + hermetic flake pin**: external repo; needs~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11
-   go-ahead (its v0.4.0 bundles go1.26-era x/tools and rejects this module).
+go-ahead (its v0.4.0 bundles go1.26-era x/tools and rejects this module).
 ~~4. **bank-sync fork retirement**: belongs to bank-sync.~~ routed — bank-sync scope (fork consolidation tracked in TODO_LIST consumer row)
 ~~5. **Live integration run** (`nix run .#integration`): no~~ → ROADMAP (2026-10-11 harvest): needs live-server credentials
-   PAPERLESS_INTEGRATION_URL/TOKEN available in this session; e2e remains
-   compile-verified only.
+PAPERLESS_INTEGRATION_URL/TOKEN available in this session; e2e remains
+compile-verified only.
 ~~6. All demand-gated ROADMAP items (ProbeCapabilities caching, share-link~~ routed — ROADMAP demand-gated items stand
-   conveniences, saved-view PATCH) — no consumer request observed.
+conveniences, saved-view PATCH) — no consumer request observed.
 
 ## (d) TOTALLY FUCKED UP (honest list)
 
@@ -163,120 +163,119 @@ Code and gates (all verified in-session):
 In-repo, actionable (impact / effort S<30min M<2h L>2h / category):
 
 ~~1. Cut the release carrying the typed enum + dep floors + this session's work~~ done — v0.3.2 released 2026-09-16; v0.4.x followed
-   (v0.3.2 vs v0.4.0 per user call; CHANGELOG ready) — Critical / S / Release
+(v0.3.2 vs v0.4.0 per user call; CHANGELOG ready) — Critical / S / Release
 ~~2. Push this session's work, then push consumer bumps (explicit go-ahead) —~~ done — pushed 2026-09-23 (consumers too)
-   Critical / S / Release
+Critical / S / Release
 ~~3. bank-sync pre-flight: confirm `RuleType: int` call sites survive the typed~~ routed — consumer-repo scope
-   enum (`var x int = rule.RuleType` breaks; untyped constants don't) before
-   rollout — High / S / Quality
+enum (`var x int = rule.RuleType` breaks; untyped constants don't) before
+rollout — High / S / Quality
 ~~4. Rebuild erraudit upstream on go1.27 x/tools; restore the dev-shell gate —~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11
-   High / M / Tooling (blocked on go-ahead)
+High / M / Tooling (blocked on go-ahead)
 ~~5. Publish erraudit to the public module proxy; add the CI job per the recorded~~ → routed — the standing AGENTS.md erraudit CI decision owns publication + CI
-   two-condition decision — High / M / Tooling
+two-condition decision — High / M / Tooling
 ~~6. Live-run `TestIntegrationUploadReconcile` (`nix run .#integration`) and~~ → ROADMAP (2026-10-11 harvest): needs live-server credentials
-   record results — High / M / Quality (needs server env)
+record results — High / M / Quality (needs server env)
 ~~7. First live `nix run .#release-verify -- <tag>` exercise post-release —~~ → TODO_LIST Low (2026-10-11 harvest): release-verify formal exercise
-   Medium / S / Release
+Medium / S / Release
 ~~8. Verify the scheduled fuzz workflow fires (manual dispatch once now; first~~ → TODO_LIST Low (2026-10-11 harvest): fuzz workflow verification
-   cron run Monday 04:00 UTC) and red-fails correctly on a planted bug —
-   Medium / S / Quality
+cron run Monday 04:00 UTC) and red-fails correctly on a planted bug —
+Medium / S / Quality
 ~~9. CI fuzz job: upload the crash corpus + repro test on failure so a red fuzz~~ → TODO_LIST Low (2026-10-11 harvest): diagnosable fuzz failures
-   job is diagnosable — Medium / S / Quality
+job is diagnosable — Medium / S / Quality
 ~~10. Overnight fuzz budget (`nix run .#fuzz -- 1h`) before the release; record~~ → TODO_LIST Low (2026-10-11 harvest): overnight fuzz budget
-    exec counts in CHANGELOG — Medium / M / Quality
+exec counts in CHANGELOG — Medium / M / Quality
 ~~11. Coverage: `GetTask`/`classifyTask` bare-array + envelope edge mix —~~ → TODO_LIST Low (2026-10-11 harvest): classifyTask edge coverage
-    Medium / S / Quality
+Medium / S / Quality
 ~~12. Coverage: `doRequestDetail` hook-failure + header-echo branches —~~ → TODO_LIST Low (2026-10-11 harvest): hook-failure coverage
-    Medium / S / Quality
+Medium / S / Quality
 ~~13. Coverage: `Upload`-level `build_multipart`/`write_document` entry branches~~ → TODO_LIST Low (2026-10-11 harvest): multipart entry branches
-    (CreateFormFile failure path) — Medium / S / Quality
+(CreateFormFile failure path) — Medium / S / Quality
 ~~14. Wire govulncheck + gosec as hermetic flake checks (currently GitHub-runner~~ → TODO_LIST Medium (2026-10-11 harvest): hermetic govulncheck/gosec checks
-    only) — Medium / M / Tooling
+only) — Medium / M / Tooling
 ~~15. Seed-corpus growth for the fuzzers: feed real paperless-ngx response~~ → TODO_LIST Low (2026-10-11 harvest): fuzz seed corpus growth
-    shapes as `f.Add` seeds — Medium / M / Quality
+shapes as `f.Add` seeds — Medium / M / Quality
 ~~16. CONTRIBUTING.md: mention `.#fuzz`, `checks.integration-vet`,~~ → TODO_LIST Low (2026-10-11 harvest): CONTRIBUTING flake apps
-    `.#integration`, `.#release-verify` — Medium / S / Docs
+`.#integration`, `.#release-verify` — Medium / S / Docs
 ~~17. Route the sibling 17-57 report's un-routed idea items 45–50 (saved-view~~ done — routed this pass (2026-10-11 harvest): demand-gated conveniences → ROADMAP
-    value typing, WaitForTask jitter, token bucket, retry override, fixture
-    suite) into ROADMAP — Medium / S / Docs
+value typing, WaitForTask jitter, token bucket, retry override, fixture
+suite) into ROADMAP — Medium / S / Docs
 ~~18. Write dismissal notes for (b)1's two dismissed items into ROADMAP so they~~ done — dismissal notes recorded in this pass's annotations
-    are not re-litigated — Medium / S / Docs
-~~19. AGENTS.md: record the writeShellApplication loop pattern (stdin consumption~~ → TODO_LIST Low (2026-10-11 harvest): writeShellApplication gotcha
-    - count-iterations check) as a gotcha — Medium / S / Docs
+are not re-litigated — Medium / S / Docs
+~~19. AGENTS.md: record the writeShellApplication loop pattern (stdin consumption~~ → TODO_LIST Low (2026-10-11 harvest): writeShellApplication gotcha - count-iterations check) as a gotcha — Medium / S / Docs
 ~~20. Options-table drift test: pin the README `WithX` options list against~~ → TODO_LIST Low (2026-10-11 harvest): options-table drift test
-    `New`'s variadic options — Medium / S / Quality
+`New`'s variadic options — Medium / S / Quality
 ~~21. ADR 0001 consequence test: assert the `Accept: application/json; version=…`~~ → TODO_LIST Low (2026-10-11 harvest): apiVersion header test
-    header on every request (currently implied by Ping only) — Medium / S /
-    Quality
+header on every request (currently implied by Ping only) — Medium / S /
+Quality
 ~~22. Research whether `GOEXPERIMENT=jsonv2` itself is still needed on go1.27~~ done — README Requirements documents json/v2 as the Go 1.27 default
-    (json/v2 is default there) or droppable like simd — Low / S / Cleanup
+(json/v2 is default there) or droppable like simd — Low / S / Cleanup
 ~~23. Decide the markdown-gate question: dprint into treefmt, or accept ungated~~ routed — AGENTS.md workaround note stands as the accepted state
-    md and delete the workaround note — Medium / S / Tooling (decision)
+md and delete the workaround note — Medium / S / Tooling (decision)
 ~~24. `dprint fmt` the sibling session's 18-18 status report (1 file, pre-existing~~ done — formatted this pass (2026-10-11 docs-health)
-    finding) — requires permission to touch their file — Low / S / Cleanup
+finding) — requires permission to touch their file — Low / S / Cleanup
 ~~25. Consolidate the four same-day status reports (sibling suggestion) into a~~ Won't implement — annotate-don't-rewrite stands; superseded banners handle it
-    per-day annotated record — Low / M / Docs
+per-day annotated record — Low / M / Docs
 ~~26. Split `docs/status/` annotated-vs-unarchived (two candidates for~~ done — archived this pass (2026-10-11 docs-health)
-    annotation/archival) — Low / S / Docs
+annotation/archival) — Low / S / Docs
 ~~27. Benchmarks: `BenchmarkEnsureTag` (name-resolution hot path) — Low / S /~~ → TODO_LIST Low (2026-10-11 harvest): BenchmarkEnsureTag
-    Quality
+Quality
 ~~28. ADR 0003 seed: turn the streaming-upload sketch into a design doc IF the~~ routed — ROADMAP (streaming design doc on demand)
-    ROADMAP item ever leaves demand-gate — Low / M / Design
+ROADMAP item ever leaves demand-gate — Low / M / Design
 ~~29. ProbeCapabilities caching per client lifetime (ROADMAP, demand-gated) —~~ routed — ROADMAP demand-gated
-    Low / M / Feature
+Low / M / Feature
 ~~30. `GetShareLink`/`ListShareLinks(documentID)` convenience (demand-gated) —~~ routed — ROADMAP demand-gated
-    Low / S / Feature
+Low / S / Feature
 ~~31. Saved-view Update/PATCH (demand-gated) — Low / M / Feature~~ routed — ROADMAP demand-gated
 ~~32. `ShareLink.URL(baseURL)` helper (demand-gated) — Low / S / Feature~~ routed — ROADMAP demand-gated
 ~~33. Examples: `ExampleClient_DownloadDocument`, `ExampleClient_UpdateDocument` —~~ → TODO_LIST Low (2026-10-11 harvest): download/update examples
-    Low / S / Docs
+Low / S / Docs
 ~~34. README "Common tasks": download + update snippets — Low / S / Docs~~ → TODO_LIST Low (2026-10-11 harvest): README download/update snippets
 ~~35. `ExampleClient_Upload` runnable variant via httptest inside client_test.go —~~ → TODO_LIST Low (2026-10-11 harvest): runnable Upload example
-    Low / M / Docs
+Low / M / Docs
 ~~36. release-verify app: add a fuzz smoke step (30s/target) to the post-release~~ → TODO_LIST Low (2026-10-11 harvest): fuzz smoke in release-verify
-    ritual — Low / S / Release
+ritual — Low / S / Release
 ~~37. ROADMAP demand-gate re-check against bank-sync's actual usage before the~~ already harvested — TODO_LIST consumer-migration row (v0.5.0 demand re-check)
-    v0.3.2 rollout (which conveniences do consumers really want?) — Medium / S /
-    Planning
+v0.3.2 rollout (which conveniences do consumers really want?) — Medium / S /
+Planning
 ~~38. e2e scaffold: extend with a share-link roundtrip (create/list/delete) —~~ → TODO_LIST Low (2026-10-11 harvest): share-link e2e roundtrip
-    Low / M / Quality
+Low / M / Quality
 ~~39. e2e scaffold: extend with a note roundtrip — Low / M / Quality~~ → TODO_LIST Low (2026-10-11 harvest): note e2e roundtrip
 ~~40. Fuzz: property assertion that unknown `SavedViewRuleType` IDs round-trip at~~ → TODO_LIST Low (2026-10-11 harvest): rule_type fuzz property
-    the fuzz level (unit-tested today) — Low / S / Quality
+the fuzz level (unit-tested today) — Low / S / Quality
 ~~41. `.golangci.yml`: review err113 scope (it fired on a test helper sentinel;~~ → TODO_LIST Low (2026-10-11 harvest): err113 scope review
-    confirm tests should be held to the same bar) — Low / S / Tooling
+confirm tests should be held to the same bar) — Low / S / Tooling
 ~~42. CI: `nix flake check --all-systems` with an aarch64 remote builder, or~~ done — 0.4.0 systems restriction; aarch64 documented (remote builders)
-    formally accept + document the warning — Low / M / Infra (needs hardware)
+formally accept + document the warning — Low / M / Infra (needs hardware)
 ~~43. CHANGELOG "Verified" section: record this session's all-systems run and~~ done — CHANGELOG 0.4.0 records the all-systems run + simd research
-    simd research (fold into release prep) — Low / S / Docs
+simd research (fold into release prep) — Low / S / Docs
 ~~44. AGENTS.md: record the empirical `multipart.Writer.WriteField`-after-Close~~ → TODO_LIST Low (2026-10-11 harvest): WriteField-after-Close gotcha
-    behavior (no error on go1.27) — Low / S / Docs
+behavior (no error on go1.27) — Low / S / Docs
 ~~45. ROADMAP: WaitForTask poll jitter (fleet syncs) — Low / S / Idea~~ → ROADMAP (2026-10-11 harvest): WaitForTask jitter
 ~~46. ROADMAP: per-client shared rate-limit backoff (only on 429 storms) — Low /~~ → ROADMAP (2026-10-11 harvest): shared rate-limit backoff
-    M / Idea
+M / Idea
 ~~47. ROADMAP: record/replay API fixture suite from a live server to extend the~~ → ROADMAP (2026-10-11 harvest): record/replay fixture suite
-    e2e without a container — Low / M / Idea
+e2e without a container — Low / M / Idea
 ~~48. ROADMAP: retry-policy per-call override (opt-in option param) — Low / S /~~ → ROADMAP (2026-10-11 harvest): retry per-call override
-    Idea
+Idea
 ~~49. Docs: link ERROR_CODES.md rows to their asserting tests (drift test already~~ → TODO_LIST Low (2026-10-11 harvest): ERROR_CODES test links
-    pins existence; test links aid debugging) — Low / M / Docs
+pins existence; test links aid debugging) — Low / M / Docs
 ~~50. Consider a `docs-health` HARVEST pass right after this report (per the~~ done — this pass (2026-10-11 docs-health)
-    skill's handoff rule) — Medium / S / Docs
+skill's handoff rule) — Medium / S / Docs
 
 ## (g) QUESTIONS I CANNOT ANSWER MYSELF
 
 ~~1. **Release version**: ship the accumulated work (typed enum = compile-visible~~ done — v0.3.2 cut 2026-09-16; convention settled
-   change, dep floors, fuzz CI, x86_64-darwin drop, catalog fixes) as **v0.3.2**
-   or fold into a later **v0.4.0**? I read ADR 0001's stability story and the
-   CHANGELOG; I cannot know what you want consumers (bank-sync pins v0.3.0) to
-   swallow first. My lean: v0.3.2 per the drop-in contract, since untyped
-   constants keep compiling — but the call is yours.
+change, dep floors, fuzz CI, x86_64-darwin drop, catalog fixes) as **v0.3.2**
+or fold into a later **v0.4.0**? I read ADR 0001's stability story and the
+CHANGELOG; I cannot know what you want consumers (bank-sync pins v0.3.0) to
+swallow first. My lean: v0.3.2 per the drop-in contract, since untyped
+constants keep compiling — but the call is yours.
 ~~2. **erraudit ownership**: do you want me to go fix erraudit upstream NOW~~ done — erraudit rebuilt upstream; gate green (fresh run 2026-10-11)
-   (rebuild on go1.27 x/tools, release, publish), or is that repo mid-work and
-   the TODO rows should stay BLOCKED until you say go? I cannot see what else
-   is happening in that repo.
+(rebuild on go1.27 x/tools, release, publish), or is that repo mid-work and
+the TODO rows should stay BLOCKED until you say go? I cannot see what else
+is happening in that repo.
 ~~3. **Live server access**: is there a PAPERLESS_INTEGRATION_URL /~~ routed — needs owner-provided credentials; tracked via ROADMAP integration line
-   PAPERLESS_INTEGRATION_TOKEN I may use to run `nix run .#integration` for
-   real? The upload-reconcile e2e is complete and compile-verified but has
-   never executed against a live Paperless-ngx — I found no credentials in the
-   session environment and will not guess endpoints.
+PAPERLESS_INTEGRATION_TOKEN I may use to run `nix run .#integration` for
+real? The upload-reconcile e2e is complete and compile-verified but has
+never executed against a live Paperless-ngx — I found no credentials in the
+session environment and will not guess endpoints.

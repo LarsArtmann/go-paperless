@@ -399,7 +399,6 @@ flowchart TD
 
 _Point-in-time plan (2026-09-13 13:51). When work completes, annotate items via docs-health ANNOTATE and keep TODO_LIST.md as the living source — this file is the snapshot, not the backlog._
 
-
 ---
 
 ## Resolution (2026-10-11, docs-health pass)

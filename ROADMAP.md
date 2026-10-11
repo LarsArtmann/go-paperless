@@ -93,6 +93,30 @@ dependency-upgrade session
 - CHANGELOG convention: a dedicated "Dependencies" subsection instead of
   burying dep bumps under Changed
 
+### 5. Harvested ideas (2026-10-11 docs-health pass)
+
+Idea-grade residue routed out of the annotated status reports (full
+dispositions per item: [docs/status/INDEX.md](docs/status/INDEX.md)):
+
+- Publishing the report series as a docs site (website-launch skill)
+- Record/replay API fixture suite from a live server (extends the e2e
+  without a container); integration-tier growth: negotiated-version
+  asserts, auth-failure negative test, live `"id":null` validation
+- `WaitForTask` poll jitter for fleets of syncs; per-client shared
+  rate-limit backoff (only on 429 storms); retry-policy per-call override
+- Saved-view rule VALUE typing (dates/tags are strings today);
+  `ChecksumShape` as a public typed enum (v2-adjacent)
+- Capabilities-informed retry tuning (probe feeds backoff decisions)
+- Periodic benchmark gate (Upload/ListChecksums exist; add
+  `BenchmarkEnsureTag`, branded hot paths) and CI caching for
+  golangci-lint builds
+- SARIF output for the quality gates (erraudit/branching-flow) if CI
+  adoption lands; golines max-width pinned explicitly in flake.nix
+- Fleet patterns: sibling "latest versions" sweeps, shared go-nix
+  helpers, a go-floor migration playbook, a gate-runner convention
+  (file-captured output + exit code)
+- Streaming-upload design doc (only if ADR 0003's demand gate opens)
+
 ## Testing infrastructure
 
 - Real-server integration tests exist behind the `integration` build tag

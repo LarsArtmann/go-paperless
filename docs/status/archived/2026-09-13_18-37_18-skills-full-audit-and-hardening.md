@@ -111,18 +111,18 @@ intent was covered by architecture-review + go-modularize.)
    ~~conversion. Deliberate Verschlimmbesserung-avoidance (a 2,700-line~~
    ~~conversion adds a dependency and churn for zero behavioral gain), but it~~
    ~~means the skill's letter (Ginkgo specs) is not implemented.~~
-~~2. **library-deep-dive**: usage-vs-capability audit done for the two real~~ Won't implement — point-in-time audit residue; go-retry's own suite owns the jitter behavior
+   ~~2. **library-deep-dive**: usage-vs-capability audit done for the two real~~ Won't implement — point-in-time audit residue; go-retry's own suite owns the jitter behavior
    dependencies; the "full potential" research leaned on pkg.go.dev summaries.
    The jitter-≤50% claim was NOT verified against go-retry source code.
-3. ~~**go-release**: Phase 0 assessment done (tag v0.2.0 == HEAD; `[Unreleased]`~~ done (done — v0.3.0 cut (2c4726b))
+2. ~~**go-release**: Phase 0 assessment done (tag v0.2.0 == HEAD; `[Unreleased]`~~ done (done — v0.3.0 cut (2c4726b))
    ~~now holds today's work → next cut would be v0.2.1). No tag created (not~~
    ~~requested; tags are immutable).~~
-4. ~~**TODO_LIST harvest**: findings that were fixed are logged; the three~~ done (done — the erraudit TODO row now carries the installability caveat (2026-09-14))
+3. ~~**TODO_LIST harvest**: findings that were fixed are logged; the three~~ done (done — the erraudit TODO row now carries the installability caveat (2026-09-14))
    ~~remaining forward items (integration scaffold, erraudit CI gate, consumer Go~~
    ~~bump) are tracked — but the erraudit item lacks the reasoning that CI~~
    ~~installability of erraudit is itself unverified (the binary may be~~
    ~~private-only; see g-1).~~
-5. ~~**Data-model review fixes**: the report documents accepted deviations~~ done at `35c019b`
+4. ~~**Data-model review fixes**: the report documents accepted deviations~~ done at `35c019b`
    ~~(raw `int` IDs, pointer PATCH semantics) but the optional typed~~
    ~~`MatchingAlgorithm` enum was left as a recommendation, not implemented.~~
 

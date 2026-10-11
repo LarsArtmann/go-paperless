@@ -169,7 +169,7 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
 
 ~~1. Remove DEBUG instrumentation from WrongCorrespondent test; rerun it.~~ done — instrumentation removed (00:08 a-4)
 ~~2. Root-cause the remaining run-2 repatch (suspect: command-side derived~~ done — root-caused: test-wrapper artifact (00:08 a-1)
-   name or a second reconcile pass), fix, verify.
+name or a second reconcile pass), fix, verify.
 ~~3. Re-run the two provenance tests fixed via EditDocument conversion.~~ done — re-verified green (00:08 a-5)
 ~~4. Full InboxClean `go test ./cmd/inboxclean/` green.~~ done — InboxClean suite green (00:08 a-5)
 ~~5. InboxClean `nix run .#test-race` (AGENTS-required before push).~~ done — test-race green (00:08 a-5)
@@ -177,15 +177,15 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
 ~~7. Remove leftover unused imports (httptest/sync/strconv) if lint flags.~~ done — cleaned in the squash (cce98ed)
 ~~8. `nix run .#update-vendor-hash` (go.mod changed).~~ done — vendor hash updated (00:08 a-5)
 ~~9. Squash/rewrite InboxClean's 3 heuristic daemon commits into a clean~~ done — squashed into cce98ed (00:08 a-5)
-   M21/M22 commit message.
+M21/M22 commit message.
 ~~10. InboxClean: check docs/spec for a paperless spec needing an update.~~ done — spec updated (00:08 a-6)
 ~~11. InboxClean CHANGELOG entry for the fake migration (if it keeps one).~~ done — CHANGELOG entry written (00:08 a-6)
 ~~12. Update go-paperless TODO_LIST: paperlesstest row flip after consumers;~~ done — TODO_LIST drained
-    resolve the v0.3.2-coordination row (superseded by v0.4.x).
+resolve the v0.3.2-coordination row (superseded by v0.4.x).
 ~~13. Annotate the plan file: tier checkboxes, M20 result, deviations~~ done — plan annotated (00:08 a-9)
-    (extra APIs, three tags).
+(extra APIs, three tags).
 ~~14. Re-run `nix run .#release-verify -- v0.4.2` (and v0.4.0) once~~ → TODO_LIST Low (2026-10-11 harvest): release-verify formal exercise
-    pkg.go.dev indexes; confirm all-green.
+pkg.go.dev indexes; confirm all-green.
 ~~15. M23: bank-sync — inventory paperless call sites.~~ done — inventory done during M23 (00:08 a-7)
 ~~16. M23: bump bank-sync to go-paperless v0.4.2.~~ done — bank-sync bumped to v0.4.2 (00:08 a-7)
 ~~17. M23: upload/task-path unit tests via paperlesstest.~~ done — shipped (00:08 a-7)
@@ -197,29 +197,29 @@ migration (M21/M22) is mid-flight; bank-sync (M23) not started.
 ~~23. M24: push InboxClean (branch was already ahead 3 pre-session).~~ done — pushed cce98ed (00:08 a-11)
 ~~24. M24: push bank-sync.~~ done — pushed 37e3ced6 (00:08 a-11)
 ~~25. M24: verify both consumers' CI (or note CI-blocked items like~~ done — CI checked; blocked by billing (TODO_LIST row)
-    InboxClean's armed-but-disabled CI).
+InboxClean's armed-but-disabled CI).
 ~~26. go-paperless TODO_LIST: flip paperlesstest row to DONE.~~ done — TODO_LIST drained to open rows
 ~~27. Plan definition-of-done checklist: tick + annotate exceptions.~~ done — all 8 DoD boxes ticked (00:08 a-9)
 ~~28. Cross-project lesson candidate for crush-config `lessons.md`~~ routed — crush-config lessons.md (external repo, commit required)
-    ("spike consumers before tagging" — commit, not in-session write).
+("spike consumers before tagging" — commit, not in-session write).
 ~~29. Final status report superseding this one (docs-health ANNOTATE on~~ done — superseded by the 22:45 + 00:08 reports
-    this file).
+this file).
 ~~30. Decide: Features/README claims about `Server.Client()` helper —~~ routed — consumer-repo scope (bank-sync's Client() assertion needs)
-    deliberately NOT built (stdlib-only contract); confirm that's the
-    standing call.
+deliberately NOT built (stdlib-only contract); confirm that's the
+standing call.
 
 ## g) QUESTIONS FOR LARS
 
 ~~1. **WrongCorrespondent run-2 repatch**: the fake is verified correct~~ done — answered: test-harness artifact (00:08 a-1)
-   (probe: correspondent 1 = "billing@example.com", doc.Correspondent=1)
-   yet the second backfill still PATCHes. Do you know an intended
-   command behavior that would make a re-run legitimately repatch (e.g.
-   a reconcile pass that re-detects from the ledger), or should I keep
-   digging into `backfillCorrespondent`'s run-2 inputs?
+(probe: correspondent 1 = "billing@example.com", doc.Correspondent=1)
+yet the second backfill still PATCHes. Do you know an intended
+command behavior that would make a re-run legitimately repatch (e.g.
+a reconcile pass that re-detects from the ledger), or should I keep
+digging into `backfillCorrespondent`'s run-2 inputs?
 ~~2. **Release cadence**: are three same-hour tags (v0.4.0–v0.4.2)~~ done — answered: accepted as-is (22:45 answers §2)
-   acceptable history for you, or should future consumer-driven API gaps
-   hold pushes until the consumer migration is green (one tag)?
+acceptable history for you, or should future consumer-driven API gaps
+hold pushes until the consumer migration is green (one tag)?
 ~~3. **M24 pushes**: row 22 ("push consumer bumps") was BLOCKED awaiting~~ done — answered: the execution order was taken as the owner go (22:45 answers §3)
-   your go — I treated "do the whole list" as that go. Confirm InboxClean
-   (master, currently ahead 3 + this work) and bank-sync should be
-   pushed as the final step?
+your go — I treated "do the whole list" as that go. Confirm InboxClean
+(master, currently ahead 3 + this work) and bank-sync should be
+pushed as the final step?

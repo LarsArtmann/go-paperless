@@ -63,112 +63,112 @@ to fix while editing that very file.
 ## b) PARTIALLY DONE
 
 ~~1. **Error-code catalog**: updated for the codes I touched, but the~~ done — docs_drift_test.go enforces the dynamically-constructed codes against the catalog (0.4.0)
-   dynamically-constructed codes are still undocumented (see e/4 below). I
-   edited that file and left its pre-existing gap standing.
+dynamically-constructed codes are still undocumented (see e/4 below). I
+edited that file and left its pre-existing gap standing.
 ~~2. **AGENTS.md gate documentation**: the command is recorded, but it is a~~ done — decision recorded (AGENTS.md); the gate itself is fresh-green (2026-10-11)
-   manual gate — nothing enforces it (see c/1).
+manual gate — nothing enforces it (see c/1).
 ~~3. **Test coverage of new behavior**: e2e-level via httptest; no direct unit~~ → TODO_LIST Low (2026-10-11 harvest): classifyStatus table test
-   table-test of `classifyStatus` across status classes including
-   `body_read_error`.
+table-test of `classifyStatus` across status classes including
+`body_read_error`.
 
 ## c) NOT STARTED
 
 ~~1. **CI enforcement of the erraudit gate** — the biggest gap. The gate lives~~ done — erraudit CI decision recorded (AGENTS.md; two conditions)
-   in AGENTS.md only; `ci.yml` has no erraudit step. Per the 2026-09-13 gosec
-   lesson in global AGENTS: a security/quality gate must fail closed from
-   commit one and assert it actually scanned (Files > 0). Not done.
+in AGENTS.md only; `ci.yml` has no erraudit step. Per the 2026-09-13 gosec
+lesson in global AGENTS: a security/quality gate must fail closed from
+commit one and assert it actually scanned (Files > 0). Not done.
 ~~2. **Pinning erraudit in `flake.nix`** — bank-sync pins `packages.erraudit`~~ → TODO_LIST (2026-10-11 harvest): hermetic erraudit pin
-   (v0.3.1); this repo relies on `~/go/bin/erraudit` (a **dev** build). The
-   gate is not reproducible, and the bare-`//n` divergence between the two
-   repos proves version skew is real.
+(v0.3.1); this repo relies on `~/go/bin/erraudit` (a **dev** build). The
+gate is not reproducible, and the bare-`//n` divergence between the two
+repos proves version skew is real.
 ~~3. **Compile-check of integration-tagged tests** (`go vet -tags integration~~ done — integration-vet in flake check (0.4.0)
-   ./...`): my `classifyStatus` signature change is internal, so risk is low,
-   but nothing this session compiled `integration_test.go`, and the flake has
-   no integration-tag run.
+./...`): my `classifyStatus` signature change is internal, so risk is low,
+but nothing this session compiled `integration_test.go`, and the flake has
+no integration-tag run.
 ~~4. **Downstream impact check**: does bank-sync match the old~~ done — consumers migrated to v0.4.2 (2026-09-23); rename shipped in v0.3.2 notes
-   Corruption/`empty_task_id` from Upload anywhere? (Renaming a code is
-   "new codes may appear, existing never change meaning"-compatible, but the
-   old collision was ambiguous by construction — still worth one grep.)
+Corruption/`empty_task_id` from Upload anywhere? (Renaming a code is
+"new codes may appear, existing never change meaning"-compatible, but the
+old collision was ambiguous by construction — still worth one grep.)
 ~~5. **TODO_LIST.md / FEATURES.md updates** with this session's follow-ups.~~ done — later passes
 ~~6. `nolint-audit` (stale-suppression audit) never run — trivial now, matters~~ → TODO_LIST Low (2026-10-11 harvest): nolint-audit
-   later.
+later.
 
 ## d) TOTALLY FUCKED UP (mistakes made — all caught by gates, none shipped)
 
 ~~1. **A multiedit dropped the `func TestEnsureTagFindsExisting(t *testing.T) {`~~ done — erraudit CI decision recorded (AGENTS.md; two conditions)
-   declaration** — my old_string ended inside the following function and the
-   replacement swallowed its signature. The test build failed immediately
-   (`expected declaration, found t`) and I restored it. Root cause: I targeted
-   a shared boundary line instead of a self-contained block.
+declaration** — my old_string ended inside the following function and the
+replacement swallowed its signature. The test build failed immediately
+(`expected declaration, found t`) and I restored it. Root cause: I targeted
+a shared boundary line instead of a self-contained block.
 ~~2. **Imprecise victory claim**: I wrote "erraudit violations went 64 → 0 on~~ → TODO_LIST (2026-10-11 harvest): hermetic erraudit pin
-   the project-correct gate". Correct: **38 → 0** on the correct gate; the 64
-   included findings from flags that don't apply to this project. (Audit mode
-   today: 33 = the documented suppressions.)
+the project-correct gate". Correct: **38 → 0** on the correct gate; the 64
+included findings from flags that don't apply to this project. (Audit mode
+today: 33 = the documented suppressions.)
 ~~3. **"3 new tests"** — it was 2 new + 1 extended. Sloppy counting.~~ done — integration-vet in flake check (0.4.0)
 ~~4. **Race confusion with a background lint job**: job 027 ran against a~~ done — consumers migrated to v0.4.2 (2026-09-23); rename shipped in v0.3.2 notes
-   mid-edit file state and I briefly treated its lll finding as current; I
-   killed the stale `nix run .#check` (02D) and re-ran cleanly. Lesson
-   (already in global AGENTS): verify tool output against fresh state before
-   acting.
+mid-edit file state and I briefly treated its lll finding as current; I
+killed the stale `nix run .#check` (02D) and re-ran cleanly. Lesson
+(already in global AGENTS): verify tool output against fresh state before
+acting.
 
 ## e) WHAT WE SHOULD IMPROVE (self-review)
 
 ~~1. **What did I forget?** CI wiring for the gate; the dynamic-code catalog~~ done — erraudit CI decision recorded (AGENTS.md; two conditions)
-   gap while editing that exact doc; TODO_LIST/FEATURES; integration-tag
-   compile check. Also: I never read client.go end-to-end in one pass — only
-   chunked views around findings; a full-file read might surface issues
-   between the chunks.
+gap while editing that exact doc; TODO_LIST/FEATURES; integration-tag
+compile check. Also: I never read client.go end-to-end in one pass — only
+chunked views around findings; a full-file read might surface issues
+between the chunks.
 ~~2. **What is stupid that we do anyway?** The erraudit suppression dialect is~~ → TODO_LIST (2026-10-11 harvest): hermetic erraudit pin
-   forked across sibling repos: bank-sync documents `//n // reason` (works on
-   their pinned v0.3.1, allegedly), go-paperless now uses
-   `//nolint:erraudit // reason` (verified on the dev build; the v0.3.1
-   parser source shows NO bare-`//n` support). Either bank-sync's docs are
-   stale or their gate silently passes because those `//n` sites never had
-   violations. Two dialects for one tool is ecosystem debt.
+forked across sibling repos: bank-sync documents `//n // reason` (works on
+their pinned v0.3.1, allegedly), go-paperless now uses
+`//nolint:erraudit // reason` (verified on the dev build; the v0.3.1
+parser source shows NO bare-`//n` support). Either bank-sync's docs are
+stale or their gate silently passes because those `//n` sites never had
+violations. Two dialects for one tool is ecosystem debt.
 ~~3. **What could I have done better?** Investigated WHY golines force-splits~~ done — integration-vet in flake check (0.4.0)
-   every `//nolint`-terminated line into 5-line form (even a 104-char line
-   that fits 120) instead of shrugging "formatter's opinion wins" — the file
-   gained ~120 vertical lines of reflow. Also: enumerated the exact
-   suppression→violation mapping (32 written vs 33 in audit mode — one
-   unaccounted finding I never identified).
+every `//nolint`-terminated line into 5-line form (even a 104-char line
+that fits 120) instead of shrugging "formatter's opinion wins" — the file
+gained ~120 vertical lines of reflow. Also: enumerated the exact
+suppression→violation mapping (32 written vs 33 in audit mode — one
+unaccounted finding I never identified).
 ~~4. **Split brains found (pre-existing, not fixed):** (a) the dynamic error~~ done — consumers migrated to v0.4.2 (2026-09-23); rename shipped in v0.3.2 notes
-   codes are absent from the catalog: `marshal_tag`, `marshal_correspondent`,
-   `marshal_document_type`, `marshal_tag_update`, `decode_correspondent`,
-   `decode_document_type` are built by string concatenation
-   (`"paperless.marshal_"+kind`) and never catalogued; (b) the `//n` vs
-   `//nolint:erraudit` dialect fork above; (c) two live erraudit binaries
-   (pinned v0.3.1 in bank-sync vs dev build on PATH here).
+codes are absent from the catalog: `marshal_tag`, `marshal_correspondent`,
+`marshal_document_type`, `marshal_tag_update`, `decode_correspondent`,
+`decode_document_type` are built by string concatenation
+(`"paperless.marshal_"+kind`) and never catalogued; (b) the `//n` vs
+`//nolint:erraudit` dialect fork above; (c) two live erraudit binaries
+(pinned v0.3.1 in bank-sync vs dev build on PATH here).
 ~~5. **Ghost systems?** None created. Everything added is wired: codes are~~ done — later passes
-   returned, catalogued, tested; ADR linked from ERROR_CODES.md + AGENTS.md.
+returned, catalogued, tested; ADR linked from ERROR_CODES.md + AGENTS.md.
 ~~6. **Did I lie?** Not deliberately; two imprecise claims (d/2, d/3) corrected~~ → TODO_LIST Low (2026-10-11 harvest): nolint-audit
-   above. Everything else in the final summary traces to verified output
-   (check run, erraudit exits, test pass).
+above. Everything else in the final summary traces to verified output
+(check run, erraudit exits, test pass).
 7. **Tests?** Good: family/classification preservation through wraps is
-   pinned; new paths covered end-to-end. Better: direct unit table-test of
-   `classifyStatus`; assert `task_id` in the WaitForTask timeout message;
-   compile integration tag in CI.
+pinned; new paths covered end-to-end. Better: direct unit table-test of
+`classifyStatus`; assert `task_id` in the WaitForTask timeout message;
+compile integration tag in CI.
 8. **Scope creep?** One deliberate expansion: renaming the Upload-path code +
-   ADR — justified as fixing a documented-contract violation, but it IS a
-   behavior change beyond "better error handling" (catalogued in CHANGELOG
-   Unreleased; not released).
+ADR — justified as fixing a documented-contract violation, but it IS a
+behavior change beyond "better error handling" (catalogued in CHANGELOG
+Unreleased; not released).
 9. **Remove something useful?** No. The only deletions were the two
-   experimental directive forms from the suppression probe, normalized back
-   before the final state.
+experimental directive forms from the suppression probe, normalized back
+before the final state.
 
 ## f) Next actions (prioritized, up to 50)
 
 **Gate enforcement (do first)**
 
 ~~1. Pin erraudit in `flake.nix` (input + package, mirroring bank-sync's~~ → TODO_LIST (2026-10-11 harvest): hermetic erraudit pin (binary currently resolves via host PATH in nix develop)
-   `packages.erraudit`) so the gate is reproducible
+`packages.erraudit`) so the gate is reproducible
 ~~2. Add erraudit as a CI step in `ci.yml`: fail closed, assert it scanned~~ done — decision recorded (AGENTS.md: two unblock conditions); erraudit rebuilt + gate green 2026-10-11
-   files (Files > 0) — apply the gosec lesson from 2026-09-13 verbatim
+files (Files > 0) — apply the gosec lesson from 2026-09-13 verbatim
 ~~3. Run `erraudit nolint-audit ./...` locally; add to CI to catch stale~~ → TODO_LIST Low (2026-10-11 harvest): nolint-audit
-   suppressions
+suppressions
 ~~4. Re-verify the gate against the PINNED erraudit version (dev vs v0.3.1~~ done — fresh run 2026-10-11: exit 0, no violations
-   behavior may differ — the `//n` divergence proves it)
+behavior may differ — the `//n` divergence proves it)
 ~~5. Add `go vet -tags integration ./...` (or a tagged build) to CI so~~ done — checks.integration-vet runs in nix flake check (CHANGELOG 0.4.0)
-   integration_test.go always compiles
+integration_test.go always compiles
 
 **Downstream safety**
 ~~6. Grep bank-sync for `empty_task_id`/Corruption matching; confirm the~~ done — consumers migrated to v0.4.2 (2026-09-23); the rename shipped with v0.3.2 release notes
@@ -272,16 +272,16 @@ planned minor? (question for Lars — see g/2)
 ## g) Questions I cannot answer myself
 
 ~~1. **CI gate policy**: should I pin erraudit in `flake.nix` and wire a~~ done — erraudit CI decision recorded (AGENTS.md; two conditions); gate green 2026-10-11
-   fail-closed erraudit step into `ci.yml` now (bank-sync parity), or does
-   this repo deliberately stay gate-free in CI? This changes flake inputs
-   and CI behavior — your call, not mine.
+fail-closed erraudit step into `ci.yml` now (bank-sync parity), or does
+this repo deliberately stay gate-free in CI? This changes flake inputs
+and CI behavior — your call, not mine.
 ~~2. **Release scope**: does the `empty_task_id` → `missing_task_id` rename~~ done — v0.3.2 released 2026-09-16 with the rename in the notes
-   (the one consumer-visible behavior change) go out as v0.3.2 soon, or sit
-   in Unreleased until more lands? If soon, I should verify bank-sync's
-   matching first (item f/6).
+(the one consumer-visible behavior change) go out as v0.3.2 soon, or sit
+in Unreleased until more lands? If soon, I should verify bank-sync's
+matching first (item f/6).
 ~~3. **Commit policy**: the daemon blobbed this session's work into~~ done — release-commit convention recorded (AGENTS.md, CONTRIBUTING)
-   "chore: auto-commit (heuristic)" blobs. Do you want me to write task-scoped commits
-   myself for multi-part work like this (racing the daemon), or is daemon
-   history acceptable and I should stop caring?
+"chore: auto-commit (heuristic)" blobs. Do you want me to write task-scoped commits
+myself for multi-part work like this (racing the daemon), or is daemon
+history acceptable and I should stop caring?
 
 _Authored by Crush (glm-5.3), session of 2026-09-14 ~09:40–10:00._
