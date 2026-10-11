@@ -3,7 +3,6 @@ package paperlesstest
 import (
 	"context"
 	"net/http"
-	"net/http/httptest"
 	"slices"
 	"testing"
 	"time"
@@ -243,7 +242,7 @@ func TestPageBoundsClampsOverflowingPagination(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		request := httptest.NewRequest(http.MethodGet, "/api/documents/?"+test.query, nil)
+		request := newTestRequest(t, http.MethodGet, "/api/documents/?"+test.query)
 
 		start, end := pageBounds(request, test.total)
 		if start != test.wantStart || end != test.wantEnd {
