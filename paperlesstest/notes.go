@@ -6,11 +6,13 @@ import (
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // noteEntity is one note attached to a stored document.
 type noteEntity struct {
-	ID      int
+	ID      paperless.NoteID
 	Note    string
 	Created time.Time
 }
@@ -18,25 +20,25 @@ type noteEntity struct {
 // noteWire mirrors the Note serializer fields the SDK relies on; the fake
 // attaches a fixed author (the real server embeds the acting user).
 type noteWire struct {
-	ID      int           `json:"id"`
-	Note    string        `json:"note"`
-	Created time.Time     `json:"created"`
-	User    *noteUserWire `json:"user"`
+	ID      paperless.NoteID `json:"id"`
+	Note    string           `json:"note"`
+	Created time.Time        `json:"created"`
+	User    *noteUserWire    `json:"user"`
 }
 
 // noteUserWire mirrors the BasicUserSerializer the notes endpoint embeds.
 type noteUserWire struct {
-	ID        int    `json:"id"`
-	Username  string `json:"username"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        paperless.UserID `json:"id"`
+	Username  string          `json:"username"`
+	FirstName string          `json:"first_name"`
+	LastName  string          `json:"last_name"`
 }
 
 // defaultNoteUser is the fixed author the fake attaches to every note (a
 // fresh value per call; noteWire stores the pointer).
 func defaultNoteUser() *noteUserWire {
 	return &noteUserWire{
-		ID:        1,
+		ID:        paperless.NewUserID(1),
 		Username:  "paperlesstest",
 		FirstName: "Paperless",
 		LastName:  "Test",
@@ -47,7 +49,11 @@ func defaultNoteUser() *noteUserWire {
 // endpoint is not paginated and answers every mutation with the full
 // remaining list, newest first). It reports whether the request matched.
 // The caller must hold s.mu.
-func (s *Server) handleDocumentNotesLocked(w http.ResponseWriter, r *http.Request, id int) bool {
+func (s *Server) handleDocumentNotesLocked(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) bool {
 	switch r.Method {
 	case http.MethodGet:
 		return s.handleNoteGetLocked(w, id)
@@ -64,7 +70,7 @@ func (s *Server) handleDocumentNotesLocked(w http.ResponseWriter, r *http.Reques
 
 // handleNoteGetLocked serves one document's note list, 404ing unknown
 // documents. The caller must hold s.mu.
-func (s *Server) handleNoteGetLocked(w http.ResponseWriter, id int) bool {
+func (s *Server) handleNoteGetLocked(w http.ResponseWriter, id paperless.DocumentID) bool {
 	if s.findDocumentLocked(id) == nil {
 		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
 
@@ -77,7 +83,11 @@ func (s *Server) handleNoteGetLocked(w http.ResponseWriter, id int) bool {
 }
 
 // handleNoteCreateLocked appends one note. The caller must hold s.mu.
-func (s *Server) handleNoteCreateLocked(w http.ResponseWriter, r *http.Request, id int) bool {
+func (s *Server) handleNoteCreateLocked(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) bool {
 	var payload struct {
 		Note string `json:"note"`
 	}
@@ -101,7 +111,7 @@ func (s *Server) handleNoteCreateLocked(w http.ResponseWriter, r *http.Request, 
 		return true
 	}
 
-	s.nextNoteID++
+	s.nextNoteID = paperless.NewNoteID(s.nextNoteID.Get() + 1)
 	s.notes[id] = append(s.notes[id], noteEntity{
 		ID:      s.nextNoteID,
 		Note:    payload.Note,
@@ -115,7 +125,11 @@ func (s *Server) handleNoteCreateLocked(w http.ResponseWriter, r *http.Request, 
 
 // handleNoteDeleteLocked removes one note by its id query parameter. The
 // caller must hold s.mu.
-func (s *Server) handleNoteDeleteLocked(w http.ResponseWriter, r *http.Request, id int) bool {
+func (s *Server) handleNoteDeleteLocked(
+	w http.ResponseWriter,
+	r *http.Request,
+	id paperless.DocumentID,
+) bool {
 	noteID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil || noteID <= 0 {
 		s.writeJSON(
@@ -127,11 +141,13 @@ func (s *Server) handleNoteDeleteLocked(w http.ResponseWriter, r *http.Request, 
 		return true
 	}
 
+	note := paperless.NewNoteID(noteID)
+
 	remaining := make([]noteEntity, 0, len(s.notes[id]))
 
-	for _, note := range s.notes[id] {
-		if note.ID != noteID {
-			remaining = append(remaining, note)
+	for _, entity := range s.notes[id] {
+		if entity.ID != note {
+			remaining = append(remaining, entity)
 		}
 	}
 
@@ -151,7 +167,7 @@ func (s *Server) handleNoteDeleteLocked(w http.ResponseWriter, r *http.Request, 
 // writeNotes serves one document's notes as the bare JSON array the notes
 // endpoint answers with (newest first, the server's ordering). The caller
 // must hold s.mu.
-func (s *Server) writeNotes(w http.ResponseWriter, id int) {
+func (s *Server) writeNotes(w http.ResponseWriter, id paperless.DocumentID) {
 	notes := s.notes[id]
 
 	wires := make([]noteWire, 0, len(notes))
@@ -170,7 +186,7 @@ func (s *Server) writeNotes(w http.ResponseWriter, id int) {
 
 // NoteCount reports how many notes one document carries (a test assertion
 // helper; the SDK has no note-count read API).
-func (s *Server) NoteCount(id int) int {
+func (s *Server) NoteCount(id paperless.DocumentID) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

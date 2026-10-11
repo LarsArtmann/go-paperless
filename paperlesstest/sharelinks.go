@@ -8,34 +8,36 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // shareLinkEntity is one share link stored on the fake.
 type shareLinkEntity struct {
-	ID          int
+	ID          paperless.ShareLinkID
 	Created     time.Time
 	Expiration  *time.Time
 	Slug        string
-	Document    int
+	Document    paperless.DocumentID
 	FileVersion string
 }
 
 // shareLinkWire mirrors the ShareLink serializer fields the SDK relies on.
 type shareLinkWire struct {
-	ID          int        `json:"id"`
-	Created     time.Time  `json:"created"`
-	Expiration  *time.Time `json:"expiration"`
-	Slug        string     `json:"slug"`
-	Document    int        `json:"document"`
-	FileVersion string     `json:"file_version"`
+	ID          paperless.ShareLinkID `json:"id"`
+	Created     time.Time            `json:"created"`
+	Expiration  *time.Time           `json:"expiration"`
+	Slug        string               `json:"slug"`
+	Document    paperless.DocumentID `json:"document"`
+	FileVersion string               `json:"file_version"`
 }
 
 // shareLinkCreateWire mirrors the POST body: the server generates the slug
 // and ID, and an omitted file version means the server default (archive).
 type shareLinkCreateWire struct {
-	Document    int        `json:"document"`
-	FileVersion string     `json:"file_version"`
-	Expiration  *time.Time `json:"expiration"`
+	Document    paperless.DocumentID `json:"document"`
+	FileVersion string               `json:"file_version"`
+	Expiration  *time.Time           `json:"expiration"`
 }
 
 // routeShareLinks serves the share-links family. It reports whether the
@@ -71,7 +73,7 @@ func (s *Server) routeShareLinks(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
-	s.handleShareLinkDelete(w, id)
+	s.handleShareLinkDelete(w, paperless.NewShareLinkID(id))
 
 	return true
 }
@@ -105,7 +107,7 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.Document <= 0 {
+	if payload.Document.IsZero() {
 		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "document is required"})
 
 		return
@@ -114,7 +116,7 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.nextShareLinkID++
+	s.nextShareLinkID = paperless.NewShareLinkID(s.nextShareLinkID.Get() + 1)
 
 	fileVersion := payload.FileVersion
 	if fileVersion == "" {
@@ -125,7 +127,7 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 		ID:          s.nextShareLinkID,
 		Created:     time.Now().UTC(),
 		Expiration:  payload.Expiration,
-		Slug:        fmt.Sprintf("test-slug-%d", s.nextShareLinkID),
+		Slug:        fmt.Sprintf("test-slug-%d", s.nextShareLinkID.Get()),
 		Document:    payload.Document,
 		FileVersion: fileVersion,
 	}
@@ -136,14 +138,14 @@ func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleShareLinkDelete revokes one share link.
-func (s *Server) handleShareLinkDelete(w http.ResponseWriter, id int) {
+func (s *Server) handleShareLinkDelete(w http.ResponseWriter, linkID paperless.ShareLinkID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	before := len(s.shareLinks)
 
 	s.shareLinks = slices.DeleteFunc(s.shareLinks, func(link shareLinkEntity) bool {
-		return link.ID == id
+		return link.ID.Equal(linkID)
 	})
 
 	if len(s.shareLinks) == before {

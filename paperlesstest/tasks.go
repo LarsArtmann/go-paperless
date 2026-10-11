@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // Upload is the parsed capture of one post_document multipart upload:
@@ -74,7 +76,7 @@ type TaskPlan struct {
 	// fixture document reported as consumed; zero means the upload is
 	// consumed naturally (the fake stores it and reports the new ID).
 	// For duplicate: the pre-existing document the upload duplicates.
-	DocumentID int64
+	DocumentID paperless.DocumentID
 	// Message is the failure reason served for TaskPlanFailure.
 	Message string
 	// InTrash refines TaskPlanDuplicate: the duplicate sits in the trash.
@@ -86,9 +88,9 @@ type TaskPlan struct {
 
 // WithTaskSuccess scripts the next upload's task to resolve as consumed,
 // pointing at the fixture document documentID.
-func WithTaskSuccess(documentID int) Option {
+func WithTaskSuccess(documentID paperless.DocumentID) Option {
 	return func(s *Server) {
-		s.scriptTask(TaskPlan{Kind: TaskPlanSuccess, DocumentID: int64(documentID)})
+		s.scriptTask(TaskPlan{Kind: TaskPlanSuccess, DocumentID: documentID})
 	}
 }
 
@@ -103,10 +105,10 @@ func WithTaskFailure(message string) Option {
 // WithTaskDuplicate scripts the next upload's task as a duplicate refusal
 // pointing at the pre-existing document documentID (inTrash marks a
 // duplicate sitting in the trash).
-func WithTaskDuplicate(documentID int, inTrash bool) Option {
+func WithTaskDuplicate(documentID paperless.DocumentID, inTrash bool) Option {
 	return func(s *Server) {
 		s.scriptTask(
-			TaskPlan{Kind: TaskPlanDuplicate, DocumentID: int64(documentID), InTrash: inTrash},
+			TaskPlan{Kind: TaskPlanDuplicate, DocumentID: documentID, InTrash: inTrash},
 		)
 	}
 }
@@ -130,7 +132,7 @@ func (s *Server) ScriptTask(plan TaskPlan) {
 // previous run left behind (e.g. a ledger row referencing a consumption
 // task this test never uploads). The plan is served to every matching
 // poll; PendingPolls applies as with scripted uploads.
-func (s *Server) SeedTask(taskID string, plan TaskPlan) {
+func (s *Server) SeedTask(taskID paperless.TaskID, plan TaskPlan) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -146,7 +148,7 @@ func (s *Server) scriptTask(plan TaskPlan) {
 
 // taskRecord is one consumption task the fake has issued.
 type taskRecord struct {
-	ID string
+	ID paperless.TaskID
 	// plan is the resolved outcome this task terminates with.
 	plan TaskPlan
 	// polls counts the task polls served (drives PendingPolls).
@@ -156,20 +158,20 @@ type taskRecord struct {
 // taskWire mirrors the Paperless-ngx v10 task object (TaskSerializerV10)
 // subset the SDK decodes.
 type taskWire struct {
-	TaskID             string         `json:"task_id"`
-	Status             string         `json:"status"`
-	ResultData         taskResultWire `json:"result_data"`
-	RelatedDocumentIDs []int64        `json:"related_document_ids"`
+	TaskID             paperless.TaskID   `json:"task_id"`
+	Status             string             `json:"status"`
+	ResultData         taskResultWire     `json:"result_data"`
+	RelatedDocumentIDs []paperless.DocumentID `json:"related_document_ids"`
 }
 
 // taskResultWire mirrors the free-form result_data dict: {"document_id": N}
 // after successful consumption, {"duplicate_of": N, "duplicate_in_trash":
 // B} for refused duplicates, {"error_message": "..."} for real failures.
 type taskResultWire struct {
-	DocumentID       *int64  `json:"document_id,omitempty"`
-	DuplicateOf      *int64  `json:"duplicate_of,omitempty"`
-	DuplicateInTrash bool    `json:"duplicate_in_trash"`
-	ErrorMessage     *string `json:"error_message,omitempty"`
+	DocumentID       *paperless.DocumentID `json:"document_id,omitempty"`
+	DuplicateOf      *paperless.DocumentID `json:"duplicate_of,omitempty"`
+	DuplicateInTrash bool                   `json:"duplicate_in_trash"`
+	ErrorMessage     *string                `json:"error_message,omitempty"`
 }
 
 // routeUpload serves the post_document upload endpoint. It reports whether
@@ -264,7 +266,7 @@ func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 	s.nextTaskNumber++
 
 	record := &taskRecord{
-		ID: fmt.Sprintf("task-%d", s.nextTaskNumber),
+		ID: paperless.NewTaskID(fmt.Sprintf("task-%d", s.nextTaskNumber)),
 	}
 
 	if scripted := s.popScriptLocked(); scripted != nil {
@@ -273,8 +275,8 @@ func (s *Server) createTaskLocked(upload Upload) *taskRecord {
 		// A scripted success without a document pointer consumes the
 		// upload naturally (storing it) while keeping the script's shape
 		// (e.g. pending polls).
-		if record.plan.Kind == TaskPlanSuccess && record.plan.DocumentID == 0 {
-			record.plan.DocumentID = int64(s.resolveConsumptionLocked(upload))
+		if record.plan.Kind == TaskPlanSuccess && record.plan.DocumentID.IsZero() {
+			record.plan.DocumentID = s.resolveConsumptionLocked(upload)
 		}
 	} else {
 		record.plan = s.naturalPlanLocked(upload)
@@ -294,7 +296,7 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 
 	for _, doc := range s.documents {
 		if doc.Checksum == checksum {
-			return TaskPlan{Kind: TaskPlanDuplicate, DocumentID: int64(doc.ID)}
+			return TaskPlan{Kind: TaskPlanDuplicate, DocumentID: doc.ID}
 		}
 	}
 
@@ -303,20 +305,20 @@ func (s *Server) naturalPlanLocked(upload Upload) TaskPlan {
 		Content:        upload.Content,
 		Checksum:       checksum,
 		Created:        parseUploadDate(upload.Created),
-		Correspondent:  atoiOrZero(upload.Correspondent),
+		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
 		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: atoiOrZero(upload.DocumentType),
+		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)),
 		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
 	})
 
-	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: int64(stored.ID)}
+	return TaskPlan{Kind: TaskPlanSuccess, DocumentID: stored.ID}
 }
 
 // resolveConsumptionLocked resolves one upload's content to a document ID:
 // a duplicate checksum maps to the pre-existing document, anything else is
 // stored (carrying its form metadata) and maps to the new document. The
 // caller must hold s.mu.
-func (s *Server) resolveConsumptionLocked(upload Upload) int {
+func (s *Server) resolveConsumptionLocked(upload Upload) paperless.DocumentID {
 	checksum := ChecksumOf(upload.Content)
 
 	for _, doc := range s.documents {
@@ -330,9 +332,9 @@ func (s *Server) resolveConsumptionLocked(upload Upload) int {
 		Content:        upload.Content,
 		Checksum:       checksum,
 		Created:        parseUploadDate(upload.Created),
-		Correspondent:  atoiOrZero(upload.Correspondent),
+		Correspondent:  paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
 		TagIDs:         atoiSlice(upload.Tags),
-		DocumentTypeID: atoiOrZero(upload.DocumentType),
+		DocumentTypeID: paperless.NewDocumentTypeID(atoiOrZero(upload.DocumentType)),
 		CustomFields:   parseCustomFieldsJSON(upload.CustomFields),
 	})
 
@@ -385,7 +387,7 @@ func (s *Server) routeTasks(w http.ResponseWriter, r *http.Request) bool {
 // hold s.mu.
 func (s *Server) taskPayloadLocked(taskID string) *taskWire {
 	for _, task := range s.tasks {
-		if task.ID != taskID {
+		if task.ID.Get() != taskID {
 			continue
 		}
 
@@ -412,7 +414,7 @@ func (s *Server) terminalTaskWireLocked(task *taskRecord) *taskWire {
 			TaskID:             task.ID,
 			Status:             "success",
 			ResultData:         taskResultWire{DocumentID: &documentID},
-			RelatedDocumentIDs: []int64{documentID},
+			RelatedDocumentIDs: []paperless.DocumentID{documentID},
 		}
 	case TaskPlanDuplicate:
 		return &taskWire{
@@ -483,18 +485,18 @@ func atoiOrZero(raw string) int {
 	return parsed
 }
 
-// atoiSlice parses repeated decimal form fields into IDs.
-func atoiSlice(raw []string) []int {
+// atoiSlice parses repeated decimal form fields into tag IDs.
+func atoiSlice(raw []string) []paperless.TagID {
 	if len(raw) == 0 {
 		return nil
 	}
 
-	ids := make([]int, 0, len(raw))
+	tagIDs := make([]paperless.TagID, 0, len(raw))
 	for _, value := range raw {
-		ids = append(ids, atoiOrZero(value))
+		tagIDs = append(tagIDs, paperless.NewTagID(atoiOrZero(value)))
 	}
 
-	return ids
+	return tagIDs
 }
 
 // parseCustomFieldsJSON parses the custom_fields form field (a JSON array

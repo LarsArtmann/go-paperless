@@ -10,14 +10,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // CustomFieldValue is one custom-field value on a document fixture: the
 // custom-field definition ID plus the value assigned to it. It mirrors the
 // wire shape ({"field": N, "value": "..."}).
 type CustomFieldValue struct {
-	Field int    `json:"field"`
-	Value string `json:"value"`
+	Field paperless.CustomFieldID `json:"field"`
+	Value string                  `json:"value"`
 }
 
 // Document is a stored-document fixture. Seed documents via WithDocuments
@@ -28,7 +30,7 @@ type CustomFieldValue struct {
 // the real server applies) when the document is stored; a Checksum set by
 // the test is kept verbatim.
 type Document struct {
-	ID int
+	ID paperless.DocumentID
 	// Title is the stored document title (the real server derives it from
 	// the upload filename when the upload sends no title).
 	Title string
@@ -40,12 +42,12 @@ type Document struct {
 	Checksum string
 	// Created is the document's creation date.
 	Created time.Time
-	// Correspondent is the assigned correspondent ID (0 = none).
-	Correspondent int
+	// Correspondent is the assigned correspondent ID (zero = none).
+	Correspondent paperless.CorrespondentID
 	// TagIDs are the assigned tag IDs.
-	TagIDs []int
-	// DocumentTypeID is the assigned document type ID (0 = none).
-	DocumentTypeID int
+	TagIDs []paperless.TagID
+	// DocumentTypeID is the assigned document type ID (zero = none).
+	DocumentTypeID paperless.DocumentTypeID
 	// CustomFields are the assigned custom-field values.
 	CustomFields []CustomFieldValue
 }
@@ -90,7 +92,7 @@ func (s *Server) AddDocument(doc Document) Document {
 // reports whether the document exists. Use it to reshape server state
 // mid-test (aging metadata, corrupting titles). The edit function runs
 // under the fake's lock — it must not call back into the server.
-func (s *Server) EditDocument(id int, edit func(doc *Document)) bool {
+func (s *Server) EditDocument(id paperless.DocumentID, edit func(doc *Document)) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -116,10 +118,10 @@ func (s *Server) addDocument(doc Document) {
 // appendDocumentLocked stores one document fixture. The caller must hold
 // s.mu.
 func (s *Server) appendDocumentLocked(doc Document) *Document {
-	if doc.ID <= 0 {
-		s.nextDocumentID++
+	if doc.ID.IsZero() {
+		s.nextDocumentID = paperless.NewDocumentID(s.nextDocumentID.Get() + 1)
 		doc.ID = s.nextDocumentID
-	} else if doc.ID > s.nextDocumentID {
+	} else if doc.ID.Get() > s.nextDocumentID.Get() {
 		s.nextDocumentID = doc.ID
 	}
 
@@ -137,13 +139,13 @@ func (s *Server) appendDocumentLocked(doc Document) *Document {
 // checksum fields follow the server's ChecksumShape: flat field
 // (pre-3.x) or versions[] array (3.x) — never both.
 type documentWire struct {
-	ID            int                `json:"id"`
-	Title         string             `json:"title"`
-	Correspondent int                `json:"correspondent"`
-	Created       string             `json:"created"`
-	Tags          []int              `json:"tags"`
-	DocumentType  int                `json:"document_type"`
-	CustomFields  []CustomFieldValue `json:"custom_fields"`
+	ID            paperless.DocumentID        `json:"id"`
+	Title         string                      `json:"title"`
+	Correspondent paperless.CorrespondentID   `json:"correspondent"`
+	Created       string                      `json:"created"`
+	Tags          []paperless.TagID           `json:"tags"`
+	DocumentType  paperless.DocumentTypeID    `json:"document_type"`
+	CustomFields  []CustomFieldValue          `json:"custom_fields"`
 	// Checksum is the flat legacy checksum field; omitted in the versions[]
 	// shape (paperless-ngx 3.x removed it from the serializer).
 	Checksum string `json:"checksum,omitempty"`
@@ -154,9 +156,9 @@ type documentWire struct {
 
 // versionWire is one entry of the document's versions[] array.
 type versionWire struct {
-	ID       int    `json:"id"`
-	Checksum string `json:"checksum"`
-	IsRoot   bool   `json:"is_root"`
+	ID       paperless.DocumentVersionID `json:"id"`
+	Checksum string                      `json:"checksum"`
+	IsRoot   bool                        `json:"is_root"`
 }
 
 // documentWireFor serializes one stored document under the server's
@@ -173,7 +175,7 @@ func (s *Server) documentWireFor(doc *Document) documentWire {
 	}
 
 	if wire.Tags == nil {
-		wire.Tags = []int{}
+		wire.Tags = []paperless.TagID{}
 	}
 
 	if wire.CustomFields == nil {
@@ -288,7 +290,7 @@ func (s *Server) routeDocuments(w http.ResponseWriter, r *http.Request) bool {
 // route.
 type DocumentPatch struct {
 	// DocumentID is the patched document.
-	DocumentID int
+	DocumentID paperless.DocumentID
 	// Body is the raw JSON patch payload as received.
 	Body []byte
 }
@@ -310,7 +312,7 @@ func (s *Server) Patches() []DocumentPatch {
 
 // DeletedDocuments returns the IDs of every document the fake has deleted
 // via the detail route, oldest first.
-func (s *Server) DeletedDocuments() []int {
+func (s *Server) DeletedDocuments() []paperless.DocumentID {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -322,12 +324,12 @@ func (s *Server) DeletedDocuments() []int {
 // them, and TagIDs replaces the full tag set (DRF many-to-many PATCH
 // semantics).
 type documentUpdateWire struct {
-	Title         *string            `json:"title"`
-	Created       *string            `json:"created"`
-	Correspondent *int               `json:"correspondent"`
-	Tags          []int              `json:"tags"`
-	DocumentType  *int               `json:"document_type"`
-	CustomFields  []CustomFieldValue `json:"custom_fields"`
+	Title         *string                    `json:"title"`
+	Created       *string                    `json:"created"`
+	Correspondent *paperless.CorrespondentID `json:"correspondent"`
+	Tags          []paperless.TagID          `json:"tags"`
+	DocumentType  *paperless.DocumentTypeID  `json:"document_type"`
+	CustomFields  []CustomFieldValue         `json:"custom_fields"`
 }
 
 // routeDocumentDetail serves the per-document routes (PATCH/GET/DELETE on
@@ -342,11 +344,13 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 		return false
 	}
 
+	documentID := paperless.NewDocumentID(int64(id))
+
 	switch {
 	case len(segments) == 1:
-		return s.routeDocumentByID(w, r, id)
+		return s.routeDocumentByID(w, r, documentID)
 	case len(segments) == 2 && segments[1] == "notes":
-		return s.routeDocumentNotes(w, r, id)
+		return s.routeDocumentNotes(w, r, documentID)
 	case len(segments) == 2 && segments[1] == "download":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowed(w, r, http.MethodGet)
@@ -354,7 +358,7 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 			return true
 		}
 
-		s.serveDocumentDownload(w, id)
+		s.serveDocumentDownload(w, documentID)
 
 		return true
 	default:
@@ -363,7 +367,7 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 }
 
 // routeDocumentByID serves the PATCH/GET/DELETE surface of one document.
-func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id int) bool {
+func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) bool {
 	switch r.Method {
 	case http.MethodPatch:
 		s.handleDocumentPatch(w, r, id)
@@ -386,12 +390,12 @@ func (s *Server) routeDocumentByID(w http.ResponseWriter, r *http.Request, id in
 
 // routeDocumentNotes serves one document's notes routes under the fake's
 // lock (the notes handlers read the document store directly).
-func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id int) bool {
+func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.notes == nil {
-		s.notes = map[int][]noteEntity{}
+		s.notes = map[paperless.DocumentID][]noteEntity{}
 	}
 
 	return s.handleDocumentNotesLocked(w, r, id)
@@ -399,7 +403,7 @@ func (s *Server) routeDocumentNotes(w http.ResponseWriter, r *http.Request, id i
 
 // handleDocumentPatch applies and records one metadata patch. The caller
 // must not hold s.mu.
-func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id int) {
+func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id paperless.DocumentID) {
 	raw := readBody(r)
 
 	var patch documentUpdateWire
@@ -450,7 +454,7 @@ func (s *Server) handleDocumentPatch(w http.ResponseWriter, r *http.Request, id 
 }
 
 // handleDocumentDelete removes one document and records the deletion.
-func (s *Server) handleDocumentDelete(w http.ResponseWriter, id int) {
+func (s *Server) handleDocumentDelete(w http.ResponseWriter, id paperless.DocumentID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -470,7 +474,7 @@ func (s *Server) handleDocumentDelete(w http.ResponseWriter, id int) {
 }
 
 // handleDocumentGet serves one document's serialized form.
-func (s *Server) handleDocumentGet(w http.ResponseWriter, id int) {
+func (s *Server) handleDocumentGet(w http.ResponseWriter, id paperless.DocumentID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -485,7 +489,7 @@ func (s *Server) handleDocumentGet(w http.ResponseWriter, id int) {
 }
 
 // serveDocumentDownload serves one document's stored original bytes.
-func (s *Server) serveDocumentDownload(w http.ResponseWriter, id int) {
+func (s *Server) serveDocumentDownload(w http.ResponseWriter, id paperless.DocumentID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -506,7 +510,7 @@ func (s *Server) serveDocumentDownload(w http.ResponseWriter, id int) {
 
 // findDocumentLocked locates one stored document by ID, or nil. The caller
 // must hold s.mu.
-func (s *Server) findDocumentLocked(id int) *Document {
+func (s *Server) findDocumentLocked(id paperless.DocumentID) *Document {
 	for _, doc := range s.documents {
 		if doc.ID == id {
 			return doc

@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 const (
@@ -121,34 +123,34 @@ type Server struct {
 	shape      ChecksumShape
 
 	documents      []*Document
-	nextDocumentID int
+	nextDocumentID paperless.DocumentID
 
 	patches          []DocumentPatch
-	deletedDocuments []int
+	deletedDocuments []paperless.DocumentID
 
 	uploads        []Upload
 	script         []TaskPlan
 	tasks          []*taskRecord
 	nextTaskNumber int
 
-	tags                []namedEntity
-	correspondents      []namedEntity
-	documentTypes       []namedEntity
-	nextTagID           int
-	nextCorrespondentID int
-	nextDocumentTypeID  int
+	tags                []namedEntity[paperless.TagBrand]
+	correspondents      []namedEntity[paperless.CorrespondentBrand]
+	documentTypes       []namedEntity[paperless.DocumentTypeBrand]
+	nextTagID           paperless.TagID
+	nextCorrespondentID paperless.CorrespondentID
+	nextDocumentTypeID  paperless.DocumentTypeID
 
 	customFields      []customFieldEntity
 	storagePaths      []storagePathEntity
-	nextCustomFieldID int
-	nextStoragePathID int
+	nextCustomFieldID paperless.CustomFieldID
+	nextStoragePathID paperless.StoragePathID
 
-	notes           map[int][]noteEntity
-	nextNoteID      int
+	notes           map[paperless.DocumentID][]noteEntity
+	nextNoteID      paperless.NoteID
 	shareLinks      []shareLinkEntity
-	nextShareLinkID int
+	nextShareLinkID paperless.ShareLinkID
 	savedViews      []savedViewEntity
-	nextSavedViewID int
+	nextSavedViewID paperless.SavedViewID
 
 	requests []RequestRecord
 	token    string
