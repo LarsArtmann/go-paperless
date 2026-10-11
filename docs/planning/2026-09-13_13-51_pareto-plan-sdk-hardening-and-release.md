@@ -65,7 +65,7 @@
 | M01-07 | Run `nix flake check` bare (no pipes); confirm exit 0                                                                                    | 12  |
 | M01-08 | Update TODO_LIST (statuses) + CHANGELOG `[Unreleased]`                                                                                   | 12  |
 
-### T02 — CI workflow (5 × 12min) — ✅ done at `4fd2427` (CI all green, run 34759332865; `pull_request` trigger still unverified — TODO_LIST)
+### T02 — CI workflow (5 × 12min) — ✅ done at `4fd2427` (CI all green, run 34759332865; ~~`pull_request` trigger still unverified~~ verified 2026-09-14 05:24 session)
 
 | ID     | Micro task                                                                   | Min |
 | ------ | ---------------------------------------------------------------------------- | --- |
@@ -83,7 +83,7 @@
 | M03-02 | Test `go.mod` → 1.27 + flake go_1_27 build locally; check bank-sync/InboxClean constraint | 12  |
 | M03-03 | Apply chosen fix; gopls warnings = 0; full gate re-run                                    | 12  |
 
-### T04 — Release (5 × 12min) — ✅ done at `ae574d8` (tag `v0.1.1` pushed + proxy-verified; the tagged commit's gosec job was red, fixed at `4fd2427` — posture question open, status report §g-1)
+### T04 — Release (5 × 12min) — ✅ done at `ae574d8` (tag `v0.1.1` pushed + proxy-verified; ~~posture question open~~ resolved: tag left, note appended to the release body `6c25597`)
 
 | ID     | Micro task                                                                                  | Min |
 | ------ | ------------------------------------------------------------------------------------------- | --- |
@@ -101,7 +101,7 @@
 | M05-02 | `TestUpload503CarriesRetryAfterHint` (mirror the 429 test) | 12  |
 | M05-03 | `nix run .#test-race`; mark TODO_LIST items done           | 12  |
 
-### T06 — UpdateDocument tests (3 × 12min)
+### T06 — UpdateDocument tests (3 × 12min) — ✅ done at `e2d6e7d`-line (tests tail shipped in v0.4.0: custom_fields wire shape + empty-`TagIDs` omission; CHANGELOG 0.4.0)
 
 | ID     | Micro task                                                        | Min |
 | ------ | ----------------------------------------------------------------- | --- |
@@ -109,7 +109,7 @@
 | M06-02 | Assert empty `TagIDs` omitted while other fields set              | 12  |
 | M06-03 | Assert explicit `TagIDs: []int{}` replaces (documented semantics) | 12  |
 
-### T07 — Options/transport tests (4 × 12min) — ✅ done at `2c4726b` (TestWithTimeoutBoundsSlowResponses, TestWithHTTPClientRoutesRequestsThroughSuppliedClient; M07-03/M07-04 still open in TODO_LIST)
+### T07 — Options/transport tests (4 × 12min) — ✅ done at `2c4726b` (TestWithTimeoutBoundsSlowResponses, TestWithHTTPClientRoutesRequestsThroughSuppliedClient; ~~M07-03/M07-04 still open~~ shipped in v0.4.0 tests tail)
 
 | ID     | Micro task                                                            | Min |
 | ------ | --------------------------------------------------------------------- | --- |
@@ -213,7 +213,7 @@
 | M17-04 | `FuzzClassifyTask` + seeds                                                 | 12  |
 | M17-05 | Run seeds × time-boxed fuzzing; file findings; wire into CI (optional job) | 12  |
 
-### T18 — Integration tier (8 × 12min) — ✅ done at `35c019b` — scaffold (`integration_test.go`, ping + five listings); the upload → poll → reconcile e2e is still open (TODO_LIST)
+### T18 — Integration tier (8 × 12min) — ✅ done at `35c019b` — scaffold (`integration_test.go`, ping + five listings); ~~the upload → poll → reconcile e2e is still open~~ shipped as `TestIntegrationUploadReconcile` (v0.4.0; live run awaits credentials)
 
 | ID     | Micro task                                                   | Min |
 | ------ | ------------------------------------------------------------ | --- |
@@ -264,7 +264,7 @@
 | M22-02 | Link from ROADMAP theme 2                                                   | 12  |
 | M22-03 | Review against ProbeCapabilities behavior                                   | 12  |
 
-### T23 — Streaming upload spike (5 × 12min)
+### T23 — Streaming upload spike (5 × 12min) — ✅ done as ADR 0003 (`docs/adr/0003-streaming-upload.md`, v0.4.0: streaming upload explicitly NOT promised, with the Content-Length/replay constraints)
 
 | ID     | Micro task                                                     | Min |
 | ------ | -------------------------------------------------------------- | --- |
@@ -398,3 +398,14 @@ flowchart TD
 ---
 
 _Point-in-time plan (2026-09-13 13:51). When work completes, annotate items via docs-health ANNOTATE and keep TODO_LIST.md as the living source — this file is the snapshot, not the backlog._
+
+
+---
+
+## Resolution (2026-10-11, docs-health pass)
+
+Every task T01–T24 is resolved: 22 carried ✅ markers from the executing
+sessions; T06 (tests tail) and T23 (ADR 0003) shipped in v0.4.0; the open
+riders on T02/T04/T07/T18 closed via later sessions (PR-path verification
+2026-09-14, release-body note `6c25597`, v0.4.0 tests tail and e2e).
+Archived to `docs/status/archived/` by the 2026-10-11 docs-health pass.

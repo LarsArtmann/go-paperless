@@ -75,7 +75,7 @@ pushed — and the migration caught two real latent bugs in InboxClean.
 
 ## Open (one item)
 
-- **GitHub Actions billing blocks CI on InboxClean + bank-sync**: every job
+- ~~**GitHub Actions billing blocks CI on InboxClean + bank-sync**~~ routed — TODO_LIST (BLOCKED, owner action; still open 2026-10-11).
   fails pre-start with "recent account payments have failed or your spending
   limit needs to be increased". All verification for both pushes ran green
   locally; go-paperless CI is unaffected and green. Owner action required —
