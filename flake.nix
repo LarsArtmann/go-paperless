@@ -374,6 +374,7 @@
                   echo "ok: pkg.go.dev indexed $version"
 
                   echo "== race detector over the tagged tree =="
+                  : "''${TMPDIR:=/tmp}"
                   git worktree add "$TMPDIR/go-paperless-release-verify" "$version" >/dev/null
                   trap 'git worktree remove --force "$TMPDIR/go-paperless-release-verify"' EXIT
                   ( cd "$TMPDIR/go-paperless-release-verify" \
