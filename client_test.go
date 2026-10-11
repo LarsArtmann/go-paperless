@@ -98,13 +98,13 @@ func TestUploadSendsMultipartWithDocumentField(t *testing.T) {
 		Content:  []byte("%PDF-1.4 fake"),
 		Title:    "Invoice from ACME",
 		Created:  time.Date(2026, 8, 18, 10, 0, 0, 0, time.UTC),
-		TagIDs:   []int{3, 7},
+		TagIDs:   []TagID{NewTagID(3), NewTagID(7)},
 	})
 	if err != nil {
 		t.Fatalf("Upload: %v", err)
 	}
 
-	if taskID != "4f7e8a2b-1234-4cde-9abc-def012345678" {
+	if taskID.Get() != "4f7e8a2b-1234-4cde-9abc-def012345678" {
 		t.Fatalf("task ID not unquoted/trimmed: %q", taskID)
 	}
 
@@ -295,7 +295,7 @@ func TestEnsureTagFindsExisting(t *testing.T) {
 		t.Fatalf("EnsureTag: %v", err)
 	}
 
-	if id != 42 {
+	if id.Get() != 42 {
 		t.Fatalf("id = %d, want 42", id)
 	}
 }
@@ -303,7 +303,7 @@ func TestEnsureTagFindsExisting(t *testing.T) {
 func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 	t.Parallel()
 
-	patched := make(chan *namedPayload, 1)
+	patched := make(chan *namedPayload[TagBrand], 1)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -327,7 +327,7 @@ func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 				t.Errorf("patch body re-sent the name field: %s", raw)
 			}
 
-			var payload namedPayload
+			var payload namedPayload[TagBrand]
 			if err := json.UnmarshalRead(bytes.NewReader(raw), &payload); err != nil {
 				t.Errorf("decode patch body: %v", err)
 			}
@@ -353,7 +353,7 @@ func TestEnsureTagSelfHealsLegacyAutoTag(t *testing.T) {
 		t.Fatalf("EnsureTag: %v", err)
 	}
 
-	if id != 42 {
+	if id.Get() != 42 {
 		t.Fatalf("id = %d, want 42", id)
 	}
 
@@ -396,7 +396,7 @@ func TestEnsureTagLeavesNonAutoTagAlone(t *testing.T) {
 		t.Fatalf("EnsureTag: %v", err)
 	}
 
-	if id != 9 {
+	if id.Get() != 9 {
 		t.Fatalf("id = %d, want 9", id)
 	}
 }
@@ -410,7 +410,7 @@ func TestEnsureTagCreatesWhenMissing(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"results":[]}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/api/tags/":
-			var payload namedPayload
+			var payload namedPayload[TagBrand]
 			if err := json.UnmarshalRead(r.Body, &payload); err != nil {
 				t.Errorf("decode create body: %v", err)
 			}
@@ -445,7 +445,7 @@ func TestEnsureTagCreatesWhenMissing(t *testing.T) {
 		t.Fatalf("EnsureTag: %v", err)
 	}
 
-	if id != 7 {
+	if id.Get() != 7 {
 		t.Fatalf("id = %d, want 7", id)
 	}
 }
@@ -801,7 +801,7 @@ func TestUploadSendsCorrespondentField(t *testing.T) {
 	if _, err := client.Upload(t.Context(), UploadRequest{
 		Filename:        "invoice.pdf",
 		Content:         []byte("%PDF"),
-		CorrespondentID: 42,
+		CorrespondentID: NewCorrespondentID(42),
 	}); err != nil {
 		t.Fatalf("Upload: %v", err)
 	}
@@ -875,7 +875,7 @@ func TestEnsureCorrespondentFindsExisting(t *testing.T) {
 		t.Errorf("name__iexact = %q, want %q", gotQuery, "acme")
 	}
 
-	if id != 7 {
+	if id.Get() != 7 {
 		t.Errorf("id = %d, want 7", id)
 	}
 }
@@ -935,7 +935,7 @@ func TestEnsureCorrespondentCreatesWhenMissing(t *testing.T) {
 		t.Error("correspondent was not created")
 	}
 
-	if id != 12 {
+	if id.Get() != 12 {
 		t.Errorf("id = %d, want 12", id)
 	}
 }
@@ -974,17 +974,17 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 	}
 
 	first := metas[0]
-	if first.ID != 1 || first.Title != "Statement" || first.Correspondent != 5 ||
+	if first.ID.Get() != 1 || first.Title != "Statement" || first.Correspondent.Get() != 5 ||
 		first.Checksum != "abc" {
 		t.Errorf("first meta = %+v", first)
 	}
 
-	if len(first.TagIDs) != 1 || first.TagIDs[0] != 1 {
+	if len(first.TagIDs) != 1 || first.TagIDs[0].Get() != 1 {
 		t.Errorf("first tags = %v", first.TagIDs)
 	}
 
 	second := metas[1]
-	if second.Correspondent != 0 {
+	if second.Correspondent.Get() != 0 {
 		t.Errorf("null correspondent should decode as 0, got %d", second.Correspondent)
 	}
 
@@ -993,7 +993,7 @@ func TestListDocumentMetasReturnsFields(t *testing.T) {
 	}
 
 	if len(second.CustomFields) != 1 ||
-		second.CustomFields[0] != (CustomFieldValue{Field: 4, Value: "msg-9"}) {
+		second.CustomFields[0] != (CustomFieldValue{Field: NewCustomFieldID(4), Value: "msg-9"}) {
 		t.Errorf("custom fields = %v, want [{4 msg-9}]", second.CustomFields)
 	}
 }
@@ -1025,14 +1025,14 @@ func TestUpdateDocumentSendsPatchBody(t *testing.T) {
 	}
 
 	title := "Wyciąg z rachunku"
-	correspondent := 9
+	correspondent := NewCorrespondentID(9)
 	created := time.Date(2026, 9, 3, 10, 0, 0, 0, time.UTC)
 
-	err = client.UpdateDocument(t.Context(), 77, UpdateDocumentRequest{
+	err = client.UpdateDocument(t.Context(), NewDocumentID(77), UpdateDocumentRequest{
 		Title:           &title,
 		CorrespondentID: &correspondent,
 		Created:         &created,
-		TagIDs:          []int{1},
+		TagIDs:   []TagID{NewTagID(1)},
 	})
 	if err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
@@ -1089,10 +1089,10 @@ func TestUpdateDocumentSendsCustomFieldsAndOmitsEmptyTags(t *testing.T) {
 
 	title := "Retitled"
 
-	err = client.UpdateDocument(t.Context(), 42, UpdateDocumentRequest{
+	err = client.UpdateDocument(t.Context(), NewDocumentID(42), UpdateDocumentRequest{
 		Title:        &title,
-		TagIDs:       []int{},
-		CustomFields: []CustomFieldValue{{Field: 3, Value: "msg-123"}},
+		TagIDs:       []TagID{},
+		CustomFields: []CustomFieldValue{{Field: NewCustomFieldID(3), Value: "msg-123"}},
 	})
 	if err != nil {
 		t.Fatalf("UpdateDocument: %v", err)
@@ -1127,7 +1127,7 @@ func TestUpdateDocumentRejectsEmptyRequest(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := client.UpdateDocument(t.Context(), 1, UpdateDocumentRequest{}); err == nil {
+	if err := client.UpdateDocument(t.Context(), NewDocumentID(1), UpdateDocumentRequest{}); err == nil {
 		t.Fatal("expected rejection for empty update request")
 	}
 }
@@ -1153,7 +1153,7 @@ func TestDeleteDocumentSendsDelete(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := client.DeleteDocument(t.Context(), 33); err != nil {
+	if err := client.DeleteDocument(t.Context(), NewDocumentID(33)); err != nil {
 		t.Fatalf("DeleteDocument: %v", err)
 	}
 
@@ -1337,7 +1337,7 @@ func TestGetCorrespondentName(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	name, err := client.GetCorrespondentName(t.Context(), 7)
+	name, err := client.GetCorrespondentName(t.Context(), NewCorrespondentID(7))
 	if err != nil {
 		t.Fatalf("GetCorrespondentName(7): %v", err)
 	}
@@ -1350,7 +1350,7 @@ func TestGetCorrespondentName(t *testing.T) {
 		t.Fatalf("request path = %q, want the detail endpoint", requestedPath)
 	}
 
-	if _, err := client.GetCorrespondentName(t.Context(), 99); err == nil {
+	if _, err := client.GetCorrespondentName(t.Context(), NewCorrespondentID(99)); err == nil {
 		t.Fatal("expected an error for a missing correspondent")
 	}
 }
@@ -1415,7 +1415,7 @@ func TestEnsureDocumentTypeFindsAndCreates(t *testing.T) {
 		t.Fatalf("EnsureDocumentType: %v", err)
 	}
 
-	if id != 3 {
+	if id.Get() != 3 {
 		t.Fatalf("id = %d, want 3", id)
 	}
 }
@@ -1432,7 +1432,7 @@ func TestGetDocumentTypeName(t *testing.T) {
 		},
 	})
 
-	name, err := client.GetDocumentTypeName(t.Context(), 5)
+	name, err := client.GetDocumentTypeName(t.Context(), NewDocumentTypeID(5))
 	if err != nil {
 		t.Fatalf("GetDocumentTypeName(5): %v", err)
 	}
@@ -1441,7 +1441,7 @@ func TestGetDocumentTypeName(t *testing.T) {
 		t.Fatalf("name = %q, want Invoice", name)
 	}
 
-	if _, err := client.GetDocumentTypeName(t.Context(), 9); err == nil {
+	if _, err := client.GetDocumentTypeName(t.Context(), NewDocumentTypeID(9)); err == nil {
 		t.Fatal("expected an error for a missing document type")
 	}
 }
@@ -1502,7 +1502,7 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 		t.Fatalf("EnsureCustomField: %v", err)
 	}
 
-	if id != 1 {
+	if id.Get() != 1 {
 		t.Fatalf("first ensure id = %d, want 1", id)
 	}
 
@@ -1511,12 +1511,12 @@ func TestEnsureAndFindCustomField(t *testing.T) {
 		t.Fatalf("second EnsureCustomField: %v", err)
 	}
 
-	if id != 1 {
+	if id.Get() != 1 {
 		t.Fatalf("second ensure id = %d, want the same field 1", id)
 	}
 
 	found, exists, err := client.FindCustomField(t.Context(), "gmail_message_id")
-	if err != nil || !exists || found != 1 {
+	if err != nil || !exists || found.Get() != 1 {
 		t.Fatalf("FindCustomField = (%d, %v, %v), want (1, true, nil)", found, exists, err)
 	}
 
@@ -1557,8 +1557,8 @@ func TestUploadSendsDocumentTypeAndCustomFields(t *testing.T) {
 	_, err = client.Upload(t.Context(), UploadRequest{
 		Filename:       "invoice.pdf",
 		Content:        []byte("%PDF-1.4"),
-		DocumentTypeID: 3,
-		CustomFields:   []CustomFieldValue{{Field: 1, Value: "msg-123"}},
+		DocumentTypeID: NewDocumentTypeID(3),
+		CustomFields:   []CustomFieldValue{{Field: NewCustomFieldID(1), Value: "msg-123"}},
 	})
 	if err != nil {
 		t.Fatalf("Upload: %v", err)
@@ -1596,7 +1596,7 @@ func TestGetTaskClassifiesConsumedDocument(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, found, err := client.GetTask(t.Context(), "task-uuid-1")
+	outcome, found, err := client.GetTask(t.Context(), NewTaskID("task-uuid-1"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1609,7 +1609,7 @@ func TestGetTaskClassifiesConsumedDocument(t *testing.T) {
 		t.Fatalf("status = %q, want terminal success", outcome.Status)
 	}
 
-	if outcome.DocumentID != 42 {
+	if outcome.DocumentID.Get() != 42 {
 		t.Fatalf("DocumentID = %d, want 42", outcome.DocumentID)
 	}
 
@@ -1637,7 +1637,7 @@ func TestGetTaskClassifiesDuplicateRefusal(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, found, err := client.GetTask(t.Context(), "task-uuid-2")
+	outcome, found, err := client.GetTask(t.Context(), NewTaskID("task-uuid-2"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1654,7 +1654,7 @@ func TestGetTaskClassifiesDuplicateRefusal(t *testing.T) {
 		t.Fatal("expected DuplicateRefused")
 	}
 
-	if outcome.DocumentID != 7 {
+	if outcome.DocumentID.Get() != 7 {
 		t.Fatalf("DocumentID = %d, want the duplicate's 7", outcome.DocumentID)
 	}
 }
@@ -1674,7 +1674,7 @@ func TestGetTaskClassifiesGenericFailure(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, found, err := client.GetTask(t.Context(), "task-uuid-3")
+	outcome, found, err := client.GetTask(t.Context(), NewTaskID("task-uuid-3"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1695,7 +1695,7 @@ func TestGetTaskClassifiesGenericFailure(t *testing.T) {
 		t.Fatalf("ErrorMessage = %q, want bad pdf", outcome.ErrorMessage)
 	}
 
-	if outcome.DocumentID != 0 {
+	if outcome.DocumentID.Get() != 0 {
 		t.Fatalf("DocumentID = %d, want 0", outcome.DocumentID)
 	}
 }
@@ -1714,7 +1714,7 @@ func TestGetTaskNonTerminalPending(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, found, err := client.GetTask(t.Context(), "task-uuid-4")
+	outcome, found, err := client.GetTask(t.Context(), NewTaskID("task-uuid-4"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1741,7 +1741,7 @@ func TestGetTaskNotFound(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, found, err := client.GetTask(t.Context(), "missing-uuid")
+	_, found, err := client.GetTask(t.Context(), NewTaskID("missing-uuid"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1765,7 +1765,7 @@ func TestGetTaskToleratesBareArray(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, found, err := client.GetTask(t.Context(), "task-uuid-5")
+	outcome, found, err := client.GetTask(t.Context(), NewTaskID("task-uuid-5"))
 	if err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
@@ -1774,7 +1774,7 @@ func TestGetTaskToleratesBareArray(t *testing.T) {
 		t.Fatal("expected the task to be found")
 	}
 
-	if outcome.Status != TaskStatusSuccess || outcome.DocumentID != 9 {
+	if outcome.Status != TaskStatusSuccess || outcome.DocumentID.Get() != 9 {
 		t.Fatalf("outcome = %+v, want success with document 9", outcome)
 	}
 }
@@ -1792,7 +1792,7 @@ func TestGetTaskRejectsMalformedJSON(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, _, err = client.GetTask(t.Context(), "task-uuid-6")
+	_, _, err = client.GetTask(t.Context(), NewTaskID("task-uuid-6"))
 	if err == nil {
 		t.Fatal("expected an error for malformed JSON")
 	}
@@ -1816,7 +1816,7 @@ func TestDownloadDocumentReturnsOriginalBytes(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	got, err := client.DownloadDocument(t.Context(), 42)
+	got, err := client.DownloadDocument(t.Context(), NewDocumentID(42))
 	if err != nil {
 		t.Fatalf("DownloadDocument: %v", err)
 	}
@@ -1843,7 +1843,7 @@ func TestDownloadDocumentWrapsErrorsWithDocumentID(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, err = client.DownloadDocument(t.Context(), 42)
+	_, err = client.DownloadDocument(t.Context(), NewDocumentID(42))
 	if err == nil {
 		t.Fatal("expected error for missing document")
 	}
@@ -1949,7 +1949,7 @@ func TestWithRetryNeverRetriesRejections(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, err = client.DownloadDocument(t.Context(), 42)
+	_, err = client.DownloadDocument(t.Context(), NewDocumentID(42))
 	if err == nil {
 		t.Fatal("expected the 404 to surface")
 	}
@@ -2090,7 +2090,7 @@ func TestWithRetryReplaysUploadBodyByteForByte(t *testing.T) {
 		t.Fatalf("Upload: %v", err)
 	}
 
-	if taskID != "task-uuid-retry" {
+	if taskID.Get() != "task-uuid-retry" {
 		t.Fatalf("task ID = %q", taskID)
 	}
 
@@ -2152,7 +2152,7 @@ func TestWaitForTaskPendingThenSuccess(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, err := client.WaitForTask(t.Context(), "task-uuid-1", time.Millisecond)
+	outcome, err := client.WaitForTask(t.Context(), NewTaskID("task-uuid-1"), time.Millisecond)
 	if err != nil {
 		t.Fatalf("WaitForTask: %v", err)
 	}
@@ -2161,7 +2161,7 @@ func TestWaitForTaskPendingThenSuccess(t *testing.T) {
 		t.Fatalf("status = %q, want success", outcome.Status)
 	}
 
-	if outcome.DocumentID != 42 {
+	if outcome.DocumentID.Get() != 42 {
 		t.Fatalf("DocumentID = %d, want 42", outcome.DocumentID)
 	}
 
@@ -2193,12 +2193,12 @@ func TestWaitForTaskToleratesNotFoundThenSuccess(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, err := client.WaitForTask(t.Context(), "task-uuid-2", time.Millisecond)
+	outcome, err := client.WaitForTask(t.Context(), NewTaskID("task-uuid-2"), time.Millisecond)
 	if err != nil {
 		t.Fatalf("WaitForTask: %v", err)
 	}
 
-	if outcome.DocumentID != 7 {
+	if outcome.DocumentID.Get() != 7 {
 		t.Fatalf("DocumentID = %d, want 7", outcome.DocumentID)
 	}
 
@@ -2224,7 +2224,7 @@ func TestWaitForTaskTerminalFailureIsRejection(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, err := client.WaitForTask(t.Context(), "task-uuid-3", time.Millisecond)
+	outcome, err := client.WaitForTask(t.Context(), NewTaskID("task-uuid-3"), time.Millisecond)
 	if err == nil {
 		t.Fatal("expected the terminal failure to surface as an error")
 	}
@@ -2256,13 +2256,13 @@ func TestWaitForTaskDuplicateRefusalIsNotAnError(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, err := client.WaitForTask(t.Context(), "task-uuid-4", time.Millisecond)
+	outcome, err := client.WaitForTask(t.Context(), NewTaskID("task-uuid-4"), time.Millisecond)
 	if err != nil {
 		t.Fatalf("duplicate refusal must not be an error, got %v", err)
 	}
 
 	documentID, inTrash, refused := outcome.Duplicate()
-	if !refused || documentID != 7 || inTrash {
+	if !refused || documentID.Get() != 7 || inTrash {
 		t.Fatalf("Duplicate() = (%d, %t, %t), want (7, false, true)", documentID, inTrash, refused)
 	}
 }
@@ -2283,7 +2283,7 @@ func TestWaitForTaskContextDeadlineSurfacesLastPollError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
 	defer cancel()
 
-	_, err = client.WaitForTask(ctx, "task-uuid-5", 5*time.Millisecond)
+	_, err = client.WaitForTask(ctx, NewTaskID("task-uuid-5"), 5*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected the context deadline to surface as an error")
 	}
@@ -2323,7 +2323,7 @@ func TestWaitForTaskRejectsEmptyTaskID(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	_, err = client.WaitForTask(t.Context(), "", time.Millisecond)
+	_, err = client.WaitForTask(t.Context(), NewTaskID(""), time.Millisecond)
 	if err == nil {
 		t.Fatal("expected an error for the empty task ID")
 	}
@@ -2365,12 +2365,12 @@ func TestWaitForTaskWithRetryRecoversFromTransientPollFailure(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	outcome, err := client.WaitForTask(t.Context(), "task-uuid-6", time.Millisecond)
+	outcome, err := client.WaitForTask(t.Context(), NewTaskID("task-uuid-6"), time.Millisecond)
 	if err != nil {
 		t.Fatalf("WaitForTask: %v", err)
 	}
 
-	if outcome.DocumentID != 42 {
+	if outcome.DocumentID.Get() != 42 {
 		t.Fatalf("DocumentID = %d, want 42", outcome.DocumentID)
 	}
 
@@ -2385,24 +2385,24 @@ func TestTaskOutcomeDuplicateReportsRefusalDetails(t *testing.T) {
 	tests := []struct {
 		name        string
 		outcome     TaskOutcome
-		wantID      int64
+		wantID      DocumentID
 		wantInTrash bool
 		wantRefused bool
 	}{
 		{
 			name:    "not a refusal",
-			outcome: TaskOutcome{Status: TaskStatusSuccess, DocumentID: 42},
+			outcome: TaskOutcome{Status: TaskStatusSuccess, DocumentID: NewDocumentID(42)},
 		},
 		{
 			name:        "refused duplicate",
-			outcome:     TaskOutcome{DuplicateRefused: true, DocumentID: 7},
-			wantID:      7,
+			outcome: TaskOutcome{DuplicateRefused: true, DocumentID: NewDocumentID(7)},
+			wantID:      NewDocumentID(7),
 			wantRefused: true,
 		},
 		{
 			name:        "refused duplicate in trash",
-			outcome:     TaskOutcome{DuplicateRefused: true, DuplicateInTrash: true, DocumentID: 9},
-			wantID:      9,
+			outcome: TaskOutcome{DuplicateRefused: true, DuplicateInTrash: true, DocumentID: NewDocumentID(9)},
+			wantID:      NewDocumentID(9),
 			wantInTrash: true,
 			wantRefused: true,
 		},
@@ -2465,7 +2465,7 @@ func TestEnsureStoragePathCreatesWhenMissing(t *testing.T) {
 		t.Fatalf("EnsureStoragePath: %v", err)
 	}
 
-	if id != 5 {
+	if id.Get() != 5 {
 		t.Fatalf("id = %d, want 5", id)
 	}
 
@@ -2519,7 +2519,7 @@ func TestEnsureStoragePathKeepsExistingTemplateWithoutPOST(t *testing.T) {
 		t.Fatalf("EnsureStoragePath: %v", err)
 	}
 
-	if id != 3 {
+	if id.Get() != 3 {
 		t.Fatalf("id = %d, want the existing 3", id)
 	}
 }
@@ -2573,12 +2573,12 @@ func TestFindStoragePathReturnsFoundFlag(t *testing.T) {
 	}
 
 	id, found, err := client.FindStoragePath(t.Context(), "Archive")
-	if err != nil || !found || id != 3 {
+	if err != nil || !found || id.Get() != 3 {
 		t.Fatalf("FindStoragePath(Archive) = (%d, %t, %v), want (3, true, nil)", id, found, err)
 	}
 
 	id, found, err = client.FindStoragePath(t.Context(), "Missing")
-	if err != nil || found || id != 0 {
+	if err != nil || found || id.Get() != 0 {
 		t.Fatalf("FindStoragePath(Missing) = (%d, %t, %v), want (0, false, nil)", id, found, err)
 	}
 }
@@ -2631,12 +2631,12 @@ func TestListStoragePathsPaginatesAndMaps(t *testing.T) {
 		t.Fatalf("paths = %d, want 101 across two pages", len(paths))
 	}
 
-	if paths[0].ID != 0 || paths[0].Name != "Path 0" || paths[0].Slug != "path-0" ||
+	if paths[0].ID.Get() != 0 || paths[0].Name != "Path 0" || paths[0].Slug != "path-0" ||
 		paths[0].Path != "dir-0/" {
 		t.Fatalf("paths[0] = %+v, want the mapped first entry", paths[0])
 	}
 
-	if paths[100].ID != 100 || paths[100].Name != "Path 100" {
+	if paths[100].ID.Get() != 100 || paths[100].Name != "Path 100" {
 		t.Fatalf("paths[100] = %+v, want the mapped second-page entry", paths[100])
 	}
 
@@ -2670,7 +2670,7 @@ func TestRequestHookObservesWithoutMutating(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if _, _, err := client.GetTask(t.Context(), "task-uuid-9"); err != nil {
+	if _, _, err := client.GetTask(t.Context(), NewTaskID("task-uuid-9")); err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
 
@@ -2723,7 +2723,7 @@ func TestResponseHookSees2xxBodyAndCappedErrorBody(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if _, _, err := client.GetTask(t.Context(), "task-uuid-10"); err != nil {
+	if _, _, err := client.GetTask(t.Context(), NewTaskID("task-uuid-10")); err != nil {
 		t.Fatalf("GetTask: %v", err)
 	}
 
@@ -2739,7 +2739,7 @@ func TestResponseHookSees2xxBodyAndCappedErrorBody(t *testing.T) {
 		t.Fatal("hooked response header must be present")
 	}
 
-	_, err = client.DownloadDocument(t.Context(), 42)
+	_, err = client.DownloadDocument(t.Context(), NewDocumentID(42))
 	if err == nil {
 		t.Fatal("expected the 404 to surface")
 	}
@@ -3336,7 +3336,7 @@ func TestListDocumentNotesReturnsBareArray(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	notes, err := client.ListDocumentNotes(t.Context(), 7)
+	notes, err := client.ListDocumentNotes(t.Context(), NewDocumentID(7))
 	if err != nil {
 		t.Fatalf("ListDocumentNotes: %v", err)
 	}
@@ -3345,7 +3345,7 @@ func TestListDocumentNotesReturnsBareArray(t *testing.T) {
 		t.Fatalf("notes = %d, want 2", len(notes))
 	}
 
-	if notes[0].ID != 1 || notes[0].Note != "first" {
+	if notes[0].ID.Get() != 1 || notes[0].Note != "first" {
 		t.Fatalf("notes[0] = %+v", notes[0])
 	}
 
@@ -3384,7 +3384,7 @@ func TestAddDocumentNoteSendsNoteFieldAndReturnsUpdated(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	notes, err := client.AddDocumentNote(t.Context(), 7, "hello")
+	notes, err := client.AddDocumentNote(t.Context(), NewDocumentID(7), "hello")
 	if err != nil {
 		t.Fatalf("AddDocumentNote: %v", err)
 	}
@@ -3415,11 +3415,11 @@ func TestAddDocumentNoteRejectsEmptyNote(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if _, err := client.AddDocumentNote(t.Context(), 0, "x"); err == nil {
+	if _, err := client.AddDocumentNote(t.Context(), NewDocumentID(0), "x"); err == nil {
 		t.Fatal("expected an error for the zero document ID")
 	}
 
-	_, err = client.AddDocumentNote(t.Context(), 7, "")
+	_, err = client.AddDocumentNote(t.Context(), NewDocumentID(7), "")
 	if err == nil {
 		t.Fatal("expected an error for the empty note")
 	}
@@ -3454,7 +3454,7 @@ func TestDeleteDocumentNoteSendsIDParam(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	notes, err := client.DeleteDocumentNote(t.Context(), 7, 3)
+	notes, err := client.DeleteDocumentNote(t.Context(), NewDocumentID(7), NewNoteID(3))
 	if err != nil {
 		t.Fatalf("DeleteDocumentNote: %v", err)
 	}
@@ -3519,7 +3519,7 @@ func TestListShareLinksPaginates(t *testing.T) {
 		t.Fatalf("links = %d, want 102 across two pages", len(links))
 	}
 
-	if links[0].ID != 1 || links[0].DocumentID != 7 ||
+	if links[0].ID.Get() != 1 || links[0].DocumentID.Get() != 7 ||
 		links[0].FileVersion != ShareLinkFileVersionArchive {
 		t.Fatalf("links[0] = %+v", links[0])
 	}
@@ -3561,14 +3561,14 @@ func TestCreateShareLinkSendsDocumentAndFileVersion(t *testing.T) {
 	}
 
 	link, err := client.CreateShareLink(t.Context(), CreateShareLinkRequest{
-		DocumentID:  7,
+		DocumentID:  NewDocumentID(7),
 		FileVersion: ShareLinkFileVersionOriginal,
 	})
 	if err != nil {
 		t.Fatalf("CreateShareLink: %v", err)
 	}
 
-	if link.ID != 9 || link.Slug != "server-slug" || link.DocumentID != 7 {
+	if link.ID.Get() != 9 || link.Slug != "server-slug" || link.DocumentID.Get() != 7 {
 		t.Fatalf("link = %+v", link)
 	}
 
@@ -3612,7 +3612,7 @@ func TestCreateShareLinkDefaultsFileVersionAndCarriesExpiration(t *testing.T) {
 
 	expiration := time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC)
 	if _, err := client.CreateShareLink(t.Context(), CreateShareLinkRequest{
-		DocumentID: 7,
+		DocumentID: NewDocumentID(7),
 		Expiration: &expiration,
 	}); err != nil {
 		t.Fatalf("CreateShareLink: %v", err)
@@ -3678,7 +3678,7 @@ func TestDeleteShareLinkSendsDelete(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := client.DeleteShareLink(t.Context(), 4); err != nil {
+	if err := client.DeleteShareLink(t.Context(), NewShareLinkID(4)); err != nil {
 		t.Fatalf("DeleteShareLink: %v", err)
 	}
 }
@@ -3710,7 +3710,7 @@ func TestListSavedViewsMapsFilterRules(t *testing.T) {
 	}
 
 	view := views[0]
-	if view.ID != 5 || view.Name != "Inbox" || !view.ShowOnDashboard || view.ShowInSidebar {
+	if view.ID.Get() != 5 || view.Name != "Inbox" || !view.ShowOnDashboard || view.ShowInSidebar {
 		t.Fatalf("view = %+v", view)
 	}
 
@@ -3762,7 +3762,7 @@ func TestCreateSavedViewSendsStableFields(t *testing.T) {
 		t.Fatalf("CreateSavedView: %v", err)
 	}
 
-	if id != 6 {
+	if id.Get() != 6 {
 		t.Fatalf("id = %d, want 6", id)
 	}
 
@@ -3824,7 +3824,7 @@ func TestDeleteSavedViewSendsDelete(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	if err := client.DeleteSavedView(t.Context(), 5); err != nil {
+	if err := client.DeleteSavedView(t.Context(), NewSavedViewID(5)); err != nil {
 		t.Fatalf("DeleteSavedView: %v", err)
 	}
 }
@@ -3846,7 +3846,7 @@ func TestDeleteShareLinkRejectsZeroID(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	err = client.DeleteShareLink(t.Context(), 0)
+	err = client.DeleteShareLink(t.Context(), NewShareLinkID(0))
 	if err == nil {
 		t.Fatal("expected a rejection for share link ID 0")
 	}
@@ -3869,7 +3869,7 @@ func TestDeleteShareLinkSurfacesServerError(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	err = client.DeleteShareLink(t.Context(), 12)
+	err = client.DeleteShareLink(t.Context(), NewShareLinkID(12))
 	if err == nil {
 		t.Fatal("expected the server error to surface")
 	}
@@ -3892,7 +3892,7 @@ func TestDeleteSavedViewRejectsZeroID(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	err = client.DeleteSavedView(t.Context(), 0)
+	err = client.DeleteSavedView(t.Context(), NewSavedViewID(0))
 	if err == nil {
 		t.Fatal("expected a rejection for saved view ID 0")
 	}
@@ -3915,7 +3915,7 @@ func TestDeleteSavedViewSurfacesServerError(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	err = client.DeleteSavedView(t.Context(), 12)
+	err = client.DeleteSavedView(t.Context(), NewSavedViewID(12))
 	if err == nil {
 		t.Fatal("expected the server error to surface")
 	}
@@ -3938,7 +3938,7 @@ func TestDeleteDocumentSurfacesServerError(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	err = client.DeleteDocument(t.Context(), 12)
+	err = client.DeleteDocument(t.Context(), NewDocumentID(12))
 	if err == nil {
 		t.Fatal("expected the server error to surface")
 	}
@@ -4020,17 +4020,17 @@ func TestWriteUploadMetadataFieldFailuresCarryCodedErrors(t *testing.T) {
 		},
 		{
 			name:     "correspondent",
-			req:      UploadRequest{CorrespondentID: 7},
+			req:      UploadRequest{CorrespondentID: NewCorrespondentID(7)},
 			wantCode: "paperless.write_correspondent",
 		},
 		{
 			name:     "tags",
-			req:      UploadRequest{TagIDs: []int{3}},
+			req:      UploadRequest{TagIDs:   []TagID{NewTagID(3)}},
 			wantCode: "paperless.write_tags",
 		},
 		{
 			name:     "document_type",
-			req:      UploadRequest{DocumentTypeID: 9},
+			req:      UploadRequest{DocumentTypeID: NewDocumentTypeID(9)},
 			wantCode: "paperless.write_document_type",
 		},
 	}
@@ -4067,7 +4067,7 @@ func TestWriteCustomFieldsFieldWriteFailureCarriesCodedError(t *testing.T) {
 
 	writer := multipart.NewWriter(failingPartWriter{})
 
-	err := writeCustomFieldsField(writer, []CustomFieldValue{{Field: 1, Value: "gmail-msg-42"}})
+	err := writeCustomFieldsField(writer, []CustomFieldValue{{Field: NewCustomFieldID(1), Value: "gmail-msg-42"}})
 	if err == nil {
 		t.Fatal("expected a write failure against the closed writer")
 	}

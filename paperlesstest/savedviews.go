@@ -6,11 +6,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/larsartmann/go-paperless"
 )
 
 // savedViewEntity is one saved view stored on the fake.
 type savedViewEntity struct {
-	ID              int
+	ID              paperless.SavedViewID
 	Name            string
 	ShowOnDashboard bool
 	ShowInSidebar   bool
@@ -27,13 +29,13 @@ type savedViewRuleEntity struct {
 
 // savedViewWire mirrors the SavedView serializer's stable fields.
 type savedViewWire struct {
-	ID              int                 `json:"id"`
-	Name            string              `json:"name"`
-	ShowOnDashboard bool                `json:"show_on_dashboard"`
-	ShowInSidebar   bool                `json:"show_in_sidebar"`
-	SortField       string              `json:"sort_field"`
-	SortReverse     bool                `json:"sort_reverse"`
-	FilterRules     []savedViewRuleWire `json:"filter_rules"`
+	ID              paperless.SavedViewID   `json:"id"`
+	Name            string                  `json:"name"`
+	ShowOnDashboard bool                    `json:"show_on_dashboard"`
+	ShowInSidebar   bool                    `json:"show_in_sidebar"`
+	SortField       string                  `json:"sort_field"`
+	SortReverse     bool                    `json:"sort_reverse"`
+	FilterRules     []savedViewRuleWire     `json:"filter_rules"`
 }
 
 // savedViewRuleWire mirrors the SavedViewFilterRule serializer.
@@ -79,7 +81,7 @@ func (s *Server) routeSavedViews(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
-	s.handleSavedViewDelete(w, id)
+	s.handleSavedViewDelete(w, paperless.NewSavedViewID(id))
 
 	return true
 }
@@ -122,7 +124,7 @@ func (s *Server) handleSavedViewCreate(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.nextSavedViewID++
+	s.nextSavedViewID = paperless.NewSavedViewID(s.nextSavedViewID.Get() + 1)
 	payload.ID = s.nextSavedViewID
 
 	entity := savedViewEntity{
@@ -144,14 +146,14 @@ func (s *Server) handleSavedViewCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSavedViewDelete removes one saved view.
-func (s *Server) handleSavedViewDelete(w http.ResponseWriter, id int) {
+func (s *Server) handleSavedViewDelete(w http.ResponseWriter, viewID paperless.SavedViewID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	before := len(s.savedViews)
 
 	s.savedViews = slices.DeleteFunc(s.savedViews, func(view savedViewEntity) bool {
-		return view.ID == id
+		return view.ID.Equal(viewID)
 	})
 
 	if len(s.savedViews) == before {

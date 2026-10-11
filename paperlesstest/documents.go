@@ -186,7 +186,7 @@ func (s *Server) documentWireFor(doc *Document) documentWire {
 	case ChecksumVersions:
 		if doc.Checksum != "" {
 			wire.Versions = []versionWire{{
-				ID:       doc.ID,
+				ID:       paperless.NewDocumentVersionID(int(doc.ID.Get())),
 				Checksum: doc.Checksum,
 				IsRoot:   true,
 			}}
