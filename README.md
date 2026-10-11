@@ -15,7 +15,7 @@ pipelines are domain-coupled and stay in the consuming repos.
 
 - Upload documents (content-hash friendly metadata: tags, correspondents, document types, custom fields)
 - `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`, `EnsureStoragePath` (tags self-heal legacy auto-matching; storage paths keep their existing directory template)
-- Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate` returns `(documentID int64, inTrash bool, refused bool)` in that order)
+- Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate` returns `(documentID DocumentID, inTrash bool, refused bool)` in that order)
 - Document management: `ListDocumentChecksums`, `ListDocumentMetas` (paginated), `UpdateDocument`, `DownloadDocument`, `DeleteDocument`
 - Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
 - Share links: `CreateShareLink` (server-generated slug), `ListShareLinks`, `DeleteShareLink`
@@ -27,6 +27,7 @@ pipelines are domain-coupled and stay in the consuming repos.
 - Respectful retry: `RetryAfterError` carries `Retry-After` hints; opt-in automatic retries via `WithRetry(RetryPolicy)` (transient-only, bodies replay, hints override backoff)
 - Observability hooks: `WithRequestHook` / `WithResponseHook` value snapshots
 - Typed errors via [go-error-family](https://github.com/LarsArtmann/go-error-family)
+- **Branded entity IDs** ([go-branded-id](https://github.com/LarsArtmann/go-branded-id), ADR 0004): every entity reference — `DocumentID`, `TagID`, `CorrespondentID`, `TaskID`, … — is a distinct compile-time type, so mixing IDs from different entities cannot compile. Construct from raw values with `paperless.NewDocumentID(42)`-style constructors; `.Get()`, `.IsZero()`, and `.Equal()` read, guard, and compare.
 
 ## Installation
 
@@ -72,7 +73,8 @@ func main() {
 
 ## Common tasks
 
-Document notes:
+Document notes (IDs are branded types — construct from raw values with
+`docID := paperless.NewDocumentID(42)`, or reuse the IDs the SDK returns):
 
 ```go
 notes, err := client.ListDocumentNotes(ctx, docID)

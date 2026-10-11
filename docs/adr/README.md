@@ -12,6 +12,7 @@ they did not say — supersede instead.
 | 0001 | [API-version policy beyond v10](0001-api-version-policy.md)  | accepted |
 | 0002 | [Error model](0002-error-model.md)                           | accepted |
 | 0003 | [Streaming upload is not promised](0003-streaming-upload.md) | accepted |
+| 0004 | [Branded entity IDs](0004-branded-entity-ids.md)             | accepted |
 
 ## Process
 

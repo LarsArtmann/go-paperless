@@ -6,8 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-11
+
+### Changed
+
+- **Breaking: every entity reference is now a branded ID type** (ADR
+  0004, built on `github.com/larsartmann/go-branded-id`). `TagID`,
+  `CorrespondentID`, `DocumentTypeID`, `DocumentID` (int64-backed),
+  `DocumentVersionID`, `TaskID` (string-backed), `CustomFieldID`,
+  `StoragePathID`, `UserID`, `NoteID`, `ShareLinkID`, and `SavedViewID`
+  replace the raw `int`/`string` parameters, struct fields, and returns
+  across the public API: `DeleteDocument(ctx, documentID int)` becomes
+  `DeleteDocument(ctx, documentID DocumentID)`, the `Ensure*`/`Find*`
+  verbs return branded IDs, `Upload` returns a `TaskID`,
+  `TaskOutcome.DocumentID` and `Duplicate()` carry `DocumentID`, and
+  `UploadRequest`/`DocumentMeta`/`UpdateDocumentRequest`/`ShareLink`/
+  `SavedView`/`DocumentNote` fields are branded. Mixing entity IDs is
+  now a compile error. Construct from raw values with the
+  `NewTagID(3)`-style constructors; compare with `.Equal`/`.Get()`,
+  guard with `.IsZero()`. Error codes, messages, and wire behavior are
+  unchanged (see the Fixed entries for the only wire deltas).
+  Consumers pinned to v0.4.x keep compiling until they upgrade; the
+  compiler then walks them through every conversion site.
+- `paperlesstest` fixtures and introspection speak the same branded
+  types (`Document.ID` is a `paperless.DocumentID`, `AddTag` returns a
+  `paperless.TagID`, …), so fake state compares equal to SDK results
+  without conversions. The package's non-test files now import the root
+  `paperless` package for the ID vocabulary only (contract amendment,
+  ADR 0004); the wire protocol remains the fake's source of truth.
+
 ### Fixed
 
+- `UpdateDocumentRequest.CorrespondentID`/`DocumentTypeID` set to a
+  zero-value pointer now PATCH `"correspondent":null` /
+  `"document_type":null` (the server's way to clear a nullable FK)
+  instead of `0`, which DRF rejects as an invalid primary key.
+- `paperlesstest` serves `null` for a document's unset correspondent /
+  document type (the real server's nullable-FK shape) instead of `0`;
+  the SDK decodes both shapes to the same zero ID.
 - CI's standalone `gosec` run reported the upload-parse G120 finding
   despite the suppression: the comment used golangci-lint's `nolint`
   syntax, which standalone gosec does not read. Rewritten as gosec's own

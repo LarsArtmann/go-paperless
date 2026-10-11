@@ -23,9 +23,15 @@
 //
 // # Dependencies
 //
-// Standard library only. The package never imports paperless or any third
-// party module, keeping consumer go.mod graphs clean; round-trip tests
-// against the real client live in this package's test files.
+// Standard library plus the root paperless package's branded ID types
+// (ADR 0004): fixtures, counters, and introspection speak the same
+// DocumentID/TagID/... vocabulary the SDK returns, so fake state compares
+// equal to SDK results without conversions. No SDK logic is imported and
+// the wire protocol remains this package's source of truth; round-trip
+// tests against the real client live in this package's test files. The
+// ID types pull in github.com/larsartmann/go-branded-id (zero
+// dependencies), which the SDK already requires — consumer go.mod graphs
+// gain nothing new.
 //
 // # Quick start
 //

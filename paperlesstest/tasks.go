@@ -367,7 +367,7 @@ func (s *Server) routeTasks(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
-	taskID := r.URL.Query().Get("task_id")
+	taskID := paperless.NewTaskID(r.URL.Query().Get("task_id"))
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -385,9 +385,9 @@ func (s *Server) routeTasks(w http.ResponseWriter, r *http.Request) bool {
 // taskPayloadLocked serves one task's current state for the task_id filter.
 // Unknown tasks answer empty (the client keeps polling). The caller must
 // hold s.mu.
-func (s *Server) taskPayloadLocked(taskID string) *taskWire {
+func (s *Server) taskPayloadLocked(taskID paperless.TaskID) *taskWire {
 	for _, task := range s.tasks {
-		if task.ID.Get() != taskID {
+		if !task.ID.Equal(taskID) {
 			continue
 		}
 
