@@ -10,7 +10,7 @@ skip_steps:
   # analysis. Revisit when govalid is adopted or rebuilt with a current
   # toolchain.
   - govalid-generate
-  # branching-flow runs unskipped since the v0.6.2+ SDK severity cap keeps
-  # its ~112 findings at warning/info (exit 0): the typed-API v2 migration
-  # debt stays documented on every run. The public API remains a
-  # compatibility contract (bank-sync drop-in).
+  # branching-flow runs unskipped at 0 active findings (2026-10-11 triage:
+  # 13 findings eliminated in code, 16 line-suppressed, 31 rule-dismissed —
+  # docs/status/2026-10-11_03-41_branching-flow-findings-triage.md). The
+  # public API remains a compatibility contract (bank-sync drop-in).

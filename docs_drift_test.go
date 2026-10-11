@@ -182,7 +182,12 @@ func calledName(fun ast.Expr) string {
 // keeps its (ctx, c, path, resource) shape.
 func kindArgumentPosition(callee string) int {
 	switch callee {
-	case "findByName", "findNamed", "ensureNamed", "createNamed", "getNamedDetail", "updateMatchingAlgorithm":
+	case "findByName",
+		"findNamed",
+		"ensureNamed",
+		"createNamed",
+		"getNamedDetail",
+		"updateMatchingAlgorithm":
 		return 3
 	case "fetchAllPages":
 		return 3
