@@ -1546,7 +1546,7 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 			Title:         entry.Title,
 			Correspondent: entry.Correspondent,
 			//nolint:branching-flow // RFC3339 wire string parsed at the boundary; branded slots are the v2 typed-API scope
-			Created: parseDocumentCreated(entry.Created),
+			Created:        parseDocumentCreated(entry.Created),
 			TagIDs:         entry.Tags,
 			DocumentTypeID: entry.DocumentType,
 			CustomFields:   customFieldsFromPayload(entry.CustomFields),
