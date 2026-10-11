@@ -97,11 +97,11 @@ Code (all verified by the suite + `nix flake check`):
 
 ## (b) PARTIALLY DONE
 
-1. **Integration e2e live run** — code is complete and compiles in the
+~~1. **Integration e2e live run** — code is complete and compiles in the~~ done — e2e shipped (TestIntegrationUploadReconcile, 0.4.0); the live run needs credentials (→ ROADMAP)
    flake gate, but never EXECUTED against a real Paperless-ngx (no
    PAPERLESS_INTEGRATION_URL/TOKEN available in this session). It remains
    compile-verified only.
-2. **erraudit gate** — intended to just "record the CI decision", ended up
+~~2. **erraudit gate** — intended to just "record the CI decision", ended up~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11 (docs-health pass)
    diagnosing a fresh breakage instead: erraudit v0.4.0 bundles go1.26-era
    x/tools ("This application uses version go1.26 of the source-processing
    packages...") and rejects this module outright — reproduced on the
@@ -109,14 +109,14 @@ Code (all verified by the suite + `nix flake check`):
    corrected (the "exits 0" claim was stale), CI decision updated to two
    unblock conditions, TODO row added. The gate itself is down until
    erraudit upstream rebuilds — outside this repo.
-3. **Fuzz depth** — 15s per fuzzer is smoke-depth, not overnight depth. New
+~~3. **Fuzz depth** — 15s per fuzzer is smoke-depth, not overnight depth. New~~ done — TODO_LIST executed to completion (2026-09-16 17:57/20:59 sessions); rows shipped in 0.4.0
    fuzzers pass; longer budgets would be the next increment.
 
 ## (c) NOT STARTED
 
-1. Nothing from the TODO_LIST's TODO rows — all 20 are done or re-homed
+~~1. Nothing from the TODO_LIST's TODO rows — all 20 are done or re-homed~~ routed — consumers migrated 2026-09-23; pushes landed
    (the erraudit-rebuild row is new and BLOCKED by design).
-2. The 2 pre-existing High BLOCKED rows (push consumer bumps; bank-sync
+~~2. The 2 pre-existing High BLOCKED rows (push consumer bumps; bank-sync~~ done — erraudit rebuilt upstream; gate green again (fresh run 2026-10-11)
    fork retirement) were verified as still-blocked and intentionally not
    touched — pushing is excluded without explicit instruction, and the
    fork decision belongs to bank-sync.
@@ -171,124 +171,124 @@ Code (all verified by the suite + `nix flake check`):
 
 In-repo, actionable (impact-ordered):
 
-1. Live-run `TestIntegrationUploadReconcile` against a real Paperless-ngx
+~~1. Live-run `TestIntegrationUploadReconcile` against a real Paperless-ngx~~ → ROADMAP (2026-10-11 harvest): needs live-server credentials
    (`nix run .#integration`) and record results.
-2. Push this session's work + the consumer bumps (explicit go-ahead
+~~2. Push this session's work + the consumer bumps (explicit go-ahead~~ done — pushed 2026-09-23; the release-verify formal run remains open (→ TODO_LIST Low)
    required), then run `nix run .#release-verify -- v0.3.1` end to end as
    the ritual's first live exercise.
-3. Rebuild erraudit upstream on current x/tools; restore the dev-shell
+~~3. Rebuild erraudit upstream on current x/tools; restore the dev-shell~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11
    gate to exit 0; then close the TODO row.
-4. Publish erraudit to the public module proxy; add the CI job per the
+~~4. Publish erraudit to the public module proxy; add the CI job per the~~ → routed — the standing AGENTS.md erraudit CI decision owns this (proxy publication still open)
    recorded decision (conditions a+b).
-5. Coverage: `writeUploadMetadata` error branches (68.8% — correspondent/
+~~5. Coverage: `writeUploadMetadata` error branches (68.8% — correspondent/~~ done — writeUploadMetadata 68.8% → 100% (2026-09-16 20:59 session; CHANGELOG 0.4.0)
    created/custom-fields/tags/title write failures).
-6. Coverage: `writeCustomFieldsField` (81.8%) malformed-field paths.
-7. Coverage: `GetTask`/`classifyTask` bare-array + envelope edge mix.
-8. Coverage: `doRequestDetail` hook-failure and header-echo branches.
-9. Overnight/30-min fuzz budgets for the four payload fuzzers (CI opt-in
+~~6. Coverage: `writeCustomFieldsField` (81.8%) malformed-field paths.~~ done — writeCustomFieldsField 81.8% → 90.9% (unreachable remainder documented; CHANGELOG 0.4.0)
+~~7. Coverage: `GetTask`/`classifyTask` bare-array + envelope edge mix.~~ → TODO_LIST Low (2026-10-11 harvest): classifyTask edge coverage
+~~8. Coverage: `doRequestDetail` hook-failure and header-echo branches.~~ → TODO_LIST Low (2026-10-11 harvest): hook-failure coverage
+~~9. Overnight/30-min fuzz budgets for the four payload fuzzers (CI opt-in~~ → TODO_LIST Low (2026-10-11 harvest): deeper fuzz budgets
    app, not per-push).
-10. Release v0.3.2 (or fold into v0.4.0) so consumers can pick up the
+~~10. Release v0.3.2 (or fold into v0.4.0) so consumers can pick up the~~ done — v0.3.2 released 2026-09-16
     space-in-code fix + typed enum; CHANGELOG is already written.
-11. bank-sync side: confirm `RuleType: int` call sites survive the typed
+~~11. bank-sync side: confirm `RuleType: int` call sites survive the typed~~ routed — consumer-repo scope
     enum (untyped constants compile; `var x int = rule.RuleType` does not)
     before the v0.3.2 rollout.
-12. Add a `GetShareLink`/`ListShareLinks(documentID)` convenience only if
+~~12. Add a `GetShareLink`/`ListShareLinks(documentID)` convenience only if~~ routed — ROADMAP demand-gated
     a consumer actually asks (ROADMAP demand-gate holds).
-13. Saved-view Update/PATCH — same demand-gate.
-14. `ProbeCapabilities` caching per client lifetime (ROADMAP item) if
+~~13. Saved-view Update/PATCH — same demand-gate.~~ routed — ROADMAP demand-gated
+~~14. `ProbeCapabilities` caching per client lifetime (ROADMAP item) if~~ routed — ROADMAP demand-gated
     consumers feel the per-call cost.
-15. Consider `expath`-style context helpers? NO — rejected: scope creep
+~~15. Consider `expath`-style context helpers? NO — rejected: scope creep~~ rejected — considered and dismissed: scope creep beyond client-only (recorded in the item)
     beyond client-only. (Kept here to show the idea was considered and
     dismissed, not missed.)
-16. `dprint fmt` hook into `nix fmt` decision: either pin dprint plugins
+~~16. `dprint fmt` hook into `nix fmt` decision: either pin dprint plugins~~ → TODO_LIST Low (2026-10-11 harvest): treefmt/dprint markdown decision
     inside treefmt or drop the duplicate formatter — the current two-formatter
     setup needs the AGENTS.md workaround note.
-17. Wire `govulncheck` + `gosec` into `nix flake check` as hermetic checks
+~~17. Wire `govulncheck` + `gosec` into `nix flake check` as hermetic checks~~ → TODO_LIST Low (2026-10-11 harvest): govulncheck/gosec hermetic checks
     (currently only GitHub-hosted runners run them).
-18. Add `.#fuzz` flake app wrapping the four fuzzers with a duration flag.
-19. Error-code test: assert catalog rows' family labels against
+~~18. Add `.#fuzz` flake app wrapping the four fuzzers with a duration flag.~~ done — .#fuzz flake app (CHANGELOG 0.4.0)
+~~19. Error-code test: assert catalog rows' family labels against~~ → TODO_LIST Low (2026-10-11 harvest): family-label test
     `errorfamily.Classify` at least for one representative code per family.
-20. Verb drift test: extend to `List*`/`Create*`/`Delete*`/`Add*`/
+~~20. Verb drift test: extend to `List*`/`Create*`/`Delete*`/`Add*`/~~ done — verb-drift test extended to 10 prefixes (2026-09-16 20:59)
     `Update*`/`Upload*` prefixes (currently only Find/Get/Ensure per the
     original task).
-21. README: retry-policy constants table (DefaultRetry* values are
+~~21. README: retry-policy constants table (DefaultRetry* values are~~ done — README retry-defaults paragraph (2026-09-16 20:59)
     documented in code, invisible in README).
-22. README: document `TaskOutcome.Duplicate()` return order explicitly
+~~22. README: document `TaskOutcome.Duplicate()` return order explicitly~~ done — README Duplicate() return order documented (2026-09-16 20:59)
     (named at call sites only).
-23. ADR 0001 consequence check: add a test asserting `apiVersion` is sent
+~~23. ADR 0001 consequence check: add a test asserting `apiVersion` is sent~~ → TODO_LIST Low (2026-10-11 harvest): apiVersion header test
     on every request (currently implied via Ping test only).
-24. Split `docs/status/` annotated-but-unarchived reports (two 2026-09-16
+~~24. Split `docs/status/` annotated-but-unarchived reports (two 2026-09-16~~ done — archived this pass (2026-10-11 docs-health)
     files from the concurrent session are candidates for annotation).
-25. FEATURES.md: rows for the doc-drift tests + release-verify app (CI/
+~~25. FEATURES.md: rows for the doc-drift tests + release-verify app (CI/~~ done — FEATURES Development and CI section (2026-09-16 20:59)
     DX features are absent from the inventory).
-26. CONTRIBUTING.md: mention `checks.integration-vet` and the
+~~26. CONTRIBUTING.md: mention `checks.integration-vet` and the~~ → TODO_LIST Low (2026-10-11 harvest): CONTRIBUTING flake apps
     `.#integration` opt-in app.
-27. `nix flake check --all-systems` in CI matrix (aarch64-darwin/linux
+~~27. `nix flake check --all-systems` in CI matrix (aarch64-darwin/linux~~ done — 0.4.0 systems restriction; remaining aarch64 documented
     currently omitted everywhere).
-28. Dependabot: verify it covers the new GitHub Actions pins after the
+~~28. Dependabot: verify it covers the new GitHub Actions pins after the~~ done — dependabot github-actions ecosystem verified (2026-09-16 20:59)
     concurrent session's ci.yml test-race addition.
-29. `.golangci.yml`: add `testifylint`-equivalent? NO — no testify here;
+~~29. `.golangci.yml`: add `testifylint`-equivalent? NO — no testify here;~~ rejected — considered and dismissed: no testify in this repo
     rejected. (Consideration recorded.)
-30. Consider `paralleltest` for `docs_drift_test.go`'s three tests — done
+~~30. Consider `paralleltest` for `docs_drift_test.go`'s three tests — done~~ done — paralleltest applied in-session; fresh sessions show clean LSP state
     in this session; verify golangci_lint_ls LSP warnings (stale) clear
     after a Crush restart — the ONE `.crushrc` item that still needs the
     restart-cycle proof.
-31. Benchmarks: `BenchmarkUpload` exists; add `BenchmarkListChecksums` for
+~~31. Benchmarks: `BenchmarkUpload` exists; add `BenchmarkListChecksums` for~~ done — BenchmarkListChecksums (2026-09-16 20:59)
     the pagination hot path.
-32. Example: `ExampleClient_ProbeCapabilities` (capability probe has no
+~~32. Example: `ExampleClient_ProbeCapabilities` (capability probe has no~~ done — ExampleClient_ProbeCapabilities (2026-09-16 20:59)
     example; FEATURES advertises it).
-33. Example: `ExampleClient_Upload` still non-runnable; a runnable variant
+~~33. Example: `ExampleClient_Upload` still non-runnable; a runnable variant~~ → TODO_LIST Low (2026-10-11 harvest): runnable Upload example
     using `httptest` is possible inside `client_test.go` (not example_test).
-34. Error docs: link ERROR_CODES.md rows back to ADR 0002 family rules.
-35. SECURITY.md: mention share-link slug entropy is server-controlled
+~~34. Error docs: link ERROR_CODES.md rows back to ADR 0002 family rules.~~ done — ERROR_CODES.md links ADR 0002 (2026-09-14 10:00 session)
+~~35. SECURITY.md: mention share-link slug entropy is server-controlled~~ done — SECURITY.md slug-entropy caveat (2026-09-16 20:59)
     (SDK cannot guarantee unpredictability — upgrade note for very
     sensitive documents).
-36. Consider `ShareLink.URL(baseURL string)` helper — currently README
+~~36. Consider `ShareLink.URL(baseURL string)` helper — currently README~~ routed — ROADMAP demand-gated (ShareLink.URL helper)
     does string concat; demand-gate first (ROADMAP line exists).
-37. flake: `checks.erraudit` placeholder that SKIPS with the upstream
+~~37. flake: `checks.erraudit` placeholder that SKIPS with the upstream~~ Won't implement — dismissed 2026-09-16 20:59 b-1: flake check has no skip concept; the AGENTS.md note is the record
     pointer instead of silently being absent, so the gate's absence is
     visible in `nix flake check` output.
-38. Make `TODO_LIST.md` "Status legend" table survive dprint reformat
+~~38. Make `TODO_LIST.md` "Status legend" table survive dprint reformat~~ → TODO_LIST Low (2026-10-11 harvest): legend dprint churn
     (emoji-width churn observed twice today).
-39. Decide release cadence: CHANGELOG [Unreleased] now carries a
+~~39. Decide release cadence: CHANGELOG [Unreleased] now carries a~~ done — v0.3.2 released 2026-09-16
     breaking-ish field-type change; consumers need a tag soon (see 10).
-40. Post-release: verify pkg.go.dev re-indexing after the next tag (the
+~~40. Post-release: verify pkg.go.dev re-indexing after the next tag (the~~ routed — the release-verify exercise is a TODO_LIST Low item
     release-verify app checks it; first run pending).
 
 Upstream/external (their repos, tracked here):
 
-41. erraudit: rebuild + release with go1.27 x/tools (see 3, 4).
-42. BuildFlow: GOTOOLCHAIN caller-wins contract feedback already filed by
+~~41. erraudit: rebuild + release with go1.27 x/tools (see 3, 4).~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11
+~~42. BuildFlow: GOTOOLCHAIN caller-wins contract feedback already filed by~~ routed — upstream BuildFlow feedback (verify landing)
     the concurrent session — verify it landed upstream.
-43. paperless-ngx: nothing owed; upstream rule-type table already matched
+~~43. paperless-ngx: nothing owed; upstream rule-type table already matched~~ done — no drift; the upstream rule-type table matched
     (no drift to report).
-44. go-error-family/go-retry: concurrent session bumped floors; nothing
+~~44. go-error-family/go-retry: concurrent session bumped floors; nothing~~ done — dep floors bumped (CHANGELOG 0.4.0)
     owed from this session.
 
 Backlog ideas (not refined — belongs in ROADMAP if kept):
 
-45. Saved-view rule VALUE typing (dates/tags have string values today).
-46. `WaitForTask` jitter on the poll interval for fleets of syncs.
-47. Rate-limit backoff shared across concurrent calls (per-client token
+~~45. Saved-view rule VALUE typing (dates/tags have string values today).~~ → ROADMAP (2026-10-11 harvest): saved-view value typing
+~~46. `WaitForTask` jitter on the poll interval for fleets of syncs.~~ → ROADMAP (2026-10-11 harvest): WaitForTask jitter
+~~47. Rate-limit backoff shared across concurrent calls (per-client token~~ → ROADMAP (2026-10-11 harvest): shared rate-limit backoff
     bucket) — only if a consumer hits 429 storms.
-48. Retry-policy per-call override (opt-in option param).
-49. Structured request/response hook context via generics? — rejected
+~~48. Retry-policy per-call override (opt-in option param).~~ → ROADMAP (2026-10-11 harvest): retry per-call override
+~~49. Structured request/response hook context via generics? — rejected~~ rejected — considered and dismissed: hooks are value snapshots deliberately
     shape; hooks are value snapshots deliberately.
-50. Generate a lightweight API-shape fixture suite from a live server
+~~50. Generate a lightweight API-shape fixture suite from a live server~~ → ROADMAP (2026-10-11 harvest): record/replay fixture suite
     (record/replay) to extend the e2e without a container.
 
 ## (g) QUESTIONS I CANNOT ANSWER MYSELF
 
-1. **Release intent**: should the current [Unreleased] (typed enum =
+~~1. **Release intent**: should the current [Unreleased] (typed enum =~~ done — v0.3.2 cut 2026-09-16 (patch-flavored per ADR 0001); convention settled
    compile-visible change + code-catalog fixes) ship as **v0.3.2**
    (patch-flavored, per ADR 0001's stability story) or fold into a later
    **v0.4.0**? I can cut either; I cannot know which you want consumers
    to swallow first, given bank-sync's drop-in contract.
-2. **erraudit ownership**: the v0.4.0 binary's x/tools is too old for this
+~~2. **erraudit ownership**: the v0.4.0 binary's x/tools is too old for this~~ done — erraudit rebuilt upstream; the gate is green again (fresh run 2026-10-11)
    module — do you want me to go fix erraudit upstream NOW (its repo,
    rebuild + release + publish), or is erraudit mid-refactor elsewhere and
    I should leave the TODO row BLOCKED until you say go?
-3. **Concurrent-session protocol**: a second session was rewriting
+~~3. **Concurrent-session protocol**: a second session was rewriting~~ routed — the concurrent session finished; its reports are annotated + archived this pass
    flake.nix/ci.yml/CHANGELOG while I worked; my rule was
    read-before-edit + merge-don't-clobber. Is that session still active
    (I will keep merging), or is it done (I can then do one reconciling

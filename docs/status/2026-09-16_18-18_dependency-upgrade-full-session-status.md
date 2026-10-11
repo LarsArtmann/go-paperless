@@ -46,12 +46,12 @@ Both direct deps on latest (go-error-family v0.10.1, go-retry v0.6.0), every ups
 
 ## c) NOT STARTED (all deliberately blocked/routed)
 
-- v0.3.2 release carrying the dep floors — BLOCKED on §g-1/§g-2 (TODO_LIST :24)
-- Consumer pin bumps (bank-sync, InboxClean) — BLOCKED on the release
-- erraudit upstream rebuild + hermetic flake pin — BLOCKED upstream (TODO_LIST :23, :25)
-- Dependabot-vs-manual policy — §g-3 (ROADMAP theme 4)
-- Explicit per-task commit convention — §g-1
-- `--all-systems` check, `simd` currency check, fuzz CI wiring — TODO_LIST-routed, unstarted
+- ~~v0.3.2 release carrying the dep floors~~ done — v0.3.2 released 2026-09-16; v0.4.x followed.
+- ~~Consumer pin bumps (bank-sync, InboxClean)~~ superseded — consumers migrated to v0.4.2 (2026-09-23); the open line is the v0.5.0 migration row.
+- ~~erraudit upstream rebuild~~ done — rebuilt upstream; fresh exit-0 run 2026-10-11. ~~hermetic flake pin~~ still open (binary resolves via host PATH) — TODO_LIST.
+- ~~Dependabot-vs-manual policy~~ routed — ROADMAP theme 4 carries it.
+- ~~Explicit per-task commit convention~~ done — convention recorded (AGENTS.md release-commit rule; CONTRIBUTING checklist).
+- ~~`--all-systems` check, `simd` currency check, fuzz CI wiring~~ done — all three landed (0.4.0: systems restriction, simd dropped, scheduled Fuzz workflow).
 
 ## d) TOTALLY FUCKED UP
 
@@ -89,26 +89,26 @@ Both direct deps on latest (go-error-family v0.10.1, go-retry v0.6.0), every ups
 
 **Canonical trackers (already maintained this session): TODO_LIST (8 rows) + ROADMAP theme 4 — do not duplicate them here.** New/remaining items noticed in this final pass:
 
-1. [NOW] Cut v0.3.2 (deps-only) or wait for the integration workstream → unblocks everything below (§g-1/§g-2).
-2. [NOW] Post-release chain: tag → proxy-resolution check → pkg.go.dev → consumer pin bumps (bank-sync `go.mod:48`, InboxClean) → push.
-3. [NOW] Rebuild + publish erraudit on go1.27 x/tools (upstream repo is yours — see §g-3); then restore the gate and re-run a complete-green battery.
-4. [NEXT] Pin erraudit hermetically in this flake (bank-sync recipe, `flake.nix:83-89,295-347,563-570`) + wire `checks.erraudit`.
-5. [NEXT] Add a fuzz CI job (fuzz targets exist; ci.yml has none — measured) or document local-only.
-6. [NEXT] BuildFlow-vs-flake ownership sentence in AGENTS.md (e5).
-7. [NEXT] Run `nix flake check --all-systems` once; resolve the omitted-systems warning.
-8. [NEXT] Verify `GOEXPERIMENT=jsonv2,simd` currency on go1.27; drop `simd` if dead.
-9. [NEXT] Independently spot-verify the sibling session's TODO-execution claims (their 17:57 report) — their greens, not yet mine.
-10. [NEXT] Fleet sweep: apply this session's upgrade pattern to bank-sync + remaining repos (per-repo commits, per-repo verification).
-11. [ROADMAP] `result`-symlink/tag/version sync assertion in CI.
-12. [ROADMAP] gomodGuard-style freshness CI check.
-13. [ROADMAP] CHANGELOG "Dependencies" subsection convention.
-14. [ROADMAP] flake.lock update ownership/cadence.
-15. [ROADMAP] Parallel-session/worktree protocol for the fleet.
-16. [ROADMAP] Dependabot policy resolution (after §g-3-style decisions).
-17. [ROADMAP] Consolidated per-repo status-report convention (e6).
-18. [ROADMAP] Items 20–25 of the 17-35 report (GoReleaser polish, integration docs cross-link, etc.) — still idea-stage.
-19. [IDEA] Go floor migration playbook: when go1.28 lands, this session's checklist (floors, ceilings, vendorHash, badges, README/AGENTS surfaces) is reusable — consider a template doc.
-20. [IDEA] A shared "gate runner" convention (file-captured output + exit code) for all larsartmann repos' AGENTS docs — kills the pipeline-masking class fleet-wide.
+~~1. [NOW] Cut v0.3.2 (deps-only) or wait for the integration workstream → unblocks everything below (§g-1/§g-2).~~ done — v0.3.2 released 2026-09-16
+~~2. [NOW] Post-release chain: tag → proxy-resolution check → pkg.go.dev → consumer pin bumps (bank-sync `go.mod:48`, InboxClean) → push.~~ done — v0.4.x released; ritual codified as .#release-verify (0.4.0)
+~~3. [NOW] Rebuild + publish erraudit on go1.27 x/tools (upstream repo is yours — see §g-3); then restore the gate and re-run a complete-green battery.~~ done — erraudit rebuilt upstream; fresh exit-0 run 2026-10-11
+~~4. [NEXT] Pin erraudit hermetically in this flake (bank-sync recipe, `flake.nix:83-89,295-347,563-570`) + wire `checks.erraudit`.~~ → TODO_LIST (2026-10-11 harvest): hermetic erraudit pin (binary currently resolves via host PATH in nix develop)
+~~5. [NEXT] Add a fuzz CI job (fuzz targets exist; ci.yml has none — measured) or document local-only.~~ done — scheduled + manual Fuzz workflow (CHANGELOG 0.4.0)
+~~6. [NEXT] BuildFlow-vs-flake ownership sentence in AGENTS.md (e5).~~ done — AGENTS.md carries the BuildFlow section (invocation, skip policy, gates)
+~~7. [NEXT] Run `nix flake check --all-systems` once; resolve the omitted-systems warning.~~ done — 0.4.0 systems restriction; --all-systems green
+~~8. [NEXT] Verify `GOEXPERIMENT=jsonv2,simd` currency on go1.27; drop `simd` if dead.~~ done — simd dropped 2026-09-16 20:59
+~~9. [NEXT] Independently spot-verify the sibling session's TODO-execution claims (their 17:57 report) — their greens, not yet mine.~~ done — superseded: later sessions verified and built on that work
+~~10. [NEXT] Fleet sweep: apply this session's upgrade pattern to bank-sync + remaining repos (per-repo commits, per-repo verification).~~ routed — fleet scope, per-repo sessions
+~~11. [ROADMAP] `result`-symlink/tag/version sync assertion in CI.~~ routed — ROADMAP theme 4 (version-sync assertion)
+~~12. [ROADMAP] gomodGuard-style freshness CI check.~~ routed — ROADMAP theme 4 (freshness gate)
+~~13. [ROADMAP] CHANGELOG "Dependencies" subsection convention.~~ routed — ROADMAP theme 4 (CHANGELOG conventions)
+~~14. [ROADMAP] flake.lock update ownership/cadence.~~ routed — ROADMAP theme 4 (flake.lock cadence)
+~~15. [ROADMAP] Parallel-session/worktree protocol for the fleet.~~ routed — ROADMAP theme 4 (worktree protocol)
+~~16. [ROADMAP] Dependabot policy resolution (after §g-3-style decisions).~~ routed — ROADMAP theme 4 (dependabot policy)
+~~17. [ROADMAP] Consolidated per-repo status-report convention (e6).~~ routed — ROADMAP theme 4 (report convention)
+~~18. [ROADMAP] Items 20–25 of the 17-35 report (GoReleaser polish, integration docs cross-link, etc.) — still idea-stage.~~ routed — ROADMAP (GoReleaser polish idea)
+~~19. [IDEA] Go floor migration playbook: when go1.28 lands, this session's checklist (floors, ceilings, vendorHash, badges, README/AGENTS surfaces) is reusable — consider a template doc.~~ → ROADMAP (2026-10-11 harvest): go-floor migration playbook idea
+~~20. [IDEA] A shared "gate runner" convention (file-captured output + exit code) for all larsartmann repos' AGENTS docs — kills the pipeline-masking class fleet-wide.~~ → ROADMAP (2026-10-11 harvest): gate-runner convention idea
 
 (Items beyond these are in TODO_LIST/ROADMAP; not fabricated to hit 50.)
 
