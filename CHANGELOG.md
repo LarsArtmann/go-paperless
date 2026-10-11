@@ -6,33 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- Drift-guard hole closed: `docs_drift_test.go` now tracks the
-  `findByName` helper, so its dynamic `paperless.decode_<kind>s` codes
-  are machine-checked against `docs/ERROR_CODES.md` like the other
-  kind-parameterized sites.
-- `findByName` parameter order normalized to `(client, ctx, …)` across
-  all call sites (internal helper; no public-API change).
-- `paperlesstest`: the duplicated 14-line consumption-store block
-  extracted into `existingDuplicateLocked`/`storeConsumedLocked`
-  (behavior identical; round-trip suite green).
-- `RetryPolicy` field docs now say "Zero (or negative) selects the
-  default" (the implementation clamps `<= 0`; the doc previously said
-  only "Zero").
-- Docs: SECURITY.md gained the `Security Practices` heading and an
-  explicit response-time commitment; README links the error-code
-  catalog; CONTRIBUTING's release checklist now bakes in the
-  release-commit rule, CI-green-before-tag, and the
-  `nix run .#release-verify` ritual, and the Development Setup section
-  carries the erraudit gate.
+- Nothing yet.
 
 ### Fixed
 
-- `FindStoragePath` lookup failures now wrap with the entity name
-  ("storage path"), matching `FindCustomField`'s error messages.
-- `paperlesstest`: `pageBounds` clamps absurd `page` values so they can
-  no longer wrap negative and panic inside the fake.
+- Nothing yet.
 
 ## [0.5.0] - 2026-10-11
 
@@ -75,6 +55,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   13 of 60 findings fixed in code, the rest suppressed per line
   (panic/phantom) or dismissed per rule with documented rationale
   (`.branching-flow.yml`).
+- Internal review follow-ups: `findByName` parameter order normalized
+  to `(client, ctx, …)` across all call sites (internal helper; no
+  public-API change); the duplicated 14-line consumption-store block in
+  `paperlesstest` extracted into
+  `existingDuplicateLocked`/`storeConsumedLocked` (behavior identical);
+  `RetryPolicy` field docs now say "Zero (or negative) selects the
+  default" (the implementation clamps `<= 0`).
+- Drift-guard hole closed: `docs_drift_test.go` now tracks the
+  `findByName` helper, so its dynamic `paperless.decode_<kind>s` codes
+  are machine-checked against `docs/ERROR_CODES.md` like the other
+  kind-parameterized sites.
+- Docs: SECURITY.md gained the `Security Practices` heading and an
+  explicit response-time commitment; README links the error-code
+  catalog; CONTRIBUTING's release checklist now bakes in the
+  release-commit rule, CI-green-before-tag, and the
+  `nix run .#release-verify` ritual, and the Development Setup section
+  carries the erraudit gate.
 
 ### Fixed
 
@@ -90,6 +87,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   syntax, which standalone gosec does not read. Rewritten as gosec's own
   `#nosec G120` annotation (rationale kept as a preceding comment). CI
   green again at `ba786b8`.
+- `FindStoragePath` lookup failures now wrap with the entity name
+  ("storage path"), matching `FindCustomField`'s error messages.
+- `paperlesstest`: `pageBounds` clamps absurd `page` values so they can
+  no longer wrap negative and panic inside the fake (regression test
+  pins the int64-overflow boundary).
 
 ## [0.4.2] - 2026-09-23
 

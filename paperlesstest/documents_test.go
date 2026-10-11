@@ -205,11 +205,41 @@ func TestPageBoundsClampsOverflowingPagination(t *testing.T) {
 		wantEnd   int
 	}{
 		{name: "first page of a small collection", query: "", total: 5, wantStart: 0, wantEnd: 5},
-		{name: "page beyond the collection clamps to an empty page", query: "page=2", total: 5, wantStart: 5, wantEnd: 5},
-		{name: "page whose offset overflows int64 clamps to an empty page", query: "page=100000000000000000", total: 5, wantStart: 5, wantEnd: 5},
-		{name: "max int64 page clamps to an empty page", query: "page=9223372036854775807", total: 5, wantStart: 5, wantEnd: 5},
-		{name: "huge page size serves the whole collection", query: "page_size=9223372036854775807", total: 5, wantStart: 0, wantEnd: 5},
-		{name: "huge page and page size clamp to an empty page", query: "page=9223372036854775807&page_size=2", total: 5, wantStart: 5, wantEnd: 5},
+		{
+			name:      "page beyond the collection clamps to an empty page",
+			query:     "page=2",
+			total:     5,
+			wantStart: 5,
+			wantEnd:   5,
+		},
+		{
+			name:      "page whose offset overflows int64 clamps to an empty page",
+			query:     "page=100000000000000000",
+			total:     5,
+			wantStart: 5,
+			wantEnd:   5,
+		},
+		{
+			name:      "max int64 page clamps to an empty page",
+			query:     "page=9223372036854775807",
+			total:     5,
+			wantStart: 5,
+			wantEnd:   5,
+		},
+		{
+			name:      "huge page size serves the whole collection",
+			query:     "page_size=9223372036854775807",
+			total:     5,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		{
+			name:      "huge page and page size clamp to an empty page",
+			query:     "page=9223372036854775807&page_size=2",
+			total:     5,
+			wantStart: 5,
+			wantEnd:   5,
+		},
 	}
 
 	for _, test := range tests {
