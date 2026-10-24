@@ -364,9 +364,7 @@ func (s *Server) routeTasks(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	if r.Method != http.MethodGet {
-		s.methodNotAllowed(w, r, http.MethodGet)
-
+	if s.rejectWrongMethod(w, r, http.MethodGet) {
 		return true
 	}
 

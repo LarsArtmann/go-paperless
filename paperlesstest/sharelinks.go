@@ -61,9 +61,7 @@ func (s *Server) routeShareLinks(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	if r.Method != http.MethodDelete {
-		s.methodNotAllowed(w, r, http.MethodDelete)
-
+	if s.rejectWrongMethod(w, r, http.MethodDelete) {
 		return true
 	}
 

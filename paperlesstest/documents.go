@@ -268,9 +268,7 @@ func (s *Server) writePage(
 // It reports whether the request matched one of the document routes.
 func (s *Server) routeDocuments(w http.ResponseWriter, r *http.Request) bool {
 	if r.URL.Path == "/api/documents/" {
-		if r.Method != http.MethodGet {
-			s.methodNotAllowed(w, r, http.MethodGet)
-
+		if s.rejectWrongMethod(w, r, http.MethodGet) {
 			return true
 		}
 
@@ -357,9 +355,7 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 	case len(segments) == 2 && segments[1] == "notes":
 		return s.routeDocumentNotes(w, r, documentID)
 	case len(segments) == 2 && segments[1] == "download":
-		if r.Method != http.MethodGet {
-			s.methodNotAllowed(w, r, http.MethodGet)
-
+		if s.rejectWrongMethod(w, r, http.MethodGet) {
 			return true
 		}
 
@@ -564,4 +560,17 @@ func (s *Server) methodNotAllowed(w http.ResponseWriter, r *http.Request, allowe
 		http.StatusMethodNotAllowed,
 		map[string]string{detailKey: fmt.Sprintf("Method %q not allowed.", r.Method)},
 	)
+}
+
+// rejectWrongMethod answers 405 via methodNotAllowed unless r carries the
+// one method the route serves. It reports whether it rejected, collapsing
+// a single-method guard to "if s.rejectWrongMethod(...) { return true }".
+func (s *Server) rejectWrongMethod(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method == method {
+		return false
+	}
+
+	s.methodNotAllowed(w, r, method)
+
+	return true
 }
