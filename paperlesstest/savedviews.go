@@ -39,7 +39,9 @@ type savedView struct {
 type savedViewCreateWire = savedView
 
 // routeSavedViews serves the saved-views family. It reports whether the
-// request matched.
+// request matched. Its collection/item route shell mirrors routeShareLinks
+// — the only two families with that shape; their create semantics are too
+// distinct to fold into routeNamedFamily.
 func (s *Server) routeSavedViews(w http.ResponseWriter, r *http.Request) bool {
 	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/saved_views/"), "/")
 
@@ -52,7 +54,7 @@ func (s *Server) routeSavedViews(w http.ResponseWriter, r *http.Request) bool {
 		case http.MethodPost:
 			s.handleSavedViewCreate(w, r)
 
-			return true
+			return true //art-dupl:accept parallel tail of the sharelinks route shell
 		default:
 			s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 

@@ -35,7 +35,9 @@ type shareLinkCreateWire struct {
 }
 
 // routeShareLinks serves the share-links family. It reports whether the
-// request matched.
+// request matched. Its collection/item route shell mirrors routeSavedViews
+// — the only two families with that shape; their create semantics are too
+// distinct to fold into routeNamedFamily.
 func (s *Server) routeShareLinks(w http.ResponseWriter, r *http.Request) bool {
 	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/share_links/"), "/")
 
@@ -48,7 +50,7 @@ func (s *Server) routeShareLinks(w http.ResponseWriter, r *http.Request) bool {
 		case http.MethodPost:
 			s.handleShareLinkCreate(w, r)
 
-			return true
+			return true //art-dupl:accept parallel tail of the savedviews route shell
 		default:
 			s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
 
