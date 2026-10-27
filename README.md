@@ -15,6 +15,7 @@ pipelines are domain-coupled and stay in the consuming repos.
 
 - Upload documents (content-hash friendly metadata: tags, correspondents, document types, custom fields)
 - `Ensure*` idempotent lookups: `EnsureTag`, `EnsureCorrespondent`, `EnsureDocumentType`, `EnsureCustomField`, `EnsureStoragePath` (tags self-heal legacy auto-matching; storage paths keep their existing directory template)
+- Tags: `ListTags` (id + name, for resolving document tag IDs)
 - Task polling (`GetTask`, `TaskOutcome`, `WaitForTask`) for Paperless' async consumption pipeline, including duplicate-refusal detection (`TaskOutcome.Duplicate` returns `(documentID DocumentID, inTrash bool, refused bool)` in that order)
 - Document management: `ListDocumentChecksums`, `ListDocumentMetas` (paginated), `UpdateDocument`, `DownloadDocument`, `DeleteDocument`
 - Document notes: `ListDocumentNotes`, `AddDocumentNote`, `DeleteDocumentNote`
