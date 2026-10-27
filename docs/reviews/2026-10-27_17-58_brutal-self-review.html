@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Report Title</title>
+    <title>go-paperless — Error Management Brutal Self-Review</title>
     <style>
       /* =========================================================================
          BAUHAUS DARK — Dashboard template
@@ -828,9 +828,9 @@
   <body>
     <!-- Full-bleed top bar (optional — remove for quieter reports) -->
     <div class="top-bar">
-      <span>REPORT TYPE</span>
-      <span>YYYY-MM-DD</span>
-      <span>AUTHOR / TEAM</span>
+      <span>BRUTAL SELF-REVIEW &middot; ERROR MANAGEMENT</span>
+      <span>2026-10-27</span>
+      <span>go-paperless &middot; Crush</span>
     </div>
 
     <div class="layout">
@@ -841,7 +841,7 @@
           <a href="#summary">Summary</a>
           <a href="#findings">Findings</a>
           <a href="#issues">Issue Cards</a>
-          <a href="#proposal">Proposal</a>
+          <a href="#strengths">Strengths</a>
           <a href="#plan">Plan</a>
         </nav>
       </aside>
@@ -855,10 +855,12 @@
             <div class="square"></div>
             <div class="tri"></div>
           </div>
-          <div class="hero-badge">Report Type</div>
-          <h1>Report Title</h1>
+          <div class="hero-badge">Scoped Review &middot; Error Model</div>
+          <h1>Error Management: Not Superb</h1>
           <p class="hero-subtitle">
-            One-sentence description of what this report covers.
+            Triggered by &ldquo;You sure our error management is superb?!?&rdquo; &mdash;
+            verdict: a genuinely strong core (ADR 0002 holds up under fire) with
+            two real contract breaks and three gaps the green gates never saw.
           </p>
         </div>
 
@@ -869,7 +871,7 @@
             <li><a href="#summary">Summary</a></li>
             <li><a href="#findings">Findings</a></li>
             <li><a href="#issues">Issue Cards</a></li>
-            <li><a href="#proposal">Proposal</a></li>
+            <li><a href="#strengths">Strengths</a></li>
             <li><a href="#plan">Plan</a></li>
           </ul>
         </nav>
@@ -877,21 +879,21 @@
         <!-- Stats Dashboard -->
         <h2 id="summary"><span class="num">00</span>Summary</h2>
         <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-value">42</div>
-            <div class="stat-label">Total Items</div>
-          </div>
           <div class="stat-card stat-bad">
-            <div class="stat-value">7</div>
-            <div class="stat-label">Critical</div>
+            <div class="stat-value">2</div>
+            <div class="stat-label">Contract breaks</div>
           </div>
           <div class="stat-card stat-warn">
-            <div class="stat-value">12</div>
-            <div class="stat-label">Warnings</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">Gaps / drifts</div>
           </div>
           <div class="stat-card stat-good">
-            <div class="stat-value">35</div>
-            <div class="stat-label">Resolved</div>
+            <div class="stat-value">9</div>
+            <div class="stat-label">Strengths verified</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">0</div>
+            <div class="stat-label">Ghost systems</div>
           </div>
         </div>
 
@@ -899,58 +901,178 @@
         <h2 id="findings"><span class="num">01</span>Findings</h2>
 
         <div class="card card-problem">
-          <h4>Critical Issue</h4>
-          <p>Description of the problem and its impact.</p>
+          <h4>The catalog&rsquo;s core promise breaks under retry exhaustion</h4>
+          <p>
+            ERROR_CODES.md promises consumers can switch on <code>paperless.*</code>
+            codes. But when <code>WithRetry</code> is enabled and attempts exhaust,
+            the surfaced code becomes <code>retry.exhausted</code> (family
+            Infrastructure) &mdash; the paperless code and its Transient family
+            are buried one cause deeper, exactly in the persistent-429 scenario
+            where a consumer needs them most.
+          </p>
         </div>
 
         <div class="card card-solution">
-          <h4>Recommended Fix</h4>
-          <p>Description of the solution with rationale.</p>
+          <h4>Document + test the real surface, then fix upstream</h4>
+          <p>
+            Pin the exhausted/canceled/deadline surface with tests, document the
+            <code>retry.*</code> outcomes in the catalog, fix the two doc lies
+            (<code>request_failed</code> family, the &ldquo;every error&rdquo;
+            header), and evaluate a go-retry option that keeps the last
+            attempt&rsquo;s classification outermost.
+          </p>
         </div>
 
         <!-- Issue Cards -->
         <h2 id="issues"><span class="num">02</span>Issue Cards</h2>
 
         <div class="issue issue-critical">
-          <span class="severity severity-critical">Blocking</span>
-          <h3>Critical finding title</h3>
-          <div class="where">path/to/file.go:42-58</div>
+          <span class="severity severity-critical">Contract break</span>
+          <h3>Retry exhaustion replaces the paperless code and flips the family</h3>
+          <div class="where">client.go:1790-1816 &middot; go-retry v0.8.0 retry.go:123</div>
           <p>
-            Describe the problem and cite the code or behavior that proves it.
+            go-retry wraps exhaustion as <code>WrapInfrastructure(retry.ErrExhausted,
+            "retry.exhausted")</code> with the last attempt error as cause. Per
+            ADR 0002, <code>Code(err)</code>/<code>Classify(err)</code> return
+            the <strong>outermost</strong> classification &mdash; so a rate-limited
+            upload that survives all attempts surfaces as
+            <code>retry.exhausted</code> / Infrastructure, not
+            <code>paperless.rate_limited</code> / Transient.
+            <code>errors.Is</code>/<code>errors.AsType</code> still reach the
+            cause, but every code-switching consumer breaks. No SDK test pins
+            this surface; the catalog does not mention it.
           </p>
           <div class="callout callout-solution">
             <strong>Fix</strong>
-            State the concrete recommended action.
+            Pin the exhausted surface with a test, document the
+            <code>retry.*</code> outcomes in ERROR_CODES.md, and evaluate
+            surfacing the last attempt&rsquo;s code upstream (keep the fail-closed
+            Infrastructure family for nesting).
           </div>
         </div>
 
         <div class="issue issue-important">
-          <span class="severity severity-important">Important</span>
-          <h3>Important finding title</h3>
-          <div class="where">path/to/another.go:12-19</div>
+          <span class="severity severity-important">Doc lie</span>
+          <h3>&ldquo;Every error carries a paperless.* code&rdquo; is false three ways</h3>
+          <div class="where">docs/ERROR_CODES.md:3 &middot; client.go:140,313 &middot; go-retry retry.go:23-59</div>
           <p>
-            Explain the risk and why a careful reviewer would hesitate before
-            shipping.
+            The catalog header overclaims: <code>ErrInvalidConfig</code> is a
+            bare <code>errors.New</code> sentinel (no code, no family), and the
+            three retry-terminal outcomes carry <code>retry.*</code> codes. The
+            doc-drift test only checks one direction &mdash; that every
+            constructed <code>paperless.*</code> code has a row; nothing checks
+            the reverse (SDK errors without a code or row).
+          </p>
+        </div>
+
+        <div class="issue issue-important">
+          <span class="severity severity-important">Doc drift</span>
+          <h3>request_failed family: docs say Infrastructure, code says Transient</h3>
+          <div class="where">docs/ERROR_CODES.md:38 vs client.go:1863</div>
+          <p>
+            The code is load-bearing: the default retry predicate retries only
+            Transient errors, and the same catalog row says &ldquo;Retryable:
+            yes&rdquo; &mdash; network failures only retry because the constructor
+            is <code>WrapTransient</code>. The doc row is stale and wrong.
+          </p>
+          <div class="callout callout-solution">
+            <strong>Fix</strong>
+            One-word doc fix: family Transient. (Deciding network errors are
+            Infrastructure and never retry would be a bigger design change.)
+          </div>
+        </div>
+
+        <div class="issue issue-nice">
+          <span class="severity severity-nice">Misclassification</span>
+          <h3>3xx responses classify as server_error / Transient</h3>
+          <div class="where">client.go:2054-2072 (classifyStatus)</div>
+          <p>
+            The switch has branches for 401/403, 429, and 4xx; everything else
+            &mdash; including redirects from a reverse proxy or an
+            http&rarr;https upgrade &mdash; falls into the 5xx default:
+            <code>paperless.server_error</code>, family Transient, i.e.
+            &ldquo;retry the redirect&rdquo;.
           </p>
         </div>
 
         <div class="issue issue-nice">
-          <span class="severity severity-nice">Nice to have</span>
-          <h3>Polish suggestion</h3>
-          <div class="where">docs/ or config</div>
+          <span class="severity severity-nice">Inconsistency</span>
+          <h3>Cancellation surface changes shape with WithRetry</h3>
+          <div class="where">client.go:1861-1866 vs go-retry retry.go:214-218</div>
           <p>
-            Minor documentation gaps or future-proofing suggestions go here.
+            Same failure, different surface: without retry, a canceled request
+            returns <code>paperless.request_failed</code> (Transient) wrapping
+            <code>context.Canceled</code>; with retry, the loop&rsquo;s backoff
+            check converts it to <code>retry.canceled</code> (Infrastructure).
+            Both unwrap to <code>context.Canceled</code>, but code-switching
+            consumers see two different codes for one condition.
           </p>
         </div>
 
         <!-- Strengths -->
-        <h2>Strengths</h2>
+        <h2 id="strengths">Strengths</h2>
         <div class="strengths">
           <div class="strength">
             <div class="check">+</div>
             <div class="text">
-              <strong>Specific strength</strong>
-              <span>Explain why it matters and what it enables.</span>
+              <strong>Classification at the source of failure</strong>
+              <span>classifyStatus, decode guards, validation guards; no unclassified construction leaks &mdash; the erraudit gate is green.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Mechanical catalog gate</strong>
+              <span>TestErrorCodesAreDocumented resolves even the kind-parameterized constructor sites; a non-literal kind argument fails the test.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Structured context everywhere</strong>
+              <span>status, path, body snippet, and a body_read_error key that explains a truncated snippet instead of leaving it silent.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Retry-After bridging with tests</strong>
+              <span>429/503 hints parsed (seconds and HTTP-date), delay function bridged, family stays Transient through call-site wraps.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Retry body replay</strong>
+              <span>The body is snapshotted once and replayed byte-for-byte per attempt; no consumed-reader bug (tested).</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Rejections never retried</strong>
+              <span>The default predicate is Transient-only and TestWithRetryNeverRetriesRejections pins exactly one request.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Defensive decode fallback</strong>
+              <span>GetTask tolerates the bare-array shape and wraps the envelope failure, with a reasoned comment on why.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Debuggable poll abandonment</strong>
+              <span>task_poll_abandoned wraps context.DeadlineExceeded and keeps the last poll error attached.</span>
+            </div>
+          </div>
+          <div class="strength">
+            <div class="check">+</div>
+            <div class="text">
+              <strong>Family assertions across the suite</strong>
+              <span>20+ tests assert Classify/Code values, not just error non-nil &mdash; the family contract is executable.</span>
             </div>
           </div>
         </div>
@@ -970,63 +1092,97 @@
             <tr>
               <td>1</td>
               <td><span class="badge badge-critical">Critical</span></td>
-              <td>Missing error handling</td>
-              <td><span class="badge badge-fixed">Fixed</span></td>
+              <td>Retry exhaustion replaces the paperless code / flips family</td>
+              <td><span class="badge badge-low">Open</span></td>
             </tr>
             <tr>
               <td>2</td>
               <td><span class="badge badge-high">High</span></td>
-              <td>Race condition</td>
+              <td>Catalog header overclaims &ldquo;every error&rdquo;</td>
+              <td><span class="badge badge-low">Open</span></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><span class="badge badge-high">High</span></td>
+              <td>request_failed family drift (docs vs code)</td>
+              <td><span class="badge badge-low">Open</span></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><span class="badge badge-low">Minor</span></td>
+              <td>3xx falls into server_error / Transient</td>
+              <td><span class="badge badge-low">Open</span></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><span class="badge badge-low">Minor</span></td>
+              <td>Cancellation surface changes with WithRetry</td>
               <td><span class="badge badge-low">Open</span></td>
             </tr>
           </tbody>
         </table>
 
-        <!-- Before/After Comparison -->
-        <h2 id="proposal">Before / After</h2>
+        <!-- Documented vs Actual -->
+        <h2 id="surface">Documented vs Actual (exhausted 429)</h2>
         <div class="compare-header">
-          <div class="compare-before">Before</div>
-          <div class="compare-after">After</div>
+          <div class="compare-before">ERROR_CODES.md implies</div>
+          <div class="compare-after">Actual surface</div>
         </div>
         <div class="compare-row">
           <div>
-            <pre><code><span class="tok-comment">// Old code</span>
-<span class="tok-keyword">func</span> <span class="tok-func">process</span>(data <span class="tok-type">interface</span>{}) { }</code></pre>
+            <pre><code>code:    paperless.rate_limited
+family:  Transient
+hint:    *RetryAfterError visible</code></pre>
           </div>
           <div>
-            <pre><code><span class="tok-comment">// New code</span>
-<span class="tok-keyword">func</span> <span class="tok-func">process</span>[T <span class="tok-type">any</span>](data T) { }</code></pre>
+            <pre><code>code:    retry.exhausted      <span class="tok-comment">// outermost wins</span>
+family:  Infrastructure
+hint:    reachable via errors.AsType
+cause:   paperless.rate_limited (buried)</code></pre>
           </div>
-        </div>
-
-        <!-- ASCII Diagram -->
-        <h2>Dependency Tree</h2>
-        <div class="dep-tree">
-          <span class="root">root</span> ├──
-          <span class="ok">wanted-dep</span> └──
-          <span class="unwanted">unwanted-dep</span>
         </div>
 
         <!-- Numbered Steps -->
-        <h2 id="plan"><span class="num">03</span>Migration Plan</h2>
+        <h2 id="plan"><span class="num">03</span>Improvement Plan</h2>
         <div class="migration-step">
           <div class="migration-num">1</div>
           <div class="migration-content">
-            <h4>Add generic type parameter</h4>
-            <p>Update the function signature to accept a type parameter.</p>
+            <h4>Fix the two catalog lies</h4>
+            <p>Correct the request_failed family cell to Transient; scope the header claim; add a Retry-outcomes section documenting retry.exhausted / retry.canceled / retry.deadline and the bare sentinel. Docs only.</p>
           </div>
         </div>
         <div class="migration-step">
           <div class="migration-num">2</div>
           <div class="migration-content">
-            <h4>Update all call sites</h4>
-            <p>Pass explicit types at each call site for type safety.</p>
+            <h4>Pin the surfaces with tests</h4>
+            <p>Assert code+family after retry exhaustion, cancellation with and without WithRetry, and the 3xx classification &mdash; before changing any of them.</p>
+          </div>
+        </div>
+        <div class="migration-step">
+          <div class="migration-num">3</div>
+          <div class="migration-content">
+            <h4>Add the classifyStatus 3xx branch</h4>
+            <p>Classify redirects as Rejection with the Location header in context, instead of retryable server_error.</p>
+          </div>
+        </div>
+        <div class="migration-step">
+          <div class="migration-num">4</div>
+          <div class="migration-content">
+            <h4>Evaluate the upstream option</h4>
+            <p>A go-retry option that keeps the last attempt&rsquo;s code outermost on exhaustion while the family stays Infrastructure for fail-closed nesting. Verify against go-retry source before filing.</p>
+          </div>
+        </div>
+        <div class="migration-step">
+          <div class="migration-num">5</div>
+          <div class="migration-content">
+            <h4>Optional: code the sentinel</h4>
+            <p>Return a coded wrap of ErrInvalidConfig (paperless.invalid_config, Rejection) &mdash; errors.Is stays matchable and new codes are contract-legal.</p>
           </div>
         </div>
 
         <footer class="footer">
-          Generated YYYY-MM-DD &middot; All claims verified against source code
-          where noted
+          Generated 2026-10-27 &middot; All claims verified against client.go,
+          client_test.go, go-retry v0.8.0 source, and docs/ERROR_CODES.md
         </footer>
       </main>
     </div>
