@@ -37,6 +37,7 @@ outer retry loop treats an inner loop's exhaustion as terminal.
 
 | Code                       | Meaning                                                                                                                | Family    | Retryable |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- | --------- |
+| `paperless.redirect`       | 3xx the http.Client could not follow (Location header in context)                                                      | Rejection | no        |
 | `paperless.auth_failed`    | 401/403 from the server                                                                                                | Rejection | no        |
 | `paperless.client_error`   | any other 4xx (body snippet attached)                                                                                  | Rejection | no        |
 | `paperless.rate_limited`   | 429; wraps `RetryAfterError` when a hint is parseable                                                                  | Transient | yes       |

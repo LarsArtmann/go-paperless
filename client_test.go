@@ -2101,12 +2101,11 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	}
 }
 
-// TestRedirectWithoutLocationClassifiedAsServerErrorToday pins the current
-// 3xx behavior: a redirect the http.Client cannot follow (a 301 without a
-// Location header is returned as-is) falls into classifyStatus's 5xx default.
-// This expectation flips to paperless.redirect (Rejection) when classifyStatus
-// grows its 3xx branch.
-func TestRedirectWithoutLocationClassifiedAsServerErrorToday(t *testing.T) {
+// TestUnfollowableRedirectClassifiedAsRedirect pins the 3xx surface: a
+// redirect the http.Client cannot follow (a 301 without a Location header is
+// returned as-is) classifies as paperless.redirect/Rejection, so it is never
+// retried into the same redirect.
+func TestUnfollowableRedirectClassifiedAsRedirect(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -2124,13 +2123,78 @@ func TestRedirectWithoutLocationClassifiedAsServerErrorToday(t *testing.T) {
 		t.Fatal("expected the 301 to surface as an error")
 	}
 
-	if code := errorfamily.Code(err); code != "paperless.server_error" {
-		t.Fatalf("code = %q, want paperless.server_error (pre-fix 3xx default)", code)
+	if code := errorfamily.Code(err); code != "paperless.redirect" {
+		t.Fatalf("code = %q, want paperless.redirect", code)
 	}
 
-	if family := errorfamily.Classify(err); family != errorfamily.Transient {
-		t.Fatalf("expected Transient family for the pre-fix 3xx default, got %v (%v)", family, err)
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family for an unfollowable redirect, got %v (%v)", family, err)
 	}
+}
+
+// TestClassifyStatusMatrix pins the status-to-code/family mapping at the
+// classification source. net/http swallows followable redirects, so only a
+// synthetic response can exercise every status; the httptest-level tests
+// above cover the reachable end-to-end surfaces.
+func TestClassifyStatusMatrix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		status     int
+		wantCode   string
+		wantFamily errorfamily.Family
+	}{
+		{http.StatusUnauthorized, "paperless.auth_failed", errorfamily.Rejection},
+		{http.StatusForbidden, "paperless.auth_failed", errorfamily.Rejection},
+		{http.StatusTooManyRequests, "paperless.rate_limited", errorfamily.Transient},
+		{http.StatusBadRequest, "paperless.client_error", errorfamily.Rejection},
+		{http.StatusNotFound, "paperless.client_error", errorfamily.Rejection},
+		{http.StatusInternalServerError, "paperless.server_error", errorfamily.Transient},
+		{http.StatusServiceUnavailable, "paperless.server_error", errorfamily.Transient},
+		{http.StatusMovedPermanently, "paperless.redirect", errorfamily.Rejection},
+		{http.StatusNotModified, "paperless.redirect", errorfamily.Rejection},
+		{http.StatusTemporaryRedirect, "paperless.redirect", errorfamily.Rejection},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%d", tt.status), func(t *testing.T) {
+			t.Parallel()
+
+			resp := &http.Response{StatusCode: tt.status, Header: http.Header{}}
+			err := classifyStatus(resp, []byte("snippet"), "/api/documents/", nil)
+
+			if code := errorfamily.Code(err); code != tt.wantCode {
+				t.Fatalf("code = %q, want %q (err: %v)", code, tt.wantCode, err)
+			}
+
+			if family := errorfamily.Classify(err); family != tt.wantFamily {
+				t.Fatalf("family = %v, want %v (err: %v)", family, tt.wantFamily, err)
+			}
+		})
+	}
+
+	t.Run("redirect carries location context", func(t *testing.T) {
+		t.Parallel()
+
+		resp := &http.Response{
+			StatusCode: http.StatusMovedPermanently,
+			Header:     http.Header{"Location": []string{"https://elsewhere.example.com/docs/"}},
+		}
+		err := classifyStatus(resp, nil, "/api/documents/", nil)
+
+		coded, ok := errors.AsType[*errorfamily.Error](err)
+		if !ok {
+			t.Fatalf("err = %v, want an *errorfamily.Error", err)
+		}
+
+		if got := coded.ErrorContext()["location"]; got != "https://elsewhere.example.com/docs/" {
+			t.Fatalf(
+				"location context = %q, want the Location header value (context: %v)",
+				got,
+				coded.ErrorContext(),
+			)
+		}
+	})
 }
 
 func TestWithRetryHonorsRetryAfterHint(t *testing.T) {

@@ -2051,9 +2051,12 @@ func parseRetryAfter(value string, now time.Time) (time.Duration, bool) {
 
 // classifyStatus converts a non-2xx response into an error-family error,
 // wrapping a Retry-After hint (429/503) in a RetryAfterError when present.
-// snippet is the (already capped) error body the caller read; bodyReadErr,
-// when non-nil, says that read failed and the snippet may be truncated or
-// empty, and is attached as context so the gap is explained, not silent.
+// 3xx responses (which only arrive when the redirect could not be followed)
+// classify as paperless.redirect/Rejection instead of retrying into the same
+// redirect again. snippet is the (already capped) error body the caller read;
+// bodyReadErr, when non-nil, says that read failed and the snippet may be
+// truncated or empty, and is attached as context so the gap is explained, not
+// silent.
 func classifyStatus(resp *http.Response, snippet []byte, path string, bodyReadErr error) error {
 	statusCode := resp.StatusCode
 
@@ -2063,6 +2066,15 @@ func classifyStatus(resp *http.Response, snippet []byte, path string, bodyReadEr
 		WithContext("body", string(snippet))
 
 	switch {
+	case statusCode >= 300 && statusCode < 400:
+		// Reached only for redirects the http.Client could not follow (e.g.
+		// a 3xx without a Location header is returned as-is). A followable
+		// redirect is transparently followed and never reaches this switch.
+		wrapped = errorfamily.NewRejection("paperless.redirect",
+			"Paperless-ngx returned a redirect the client could not follow").
+			WithContext("status", strconv.Itoa(statusCode)).
+			WithContext("path", path).
+			WithContext("location", resp.Header.Get("Location"))
 	case statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden:
 		wrapped = errorfamily.NewRejection("paperless.auth_failed", "Paperless-ngx rejected the API token").
 			WithContext("status", strconv.Itoa(statusCode)).
