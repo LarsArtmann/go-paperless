@@ -147,7 +147,17 @@ the compiler walks migrations when they upgrade.
   `//nolint:erraudit // reason` ON the anchor line (`nix fmt` may move it
   to the closing paren — suppression still anchors). golangci's "Found
   unknown linters: erraudit" warning is unavoidable noise. `--no-suppress`
-  is audit mode: suppressed findings reappearing there is by design.
+  and `--max` are audit modes, but the current build honors `//nolint`
+  suppressions even there (verified 2026-10-27: zero resurfaced findings).
+  Bare `--max` (= `--type-aware --no-suppress --explain
+  --disable-extensions` + every `--enforce-*` check) exits 2 with a
+  `generic_return` finding per client.go method returning bare `error`
+  (27 as of 2026-10-27): the per-method-error-type alternative ADR 0002
+  explicitly rejected, not a regression — do NOT refactor signatures or
+  add nolints for them (the rule is off by default, and audit mode
+  ignores nolints anyway). The sanctioned maximum-strictness audit is
+  `erraudit lint ./... --max --disable generic_return` (exit 0, verified
+  2026-10-27).
   **CI decision (2026-09-16)**: erraudit stays out of CI until it is (a)
   published on the public module proxy (proxy.golang.org 404s it as of
   v0.4.0 — re-verify before revisiting) AND (b) rebuilt on go1.27
@@ -160,7 +170,8 @@ the compiler walks migrations when they upgrade.
   context wraps (an outer code would shadow the inner HTTP classification —
   a tested contract). One code, one meaning, one family.
   `--enforce-generic-return` stays off: bare `error` returns are the SDK
-  contract.
+  contract (erraudit `--max` turns it on — see the erraudit bullet above
+  for the sanctioned `--disable generic_return` audit invocation).
 - `// art-dupl:<scope>` comments mark accepted duplication for the clone
   scanner (e.g. the Ping/`ProbeCapabilities` first-page query pair) — don't
   "fix" them away without checking the paired site named in the comment.
