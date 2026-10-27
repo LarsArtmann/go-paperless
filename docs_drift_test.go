@@ -260,6 +260,16 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 
 	codePattern := regexp.MustCompile(`^paperless\.[a-z_]+$`)
 
+	type source struct {
+		name string
+		fset *token.FileSet
+		file *ast.File
+	}
+
+	sources := []source{}
+
+	var sentinel *ast.ValueSpec
+
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -273,9 +283,28 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 			t.Fatalf("parse %s: %v", name, parseErr)
 		}
 
-		if sentinelRange(file) == nil {
-			t.Errorf("%s: the ErrInvalidConfig sentinel declaration disappeared; update this test", name)
+		sources = append(sources, source{name: name, fset: fset, file: file})
+
+		if spec := sentinelRange(file); spec != nil {
+			if sentinel != nil {
+				t.Fatalf(
+					"%s: second ErrInvalidConfig declaration — keep exactly one sentinel",
+					name,
+				)
+			}
+
+			sentinel = spec
 		}
+	}
+
+	if sentinel == nil {
+		t.Fatal("the ErrInvalidConfig sentinel declaration disappeared; update this test")
+	}
+
+	for _, src := range sources {
+		name, fset, file := src.name, src.fset, src.file
+
+		codeLocals := defineStringLocals(file)
 
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
@@ -287,11 +316,12 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 
 			switch {
 			case qualifier == "errors" && (callee == "New" || callee == "Newf" || callee == "Join"):
-				if sentinel := sentinelRange(file); sentinel == nil ||
-					call.Pos() < sentinel.Pos() || call.Pos() > sentinel.End() {
+				if call.Pos() < sentinel.Pos() || call.Pos() > sentinel.End() {
 					t.Errorf(
 						"%s: bare stdlib error construction errors.%s at %s — errors must carry a paperless.* code",
-						name, callee, fset.Position(call.Pos()),
+						name,
+						callee,
+						fset.Position(call.Pos()),
 					)
 				}
 			case qualifier == "fmt" && callee == "Errorf":
@@ -306,24 +336,40 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 						name, fset.Position(call.Pos()),
 					)
 				}
-			case qualifier == "errorfamily" && (strings.HasPrefix(callee, "New") || strings.HasPrefix(callee, "Wrap")):
-				codePos := 0
-				if strings.HasPrefix(callee, "Wrap") {
-					codePos = 1
-				}
-
+			case qualifier == "errorfamily" && constructorCodePosition(callee) >= 0:
+				codePos := constructorCodePosition(callee)
 				if codePos >= len(call.Args) {
 					return true
 				}
 
 				codeArg := call.Args[codePos]
 
+				if ident, ok := codeArg.(*ast.Ident); ok {
+					rhs, defined := codeLocals[ident.Name]
+					if !defined {
+						t.Errorf(
+							"%s: errorfamily.%s at %s passes code variable %q of unknown provenance — pass a paperless.* literal or a locally assembled code",
+							name,
+							callee,
+							fset.Position(call.Pos()),
+							ident.Name,
+						)
+
+						return true
+					}
+
+					codeArg = rhs
+				}
+
 				if literal, ok := codeArg.(*ast.BasicLit); ok {
 					value := strings.Trim(literal.Value, `"`)
 					if !codePattern.MatchString(value) {
 						t.Errorf(
 							"%s: errorfamily.%s at %s has code %q — codes must be non-empty paperless.* literals",
-							name, callee, fset.Position(call.Pos()), value,
+							name,
+							callee,
+							fset.Position(call.Pos()),
+							value,
 						)
 					}
 
@@ -345,7 +391,8 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 				if !hasNamespace {
 					t.Errorf(
 						"%s: dynamic error code at %s must be assembled from paperless.-prefixed literals",
-						name, fset.Position(call.Pos()),
+						name,
+						fset.Position(call.Pos()),
 					)
 				}
 			}
@@ -408,6 +455,67 @@ func qualifiedCallee(fun ast.Expr) (qualifier, name string) {
 	}
 
 	return "", selector.Sel.Name
+}
+
+// constructorCodePosition maps an errorfamily constructor name to the
+// 0-based argument index of its code parameter, or -1 for non-constructors:
+// New/Newf take (family, code, ...), the typed NewXxx take (code, ...),
+// Wrap/Wrapf/WrapOnce/WrapOncef take (err, family, code, ...), and the typed
+// WrapXxx take (err, code, ...).
+func constructorCodePosition(callee string) int {
+	switch callee {
+	case "New", "Newf":
+		return 1
+	case "Wrap", "Wrapf", "WrapOnce", "WrapOncef":
+		return 2
+	}
+
+	if strings.HasPrefix(callee, "New") {
+		return 0
+	}
+
+	if strings.HasPrefix(callee, "Wrap") {
+		return 1
+	}
+
+	return -1
+}
+
+// defineStringLocals maps every function-local `name := expr` definition in
+// the file whose expression contains a string literal, so error-code
+// arguments passed as identifiers resolve to their assembling expression.
+func defineStringLocals(file *ast.File) map[string]ast.Expr {
+	locals := map[string]ast.Expr{}
+
+	ast.Inspect(file, func(node ast.Node) bool {
+		assign, ok := node.(*ast.AssignStmt)
+		if !ok || assign.Tok != token.DEFINE || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+
+		ident, ok := assign.Lhs[0].(*ast.Ident)
+		if !ok {
+			return true
+		}
+
+		hasString := false
+
+		ast.Inspect(assign.Rhs[0], func(sub ast.Node) bool {
+			if literal, ok := sub.(*ast.BasicLit); ok && literal.Kind == token.STRING {
+				hasString = true
+			}
+
+			return true
+		})
+
+		if hasString {
+			locals[ident.Name] = assign.Rhs[0]
+		}
+
+		return true
+	})
+
+	return locals
 }
 
 func TestFlakeVersionMatchesChangelog(t *testing.T) {
