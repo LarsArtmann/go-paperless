@@ -180,7 +180,14 @@ the compiler walks migrations when they upgrade.
   (Rejection). `TestEveryConstructedErrorIsCoded` (`docs_drift_test.go`)
   mechanically enforces that every constructed error is coded or a `%w`
   wrap — new bare `errors.New`, non-wrapping `fmt.Errorf`, or
-  non-`paperless.*` errorfamily codes all fail it.
+  non-`paperless.*` errorfamily codes all fail it. Consequently
+  golangci's wrapcheck ignores `github.com/larsartmann/go-error-family`
+  as a package (`.golangci.yml` `wrapcheck.ignore-package-globs`):
+  errorfamily constructors are the ADR 0002-sanctioned error model, not
+  foreign errors escaping unwrapped — without the glob, every
+  constructor site is a false positive (exposed 2026-10-18 when
+  `max-same-issues` was lifted from 10 to 0; don't remove the glob and
+  don't re-cap the issue limits).
   `--enforce-generic-return` stays off: bare `error` returns are the SDK
   contract (erraudit `--max` turns it on — see the erraudit bullet above
   for the sanctioned `--disable generic_return` audit invocation).

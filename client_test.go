@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -2157,7 +2158,7 @@ func TestClassifyStatusMatrix(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%d", tt.status), func(t *testing.T) {
+		t.Run(strconv.Itoa(tt.status), func(t *testing.T) {
 			t.Parallel()
 
 			resp := &http.Response{StatusCode: tt.status, Header: http.Header{}}

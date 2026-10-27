@@ -249,7 +249,7 @@ func TestErrorCodesAreDocumented(t *testing.T) {
 // The only bare stdlib error is the ErrInvalidConfig sentinel declaration
 // itself, and it may never be returned directly — only through its coded
 // wraps (paperless.invalid_config / paperless.invalid_retry). Supersedes the
-// TODO_LIST f-20 meta-test row.
+// f-20 backlog row (the coded-errors meta-test).
 func TestEveryConstructedErrorIsCoded(t *testing.T) {
 	t.Parallel()
 
@@ -302,122 +302,163 @@ func TestEveryConstructedErrorIsCoded(t *testing.T) {
 	}
 
 	for _, src := range sources {
-		name, fset, file := src.name, src.fset, src.file
+		scan := codedErrorScan{
+			t:           t,
+			name:        src.name,
+			fset:        src.fset,
+			codePattern: codePattern,
+			codeLocals:  defineStringLocals(src.file),
+			sentinel:    sentinel,
+		}
 
-		codeLocals := defineStringLocals(file)
-
-		ast.Inspect(file, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-
-			qualifier, callee := qualifiedCallee(call.Fun)
-
-			switch {
-			case qualifier == "errors" && (callee == "New" || callee == "Newf" || callee == "Join"):
-				if call.Pos() < sentinel.Pos() || call.Pos() > sentinel.End() {
-					t.Errorf(
-						"%s: bare stdlib error construction errors.%s at %s — errors must carry a paperless.* code",
-						name,
-						callee,
-						fset.Position(call.Pos()),
-					)
-				}
-			case qualifier == "fmt" && callee == "Errorf":
-				if len(call.Args) == 0 {
-					return true
-				}
-
-				literal, ok := call.Args[0].(*ast.BasicLit)
-				if !ok || !strings.Contains(literal.Value, "%w") {
-					t.Errorf(
-						"%s: fmt.Errorf at %s must wrap with %%w so the inner code+family survive",
-						name, fset.Position(call.Pos()),
-					)
-				}
-			case qualifier == "errorfamily" && constructorCodePosition(callee) >= 0:
-				codePos := constructorCodePosition(callee)
-				if codePos >= len(call.Args) {
-					return true
-				}
-
-				codeArg := call.Args[codePos]
-
-				if ident, ok := codeArg.(*ast.Ident); ok {
-					rhs, defined := codeLocals[ident.Name]
-					if !defined {
-						t.Errorf(
-							"%s: errorfamily.%s at %s passes code variable %q of unknown provenance — pass a paperless.* literal or a locally assembled code",
-							name,
-							callee,
-							fset.Position(call.Pos()),
-							ident.Name,
-						)
-
-						return true
-					}
-
-					codeArg = rhs
-				}
-
-				if literal, ok := codeArg.(*ast.BasicLit); ok {
-					value := strings.Trim(literal.Value, `"`)
-					if !codePattern.MatchString(value) {
-						t.Errorf(
-							"%s: errorfamily.%s at %s has code %q — codes must be non-empty paperless.* literals",
-							name,
-							callee,
-							fset.Position(call.Pos()),
-							value,
-						)
-					}
-
-					return true
-				}
-
-				hasNamespace := false
-
-				ast.Inspect(codeArg, func(sub ast.Node) bool {
-					if literal, ok := sub.(*ast.BasicLit); ok && literal.Kind == token.STRING {
-						if strings.HasPrefix(strings.Trim(literal.Value, `"`), "paperless.") {
-							hasNamespace = true
-						}
-					}
-
-					return true
-				})
-
-				if !hasNamespace {
-					t.Errorf(
-						"%s: dynamic error code at %s must be assembled from paperless.-prefixed literals",
-						name,
-						fset.Position(call.Pos()),
-					)
-				}
+		ast.Inspect(src.file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				scan.call(call)
 			}
 
 			return true
 		})
 
-		ast.Inspect(file, func(node ast.Node) bool {
-			ret, ok := node.(*ast.ReturnStmt)
-			if !ok {
-				return true
-			}
-
-			for _, result := range ret.Results {
-				if ident, ok := result.(*ast.Ident); ok && ident.Name == "ErrInvalidConfig" {
-					t.Errorf(
-						"%s: bare sentinel returned at %s — return it through its coded wrap",
-						name, fset.Position(ret.Pos()),
-					)
-				}
-			}
-
-			return true
-		})
+		scan.rejectBareSentinelReturns(src.file)
 	}
+}
+
+// codedErrorScan carries one source file's context through the
+// every-error-coded checks.
+type codedErrorScan struct {
+	t           *testing.T
+	name        string
+	fset        *token.FileSet
+	codePattern *regexp.Regexp
+	codeLocals  map[string]ast.Expr
+	sentinel    *ast.ValueSpec
+}
+
+// failf reports one violation prefixed with the source file name.
+func (s codedErrorScan) failf(format string, args ...any) {
+	s.t.Errorf(s.name+": "+format, args...)
+}
+
+// call classifies one call expression and reports violations.
+func (s codedErrorScan) call(call *ast.CallExpr) {
+	qualifier, callee := qualifiedCallee(call.Fun)
+
+	switch {
+	case qualifier == "errors" && (callee == "New" || callee == "Newf" || callee == "Join"):
+		if call.Pos() < s.sentinel.Pos() || call.Pos() > s.sentinel.End() {
+			s.failf(
+				"bare stdlib error construction errors.%s at %s — errors must carry a paperless.* code",
+				callee,
+				s.fset.Position(call.Pos()),
+			)
+		}
+	case qualifier == "fmt" && callee == "Errorf":
+		s.checkErrorfWraps(call)
+	case qualifier == "errorfamily" && constructorCodePosition(callee) >= 0:
+		s.checkErrorfamilyCode(call, callee)
+	}
+}
+
+// checkErrorfWraps requires the format string to contain %w so the call-site
+// wrap stays transparent for code+family.
+func (s codedErrorScan) checkErrorfWraps(call *ast.CallExpr) {
+	if len(call.Args) == 0 {
+		return
+	}
+
+	if literal, ok := call.Args[0].(*ast.BasicLit); !ok || !strings.Contains(literal.Value, "%w") {
+		s.failf(
+			"fmt.Errorf at %s must wrap with %%w so the inner code+family survive",
+			s.fset.Position(call.Pos()),
+		)
+	}
+}
+
+// checkErrorfamilyCode requires the constructor's code argument to be a
+// paperless.* literal, a local variable initialized from such an expression,
+// or an expression assembled from paperless.-prefixed literals.
+func (s codedErrorScan) checkErrorfamilyCode(call *ast.CallExpr, callee string) {
+	codePos := constructorCodePosition(callee)
+	if codePos >= len(call.Args) {
+		return
+	}
+
+	codeArg := call.Args[codePos]
+
+	if ident, ok := codeArg.(*ast.Ident); ok {
+		rhs, defined := s.codeLocals[ident.Name]
+		if !defined {
+			s.failf(
+				"errorfamily.%s at %s passes code variable %q of unknown provenance — pass a paperless.* literal or a locally assembled code",
+				callee,
+				s.fset.Position(call.Pos()),
+				ident.Name,
+			)
+
+			return
+		}
+
+		codeArg = rhs
+	}
+
+	if literal, ok := codeArg.(*ast.BasicLit); ok {
+		if value := strings.Trim(literal.Value, `"`); !s.codePattern.MatchString(value) {
+			s.failf(
+				"errorfamily.%s at %s has code %q — codes must be non-empty paperless.* literals",
+				callee, s.fset.Position(call.Pos()), value,
+			)
+		}
+
+		return
+	}
+
+	if !assembledFromNamespace(codeArg) {
+		s.failf(
+			"dynamic error code at %s must be assembled from paperless.-prefixed literals",
+			s.fset.Position(call.Pos()),
+		)
+	}
+}
+
+// assembledFromNamespace reports whether the expression contains at least
+// one paperless.-prefixed string literal, so dynamically assembled codes
+// cannot lose their namespace.
+func assembledFromNamespace(expr ast.Expr) bool {
+	hasNamespace := false
+
+	ast.Inspect(expr, func(sub ast.Node) bool {
+		if literal, ok := sub.(*ast.BasicLit); ok && literal.Kind == token.STRING {
+			if strings.HasPrefix(strings.Trim(literal.Value, `"`), "paperless.") {
+				hasNamespace = true
+			}
+		}
+
+		return true
+	})
+
+	return hasNamespace
+}
+
+// rejectBareSentinelReturns fails on any return of the bare sentinel ident:
+// the sentinel leaves the SDK only through its coded wraps.
+func (s codedErrorScan) rejectBareSentinelReturns(file *ast.File) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		ret, ok := node.(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+
+		for _, result := range ret.Results {
+			if ident, ok := result.(*ast.Ident); ok && ident.Name == "ErrInvalidConfig" {
+				s.failf(
+					"bare sentinel returned at %s — return it through its coded wrap",
+					s.fset.Position(ret.Pos()),
+				)
+			}
+		}
+
+		return true
+	})
 }
 
 // sentinelRange locates the ErrInvalidConfig var declaration, the single
@@ -444,7 +485,7 @@ func sentinelRange(file *ast.File) *ast.ValueSpec {
 
 // qualifiedCallee splits a call's function expression into package qualifier
 // and callee name ("" qualifier for local calls), for constructor scanning.
-func qualifiedCallee(fun ast.Expr) (qualifier, name string) {
+func qualifiedCallee(fun ast.Expr) (string, string) {
 	selector, ok := fun.(*ast.SelectorExpr)
 	if !ok {
 		return "", calledName(fun)

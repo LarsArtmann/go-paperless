@@ -220,6 +220,12 @@ linters:
       max-distance: 15
       min-name-length: 2
     wrapcheck:
+      # errorfamily constructors ARE this repo's sanctioned error model (ADR
+      # 0002: codes assigned at the failure source), not foreign errors
+      # slipping out unwrapped — same rationale as the errors./fmt. ignores.
+      # Their codes are enforced by TestEveryConstructedErrorIsCoded instead.
+      ignore-package-globs:
+        - github.com/larsartmann/go-error-family
       ignore-sig-regexps:
         - encoding/json
         - fmt\.
