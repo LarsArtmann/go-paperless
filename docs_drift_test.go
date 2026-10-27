@@ -236,6 +236,180 @@ func TestErrorCodesAreDocumented(t *testing.T) {
 	}
 }
 
+// TestEveryConstructedErrorIsCoded is the mechanical side of the catalog's
+// header claim ("every error this SDK constructs carries a paperless.* code",
+// ERROR_CODES.md). It scans every non-test source of the root package and
+// requires each error construction to be one of:
+//
+//   - an errorfamily constructor whose code is a paperless.* literal, or a
+//     dynamic expression that contains at least one paperless.-prefixed
+//     literal (the kind-parameterized helpers assemble codes that way), or
+//   - a transparent fmt.Errorf wrap (%w), which preserves the inner code.
+//
+// The only bare stdlib error is the ErrInvalidConfig sentinel declaration
+// itself, and it may never be returned directly — only through its coded
+// wraps (paperless.invalid_config / paperless.invalid_retry). Supersedes the
+// TODO_LIST f-20 meta-test row.
+func TestEveryConstructedErrorIsCoded(t *testing.T) {
+	t.Parallel()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read package dir: %v", err)
+	}
+
+	codePattern := regexp.MustCompile(`^paperless\.[a-z_]+$`)
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+
+		fset := token.NewFileSet()
+
+		file, parseErr := parser.ParseFile(fset, name, nil, 0)
+		if parseErr != nil {
+			t.Fatalf("parse %s: %v", name, parseErr)
+		}
+
+		if sentinelRange(file) == nil {
+			t.Errorf("%s: the ErrInvalidConfig sentinel declaration disappeared; update this test", name)
+		}
+
+		ast.Inspect(file, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+
+			qualifier, callee := qualifiedCallee(call.Fun)
+
+			switch {
+			case qualifier == "errors" && (callee == "New" || callee == "Newf" || callee == "Join"):
+				if sentinel := sentinelRange(file); sentinel == nil ||
+					call.Pos() < sentinel.Pos() || call.Pos() > sentinel.End() {
+					t.Errorf(
+						"%s: bare stdlib error construction errors.%s at %s — errors must carry a paperless.* code",
+						name, callee, fset.Position(call.Pos()),
+					)
+				}
+			case qualifier == "fmt" && callee == "Errorf":
+				if len(call.Args) == 0 {
+					return true
+				}
+
+				literal, ok := call.Args[0].(*ast.BasicLit)
+				if !ok || !strings.Contains(literal.Value, "%w") {
+					t.Errorf(
+						"%s: fmt.Errorf at %s must wrap with %%w so the inner code+family survive",
+						name, fset.Position(call.Pos()),
+					)
+				}
+			case qualifier == "errorfamily" && (strings.HasPrefix(callee, "New") || strings.HasPrefix(callee, "Wrap")):
+				codePos := 0
+				if strings.HasPrefix(callee, "Wrap") {
+					codePos = 1
+				}
+
+				if codePos >= len(call.Args) {
+					return true
+				}
+
+				codeArg := call.Args[codePos]
+
+				if literal, ok := codeArg.(*ast.BasicLit); ok {
+					value := strings.Trim(literal.Value, `"`)
+					if !codePattern.MatchString(value) {
+						t.Errorf(
+							"%s: errorfamily.%s at %s has code %q — codes must be non-empty paperless.* literals",
+							name, callee, fset.Position(call.Pos()), value,
+						)
+					}
+
+					return true
+				}
+
+				hasNamespace := false
+
+				ast.Inspect(codeArg, func(sub ast.Node) bool {
+					if literal, ok := sub.(*ast.BasicLit); ok && literal.Kind == token.STRING {
+						if strings.HasPrefix(strings.Trim(literal.Value, `"`), "paperless.") {
+							hasNamespace = true
+						}
+					}
+
+					return true
+				})
+
+				if !hasNamespace {
+					t.Errorf(
+						"%s: dynamic error code at %s must be assembled from paperless.-prefixed literals",
+						name, fset.Position(call.Pos()),
+					)
+				}
+			}
+
+			return true
+		})
+
+		ast.Inspect(file, func(node ast.Node) bool {
+			ret, ok := node.(*ast.ReturnStmt)
+			if !ok {
+				return true
+			}
+
+			for _, result := range ret.Results {
+				if ident, ok := result.(*ast.Ident); ok && ident.Name == "ErrInvalidConfig" {
+					t.Errorf(
+						"%s: bare sentinel returned at %s — return it through its coded wrap",
+						name, fset.Position(ret.Pos()),
+					)
+				}
+			}
+
+			return true
+		})
+	}
+}
+
+// sentinelRange locates the ErrInvalidConfig var declaration, the single
+// sanctioned bare-stdlib error site, so the coded-error test can exempt it.
+func sentinelRange(file *ast.File) *ast.ValueSpec {
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.VAR {
+			continue
+		}
+
+		for _, spec := range gen.Specs {
+			value, ok := spec.(*ast.ValueSpec)
+			if !ok || len(value.Names) != 1 || value.Names[0].Name != "ErrInvalidConfig" {
+				continue
+			}
+
+			return value
+		}
+	}
+
+	return nil
+}
+
+// qualifiedCallee splits a call's function expression into package qualifier
+// and callee name ("" qualifier for local calls), for constructor scanning.
+func qualifiedCallee(fun ast.Expr) (qualifier, name string) {
+	selector, ok := fun.(*ast.SelectorExpr)
+	if !ok {
+		return "", calledName(fun)
+	}
+
+	if ident, ok := selector.X.(*ast.Ident); ok {
+		return ident.Name, selector.Sel.Name
+	}
+
+	return "", selector.Sel.Name
+}
+
 func TestFlakeVersionMatchesChangelog(t *testing.T) {
 	t.Parallel()
 
