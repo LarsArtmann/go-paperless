@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`DocumentMeta.Content` — the document's OCR text as served by
+  Paperless-ngx.** The document serializer serves `effective_content` on
+  every list and detail response (`serialisers.py`; truncated only when the
+  caller opts in via `truncate_content`); the SDK previously decoded and
+  dropped it. `ListDocumentMetas` now surfaces it (empty string for
+  un-OCR'd documents), and the `paperlesstest` fake carries it as the
+  `Document.Text` fixture field served on the wire as `content` — pinned
+  by the extended full-meta-shape test. First consumer: journal's M4
+  documents pull (Belegbuchung evidence pipeline).
+
 ### Changed
 
 - **3xx responses classify as `paperless.redirect` (Rejection) instead of

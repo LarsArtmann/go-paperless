@@ -97,6 +97,7 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 	server.addDocument(Document{
 		Title:          "invoice.pdf",
 		Content:        []byte("%PDF-invoice"),
+		Text:           "ACME GmbH Invoice 2026-0042 Total 119,00 EUR",
 		Created:        created,
 		Correspondent:  paperless.NewCorrespondentID(12),
 		TagIDs:         []paperless.TagID{paperless.NewTagID(3), paperless.NewTagID(9)},
@@ -137,6 +138,10 @@ func TestDocumentListServesFullMetaShape(t *testing.T) {
 
 	if meta.Checksum != ChecksumOf([]byte("%PDF-invoice")) {
 		t.Errorf("checksum = %q, want derived SHA-256 of content", meta.Checksum)
+	}
+
+	if meta.Content != "ACME GmbH Invoice 2026-0042 Total 119,00 EUR" {
+		t.Errorf("content = %q, want the OCR text served verbatim", meta.Content)
 	}
 }
 

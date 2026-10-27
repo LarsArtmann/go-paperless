@@ -37,6 +37,10 @@ type Document struct {
 	// Content is the stored original file bytes, served by the download
 	// endpoint.
 	Content []byte
+	// Text is the document's OCR text, served as the wire `content` field
+	// (the real server stores it beside the file as effective_content;
+	// empty is a valid state — a document that has not been OCR'd).
+	Text string
 	// Checksum is the document's content checksum. Empty means "derive
 	// from Content".
 	Checksum string
@@ -147,7 +151,10 @@ type documentWire struct {
 	Created       string                    `json:"created"`
 	Tags          []paperless.TagID         `json:"tags"`
 	DocumentType  paperless.DocumentTypeID  `json:"document_type"`
-	CustomFields  []CustomFieldValue        `json:"custom_fields"`
+	CustomFields  []CustomFieldValue       `json:"custom_fields"`
+	// Content is the OCR text the real serializer always serves
+	// (effective_content; empty string for un-OCR'd documents).
+	Content string `json:"content"`
 	// Checksum is the flat legacy checksum field; omitted in the versions[]
 	// shape (paperless-ngx 3.x removed it from the serializer).
 	Checksum string `json:"checksum,omitempty"`
@@ -174,6 +181,7 @@ func (s *Server) documentWireFor(doc *Document) documentWire {
 		Tags:          doc.TagIDs,
 		DocumentType:  doc.DocumentTypeID,
 		CustomFields:  doc.CustomFields,
+		Content:       doc.Text,
 	}
 
 	if wire.Tags == nil {
