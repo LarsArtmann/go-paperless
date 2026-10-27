@@ -1501,6 +1501,10 @@ type documentMetaPayload struct {
 	CustomFields  []customFieldValuePayload `json:"custom_fields"`
 	Checksum      string                    `json:"checksum"`
 	Versions      []documentVersionPayload  `json:"versions"`
+	// Content is the OCR text Paperless-ngx serves on every document
+	// serialization (list and detail alike — DocumentSerializer serves
+	// effective_content, "" when the document has none).
+	Content string `json:"content"`
 }
 
 // documentVersionPayload mirrors one entry of Paperless-ngx's document
@@ -1557,12 +1561,15 @@ type DocumentMeta struct {
 	DocumentTypeID DocumentTypeID
 	CustomFields   []CustomFieldValue
 	Checksum       string
+	// Content is the document's OCR text as served (effective_content in
+	// paperless-ngx: the current version's text, "" when not OCR'd).
+	Content string
 }
 
 // ListDocumentMetas returns id, title, correspondent, created date, tags,
-// and checksum of every stored document. The backfill matches ledger
-// records against server documents (by checksum) and detects duplicates
-// (same checksum stored more than once).
+// checksum, and OCR content of every stored document. The backfill matches
+// ledger records against server documents (by checksum) and detects
+// duplicates (same checksum stored more than once).
 func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) {
 	entries, err := fetchAllPages[documentMetaPayload](ctx, c, pathDocuments, "document meta")
 	if err != nil {
@@ -1583,6 +1590,7 @@ func (c *Client) ListDocumentMetas(ctx context.Context) ([]DocumentMeta, error) 
 			DocumentTypeID: entry.DocumentType,
 			CustomFields:   customFieldsFromPayload(entry.CustomFields),
 			Checksum:       entry.effectiveChecksum(),
+			Content:        entry.Content,
 		})
 	}
 
