@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
-	"testing"
 
 	"github.com/larsartmann/go-paperless"
 )
