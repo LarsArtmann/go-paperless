@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **3xx responses classify as `paperless.redirect` (Rejection) instead of
+  `paperless.server_error` (Transient).** A 3xx that net/http hands back
+  as-is (typically a redirect without a Location header) previously fell
+  into the 5xx default — "retry the redirect", the one response class
+  that cannot succeed by retrying. The Location header rides along as
+  error context. Only this exotic case changes; followable redirects
+  stay transparent.
+- **`New` with an empty base URL or token now returns the
+  `ErrInvalidConfig` sentinel wrapped in `paperless.invalid_config`
+  (Rejection family).** `errors.Is(err, ErrInvalidConfig)` still matches
+  (pinned by test), so drop-in consumers are unaffected; what is new is
+  that `errorfamily.Code`/`Classify` now speak
+  (`paperless.invalid_config`/Rejection) instead of returning `""` and
+  the fail-open Transient default for a construction rejection.
 - CI: the standalone gosec job is parked. gosec v2.29.0 (the latest
   release) cannot type-check a Go 1.27 module: its x/tools reads export
   data up to version 4 while Go 1.27 compilers emit version 5, so every
@@ -19,11 +33,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Nothing yet.
+- ERROR_CODES.md: a "Retry outcomes" section documenting go-retry's
+  terminal `retry.exhausted`/`retry.canceled`/`retry.deadline` codes
+  (family Infrastructure), why they surface outermost (fail-closed
+  nesting), and how the last attempt's `paperless.*` error stays
+  reachable through the chain via `errors.Is`/`errors.AsType`.
+- Drift test `TestEveryConstructedErrorIsCoded`: the catalog's
+  "every error this SDK constructs carries a `paperless.*` code" claim
+  is now mechanically enforced — bare stdlib error constructors,
+  non-wrapping `fmt.Errorf`, and non-namespaced errorfamily codes all
+  fail the suite.
+- Surface-pinning tests for retry exhaustion (`retry.exhausted` +
+  reachable `*RetryAfterError` cause), cancellation with and without
+  `WithRetry` (`retry.canceled` vs `paperless.request_failed`), and a
+  `classifyStatus` matrix (401/403/429/4xx/5xx/3xx).
 
 ### Fixed
 
-- Nothing yet.
+- ERROR_CODES.md corrections: the `paperless.request_failed` family cell
+  said Infrastructure while the code wraps Transient — and Transient is
+  load-bearing (the default retry predicate retries Transient-only, and
+  the row says Retryable: yes); the header claim now scopes exactly what
+  carries a `paperless.*` code.
 
 ## [0.5.0] - 2026-10-11
 
