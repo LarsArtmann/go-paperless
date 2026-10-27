@@ -116,7 +116,7 @@ func servedRoutes() []string {
 //
 // Fixture state: one mutex guards the per-family stores and ID counters; splitting it would scatter the lock.
 type Server struct {
-	t    testing.TB
+	t    TestReporter
 	http *httptest.Server
 
 	mu sync.Mutex
@@ -159,10 +159,23 @@ type Server struct {
 	faults   []*Fault
 }
 
+// TestReporter is the testing.TB subset the fake actually calls.
+// testing.TB carries an unexported seal method, so no type outside
+// package testing can implement it — notably ginkgo's GinkgoT(). Every
+// method here IS part of GinkgoT()'s surface, which lets ginkgo-based
+// consumers (journal) drive the fake directly; *testing.T satisfies it
+// trivially.
+type TestReporter interface {
+	Helper()
+	Errorf(format string, args ...any)
+	Fatalf(format string, args ...any)
+	Cleanup(func())
+}
+
 // NewServer starts a fake Paperless-ngx server and registers its shutdown
 // on tb's cleanup list. Unexpected requests fail the test (tb.Errorf) and
 // answer 404.
-func NewServer(tb testing.TB, opts ...Option) *Server {
+func NewServer(tb TestReporter, opts ...Option) *Server {
 	tb.Helper()
 
 	server := &Server{
