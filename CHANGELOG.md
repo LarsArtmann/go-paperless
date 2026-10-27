@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `Document.Text` fixture field served on the wire as `content` — pinned
   by the extended full-meta-shape test. First consumer: journal's M4
   documents pull (Belegbuchung evidence pipeline).
+- **`ListTags` — every tag definition on the server (id + name).** The
+  document list endpoint serves tag IDs only; rendering or filtering by
+  tag name requires joining against this list. Same bounded pagination as
+  the other list endpoints, pinned by `paperlesstest`
+  (`TestListTagsReturnsEveryTagWithNames`).
 
 ### Changed
 

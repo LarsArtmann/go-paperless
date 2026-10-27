@@ -69,6 +69,40 @@ func TestEnsureTagCreatesFindsAndSelfHeals(t *testing.T) {
 	}
 }
 
+func TestListTagsReturnsEveryTagWithNames(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(t, WithTags("gmail", "invoice"))
+	client := newTestClient(t, server)
+	ctx := context.Background()
+
+	created, err := client.EnsureTag(ctx, "receipt")
+	if err != nil {
+		t.Fatalf("EnsureTag create: %v", err)
+	}
+
+	tags, err := client.ListTags(ctx)
+	if err != nil {
+		t.Fatalf("ListTags: %v", err)
+	}
+
+	byID := make(map[int]string, len(tags))
+	for _, tag := range tags {
+		byID[tag.ID.Get()] = tag.Name
+	}
+
+	if len(tags) != 3 {
+		t.Fatalf("ListTags returned %d tags, want 3: %+v", len(tags), tags)
+	}
+
+	want := map[int]string{1: "gmail", 2: "invoice", created.Get(): "receipt"}
+	for id, name := range want {
+		if byID[id] != name {
+			t.Errorf("tag %d = %q, want %q", id, byID[id], name)
+		}
+	}
+}
+
 func TestEnsureCorrespondentAndDocumentType(t *testing.T) {
 	t.Parallel()
 

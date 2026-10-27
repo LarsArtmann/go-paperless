@@ -830,6 +830,39 @@ func (c *Client) EnsureTag(ctx context.Context, name string) (TagID, error) {
 	return createNamed[TagBrand](c, ctx, pathTags, "tag", name, matchingAlgorithmNone)
 }
 
+// Tag is one tag definition on the server: the ID consumers resolve document
+// tag ID lists against (the document list endpoint returns tag IDs, not
+// names, so rendering a tag name means joining against this list).
+type Tag struct {
+	ID   TagID
+	Name string
+}
+
+// tagPayload mirrors Paperless-ngx's tag serializer fields the SDK relies on.
+//
+// Unexported wire mirror of the public struct; the JSON tags belong here until v2 unifies the API.
+type tagPayload struct {
+	ID   TagID  `json:"id"`
+	Name string `json:"name"`
+}
+
+// ListTags returns every tag definition on the server, paginating the same
+// bounded way as the other list endpoints. Callers needing name filters on
+// documents (tags arrive as IDs there) resolve them through this list.
+func (c *Client) ListTags(ctx context.Context) ([]Tag, error) {
+	payloads, listErr := fetchAllPages[tagPayload](ctx, c, pathTags, "tag")
+	if listErr != nil {
+		return nil, listErr
+	}
+
+	tags := make([]Tag, 0, len(payloads))
+	for _, payload := range payloads {
+		tags = append(tags, Tag(payload))
+	}
+
+	return tags, nil
+}
+
 // updateMatchingAlgorithm PATCHes an existing object's matching algorithm
 // (used to self-heal legacy auto tags down to none). The brand parameter
 // keeps the PATCHed ID within the caller's entity family; it is a free
