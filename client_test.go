@@ -1967,6 +1967,155 @@ func TestWithRetryNeverRetriesRejections(t *testing.T) {
 	}
 }
 
+// TestWithRetryExhaustionSurfacesRetryOutcome pins the exhaustion surface
+// (ERROR_CODES.md "Retry outcomes"): when every attempt fails retryably, the
+// terminal error is go-retry's retry.exhausted (Infrastructure) with the SDK's
+// uncoded "request failed after retries" message wrap on top; the last
+// attempt's paperless classification stays reachable only through the chain.
+func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
+	t.Parallel()
+
+	var requests int
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		// Retry-After: 0 keeps the hint parseable (so the attempt error is a
+		// *RetryAfterError) without extending the tiny test backoff.
+		w.Header().Set("Retry-After", "0")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  3,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.Upload(t.Context(), UploadRequest{
+		Filename: "invoice.pdf",
+		Content:  []byte("%PDF-1.4 rate-limited"),
+	})
+	if err == nil {
+		t.Fatal("expected the persistent 429 to surface")
+	}
+
+	if requests != 3 {
+		t.Fatalf("requests = %d, want 3 (every attempt rate-limited)", requests)
+	}
+
+	if code := errorfamily.Code(err); code != "retry.exhausted" {
+		t.Fatalf("code = %q, want retry.exhausted (outermost coded classification)", code)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
+		t.Fatalf("expected Infrastructure family for exhaustion, got %v (%v)", family, err)
+	}
+
+	if !strings.Contains(err.Error(), "request failed after retries") {
+		t.Fatalf("error %q should carry the documented exhaustion message wrap", err)
+	}
+
+	rateLimited, ok := errors.AsType[*RetryAfterError](err)
+	if !ok {
+		t.Fatalf("exhaustion should reach the last attempt's *RetryAfterError, got %v", err)
+	}
+
+	if code := errorfamily.Code(rateLimited); code != "paperless.rate_limited" {
+		t.Fatalf("inner code = %q, want paperless.rate_limited", code)
+	}
+}
+
+// TestWithRetryCancelDuringBackoffSurfacesRetryCanceled pins the WithRetry
+// half of the cancellation surface: a context canceled during a backoff
+// delay surfaces retry.canceled (Infrastructure), and context.Canceled stays
+// reachable through the chain.
+func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
+	t.Parallel()
+
+	firstSeen := make(chan struct{})
+
+	var once sync.Once
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		once.Do(func() { close(firstSeen) })
+		// A 30s hint bridges the backoff delay, so the cancel below lands
+		// squarely inside the backoff wait rather than inside an attempt.
+		w.Header().Set("Retry-After", "30")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
+		MaxAttempts:  3,
+		InitialDelay: time.Millisecond,
+		MaxDelay:     2 * time.Millisecond,
+	}))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	go func() {
+		<-firstSeen
+		cancel()
+	}()
+
+	_, err = client.ListStoragePaths(ctx)
+	if err == nil {
+		t.Fatal("expected the canceled retry loop to surface")
+	}
+
+	if code := errorfamily.Code(err); code != "retry.canceled" {
+		t.Fatalf("code = %q, want retry.canceled (outermost coded classification)", code)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
+		t.Fatalf("expected Infrastructure family for a canceled backoff, got %v (%v)", family, err)
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want it to reach context.Canceled through the chain", err)
+	}
+}
+
+// TestRedirectWithoutLocationClassifiedAsServerErrorToday pins the current
+// 3xx behavior: a redirect the http.Client cannot follow (a 301 without a
+// Location header is returned as-is) falls into classifyStatus's 5xx default.
+// This expectation flips to paperless.redirect (Rejection) when classifyStatus
+// grows its 3xx branch.
+func TestRedirectWithoutLocationClassifiedAsServerErrorToday(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusMovedPermanently)
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.ListStoragePaths(t.Context())
+	if err == nil {
+		t.Fatal("expected the 301 to surface as an error")
+	}
+
+	if code := errorfamily.Code(err); code != "paperless.server_error" {
+		t.Fatalf("code = %q, want paperless.server_error (pre-fix 3xx default)", code)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Transient {
+		t.Fatalf("expected Transient family for the pre-fix 3xx default, got %v (%v)", family, err)
+	}
+}
+
 func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	t.Parallel()
 
@@ -3078,6 +3227,18 @@ func TestPlainRequestHonorsContextCancellation(t *testing.T) {
 
 	if !errors.Is(pingErr, context.Canceled) {
 		t.Fatalf("pingErr = %v, want it to wrap context.Canceled", pingErr)
+	}
+
+	if code := errorfamily.Code(pingErr); code != "paperless.request_failed" {
+		t.Fatalf("code = %q, want paperless.request_failed (cancel without retry)", code)
+	}
+
+	if family := errorfamily.Classify(pingErr); family != errorfamily.Transient {
+		t.Fatalf(
+			"expected Transient family for a canceled single attempt, got %v (%v)",
+			family,
+			pingErr,
+		)
 	}
 }
 
