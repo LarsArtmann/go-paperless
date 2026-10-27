@@ -151,7 +151,7 @@ type documentWire struct {
 	Created       string                    `json:"created"`
 	Tags          []paperless.TagID         `json:"tags"`
 	DocumentType  paperless.DocumentTypeID  `json:"document_type"`
-	CustomFields  []CustomFieldValue       `json:"custom_fields"`
+	CustomFields  []CustomFieldValue        `json:"custom_fields"`
 	// Content is the OCR text the real serializer always serves
 	// (effective_content; empty string for un-OCR'd documents).
 	Content string `json:"content"`
