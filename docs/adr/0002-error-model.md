@@ -58,4 +58,39 @@ toward zero:
   change (new codes may appear; existing codes never change meaning),
   not a mechanical lint fix.
 
+## Amendments
+
+### 2026-10-27 — retry outcomes, coded sentinel, 3xx classification
+
+Trigger: the 2026-10-27 brutal review of the error surfaces
+([report](../reviews/2026-10-27_17-58_brutal-self-review.html); plan:
+[superb error management](../planning/2026-10-27_18-35_SUPERB-ERROR-MANAGEMENT.md)).
+
+- **go-retry's terminal outcomes surface their `retry.*` codes
+  outermost** (`retry.exhausted` / `retry.canceled` / `retry.deadline`,
+  family Infrastructure). This is the one sanctioned coded wrap above
+  SDK errors: the fail-closed Infrastructure family keeps an outer
+  retry loop from multiplying attempts, while the last attempt's
+  `paperless.*` error stays reachable via `errors.Is`/`errors.AsType`.
+  The SDK adds only the usual uncoded "request failed after retries"
+  message wrap on top. Consumers programming against persistent
+  rate-limit exhaustion read the cause chain (`*RetryAfterError` →
+  `paperless.rate_limited`), not `Code()`. Without `WithRetry` these
+  outcomes cannot occur: transport failures and cancellation surface as
+  `paperless.request_failed` (Transient) directly.
+- **The `ErrInvalidConfig` sentinel is coded at its return site.** The
+  sentinel stays a bare `errors.New` so `errors.Is` keeps matching, but
+  `New` returns it wrapped in `paperless.invalid_config` (Rejection) —
+  never bare, so `Classify` no longer falls back to its fail-open
+  Transient default for a construction rejection. The catalog-header
+  claim ("every error this SDK constructs carries a `paperless.*`
+  code") is mechanically enforced by `TestEveryConstructedErrorIsCoded`
+  (`docs_drift_test.go`): every construction is coded or a `%w` wrap.
+- **Unfollowable 3xx responses classify as `paperless.redirect`**
+  (Rejection) instead of falling into the 5xx/Transient default —
+  retrying a redirect cannot succeed. Only 3xx responses the
+  http.Client hands back as-is (e.g. a redirect without a Location
+  header) reach this branch; followable redirects stay transparent.
+  The Location header rides along as context.
+
 [go-error-family]: https://github.com/larsartmann/go-error-family

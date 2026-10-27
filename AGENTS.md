@@ -168,7 +168,19 @@ the compiler walks migrations when they upgrade.
 - **Error model = ADR 0002** (`docs/adr/0002-error-model.md`): codes+family
   live at the failure source; call-site wraps are uncoded `fmt.Errorf`
   context wraps (an outer code would shadow the inner HTTP classification —
-  a tested contract). One code, one meaning, one family.
+  a tested contract). One code, one meaning, one family. Amendments
+  (2026-10-27): go-retry's terminal `retry.*` outcomes
+  (`retry.exhausted`/`retry.canceled`/`retry.deadline`, Infrastructure)
+  are the one sanctioned coded wrap ABOVE SDK errors — `Code`/`Classify`
+  surface them outermost while the `paperless.*` cause stays reachable
+  via `errors.Is`/`AsType` (documented in `docs/ERROR_CODES.md` "Retry
+  outcomes"); the `ErrInvalidConfig` sentinel is coded
+  (`paperless.invalid_config`, Rejection) at the `New` return site and
+  never returned bare; unfollowable 3xx → `paperless.redirect`
+  (Rejection). `TestEveryConstructedErrorIsCoded` (`docs_drift_test.go`)
+  mechanically enforces that every constructed error is coded or a `%w`
+  wrap — new bare `errors.New`, non-wrapping `fmt.Errorf`, or
+  non-`paperless.*` errorfamily codes all fail it.
   `--enforce-generic-return` stays off: bare `error` returns are the SDK
   contract (erraudit `--max` turns it on — see the erraudit bullet above
   for the sanctioned `--disable generic_return` audit invocation).
