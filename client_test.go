@@ -28,6 +28,23 @@ func TestNewRejectsMissingConfig(t *testing.T) {
 	if _, err := New("https://paperless.example.com", ""); !errors.Is(err, ErrInvalidConfig) {
 		t.Fatalf("empty token: expected ErrInvalidConfig, got %v", err)
 	}
+
+	_, err := New("", "token")
+	if err == nil {
+		t.Fatal("expected an error for an empty base URL")
+	}
+
+	if code := errorfamily.Code(err); code != "paperless.invalid_config" {
+		t.Fatalf("code = %q, want paperless.invalid_config", code)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Rejection {
+		t.Fatalf("expected Rejection family, got %v (%v)", family, err)
+	}
+
+	if !errors.Is(err, ErrInvalidConfig) {
+		t.Fatalf("err = %v, want the sentinel matchable through the coded wrap", err)
+	}
 }
 
 func TestNewRejectsNonHTTPScheme(t *testing.T) {

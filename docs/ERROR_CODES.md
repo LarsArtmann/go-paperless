@@ -4,10 +4,9 @@ Every error this SDK constructs carries a `paperless.*` dot-notation code (via
 [go-error-family](https://github.com/larsartmann/go-error-family)). Consumers
 can switch on codes with `errorfamily.Code(err)` (or `errors.AsType`) without
 reading SDK source. Codes are a compatibility contract: new codes may appear,
-existing codes never change meaning. Two surfaces sit outside the
-`paperless.*` namespace: the `ErrInvalidConfig` sentinel (match with
-`errors.Is`, see [Sentinel](#sentinel)) and go-retry's terminal `retry.*`
-outcomes when `WithRetry` is enabled (see
+existing codes never change meaning. One surface sits outside the
+`paperless.*` namespace: go-retry's terminal `retry.*` outcomes when
+`WithRetry` is enabled (see
 [Retry outcomes](#retry-outcomes-family-infrastructure)).
 
 The error model is [ADR 0002](adr/0002-error-model.md): codes and families
@@ -32,6 +31,7 @@ outer retry loop treats an inner loop's exhaustion as terminal.
 | `paperless.empty_storage_path`  | Storage path name or directory template was empty                                                                                           |
 | `paperless.empty_update`        | `UpdateDocument` called with no fields set                                                                                                  |
 | `paperless.invalid_retry`       | `WithRetry` passed a negative `MaxAttempts` (wraps `ErrInvalidConfig`, so `errors.Is` still matches; the offending value is in the message) |
+| `paperless.invalid_config`      | `New` called with an empty base URL or token (wraps the `ErrInvalidConfig` sentinel, so `errors.Is` still matches)                          |
 
 ## HTTP classification (family depends on status)
 
@@ -92,14 +92,3 @@ cannot occur — transport failures and cancellation surface as
 | `paperless.write_correspondent` / `paperless.write_created` / `paperless.write_custom_fields` / `paperless.write_document` / `paperless.write_document_type` / `paperless.write_tags` / `paperless.write_title`                                                                                          | A multipart form part could not be written                                                                                                                                                                        |
 | `paperless.read_response`                                                                                                                                                                                                                                                                                | 2xx response body could not be read                                                                                                                                                                               |
 | `body_read_error` context key                                                                                                                                                                                                                                                                            | Not a code: when the best-effort read of an error-response body fails mid-body, HTTP-classification errors attach the read failure under this context key so a missing/truncated snippet is explained, not silent |
-
-## Sentinel
-
-| Error                        | Meaning                                                               |
-| ---------------------------- | --------------------------------------------------------------------- |
-| `paperless.ErrInvalidConfig` | `New` called with an empty base URL or token (match with `errors.Is`) |
-
-The sentinel carries no `paperless.*` code: `errorfamily.Code` returns `""`
-for it, and `Classify` falls back to its fail-open Transient default. Match
-it with `errors.Is` only. The coded variant for malformed retry policies is
-`paperless.invalid_retry` (Validation table above), which wraps the sentinel.

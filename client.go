@@ -136,10 +136,12 @@ const (
 
 // ErrInvalidConfig is returned when the client is constructed with a missing
 // base URL or token. The integration is optional; callers that have not
-// configured Paperless should never construct a client.
+// configured Paperless should never construct a client. New wraps it with the
+// paperless.invalid_config code (Rejection family), so errors.Is keeps
+// matching while Code/Classify speak.
 var ErrInvalidConfig = errors.New(
 	"paperless: base URL and token are required",
-) //nolint:erraudit // documented errors.Is sentinel (ERROR_CODES.md), uncoded by design
+) //nolint:erraudit // documented errors.Is sentinel (ERROR_CODES.md); coded via paperless.invalid_config at the New call site
 
 // Option configures a Client at construction time.
 type Option func(*Client)
@@ -303,14 +305,18 @@ type Client struct {
 }
 
 // New creates a client for the given base URL (e.g. "https://paperless.example.com")
-// and API token. Returns ErrInvalidConfig when either is empty, the URL is
-// not parseable, or a WithRetry policy is malformed. Options customize the
-// HTTP transport.
+// and API token. Returns ErrInvalidConfig (coded paperless.invalid_config,
+// Rejection) when either is empty, the URL is not parseable, or a WithRetry
+// policy is malformed. Options customize the HTTP transport.
 
 //nolint:branching-flow // public API; a swapped token fails scheme validation; brands are ROADMAP v2 scope
 func New(baseURL, token string, opts ...Option) (*Client, error) {
 	if baseURL == "" || token == "" {
-		return nil, ErrInvalidConfig
+		return nil, errorfamily.WrapRejection(
+			ErrInvalidConfig,
+			"paperless.invalid_config",
+			ErrInvalidConfig.Error(),
+		)
 	}
 
 	parsed, err := url.Parse(strings.TrimRight(baseURL, "/"))
