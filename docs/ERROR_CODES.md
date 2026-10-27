@@ -1,15 +1,21 @@
 # Error-code catalog
 
-Every error this SDK returns carries a `paperless.*` dot-notation code (via
+Every error this SDK constructs carries a `paperless.*` dot-notation code (via
 [go-error-family](https://github.com/larsartmann/go-error-family)). Consumers
 can switch on codes with `errorfamily.Code(err)` (or `errors.AsType`) without
 reading SDK source. Codes are a compatibility contract: new codes may appear,
-existing codes never change meaning.
+existing codes never change meaning. Two surfaces sit outside the
+`paperless.*` namespace: the `ErrInvalidConfig` sentinel (match with
+`errors.Is`, see [Sentinel](#sentinel)) and go-retry's terminal `retry.*`
+outcomes when `WithRetry` is enabled (see
+[Retry outcomes](#retry-outcomes-family-infrastructure)).
 
 The error model is [ADR 0002](adr/0002-error-model.md): codes and families
 are assigned at the source of failure; call-site wraps add human message
 context without a competing code, so `Code`/`Classify` always surface the
-inner classification.
+innermost coded classification. The one coded wrap above SDK errors is
+go-retry's terminal outcome (see Retry outcomes below) — by design, so an
+outer retry loop treats an inner loop's exhaustion as terminal.
 
 ## Validation (family: Rejection — fail fast, never retry)
 
@@ -29,13 +35,32 @@ inner classification.
 
 ## HTTP classification (family depends on status)
 
-| Code                       | Meaning                                               | Family         | Retryable |
-| -------------------------- | ----------------------------------------------------- | -------------- | --------- |
-| `paperless.auth_failed`    | 401/403 from the server                               | Rejection      | no        |
-| `paperless.client_error`   | any other 4xx (body snippet attached)                 | Rejection      | no        |
-| `paperless.rate_limited`   | 429; wraps `RetryAfterError` when a hint is parseable | Transient      | yes       |
-| `paperless.server_error`   | 5xx; wraps `RetryAfterError` on 503 with a hint       | Transient      | yes       |
-| `paperless.request_failed` | network/transport failure before a response           | Infrastructure | yes       |
+| Code                       | Meaning                                                                                                                | Family    | Retryable |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- | --------- |
+| `paperless.auth_failed`    | 401/403 from the server                                                                                                | Rejection | no        |
+| `paperless.client_error`   | any other 4xx (body snippet attached)                                                                                  | Rejection | no        |
+| `paperless.rate_limited`   | 429; wraps `RetryAfterError` when a hint is parseable                                                                  | Transient | yes       |
+| `paperless.server_error`   | 5xx; wraps `RetryAfterError` on 503 with a hint                                                                        | Transient | yes       |
+| `paperless.request_failed` | network/transport failure before a response (including a canceled context: `errors.Is(err, context.Canceled)` matches) | Transient | yes       |
+
+## Retry outcomes (family: Infrastructure)
+
+When `WithRetry` is enabled, the go-retry engine owns the terminal outcome:
+`Code`/`Classify` surface the outermost coded classification, which is
+go-retry's `retry.*` code, while the last attempt's `paperless.*` error stays
+reachable through the chain via `errors.Is`/`errors.AsType`. On top, the SDK
+adds an uncoded "request failed after retries" message wrap (ADR 0002
+call-site wrap: no competing code).
+
+Without `WithRetry` the client makes exactly one attempt, so these outcomes
+cannot occur — transport failures and cancellation surface as
+`paperless.request_failed` (Transient) directly.
+
+| Code              | Meaning                                          | Reachable in the chain                                                              |
+| ----------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `retry.exhausted` | every attempt failed                             | the last attempt's error, e.g. `*RetryAfterError` wrapping `paperless.rate_limited` |
+| `retry.canceled`  | context canceled during a backoff delay          | `context.Canceled` and the last attempt's error (both)                              |
+| `retry.deadline`  | context deadline exceeded during a backoff delay | `context.DeadlineExceeded` and the last attempt's error (both)                      |
 
 ## Task outcomes
 
@@ -73,3 +98,8 @@ inner classification.
 | Error                        | Meaning                                                               |
 | ---------------------------- | --------------------------------------------------------------------- |
 | `paperless.ErrInvalidConfig` | `New` called with an empty base URL or token (match with `errors.Is`) |
+
+The sentinel carries no `paperless.*` code: `errorfamily.Code` returns `""`
+for it, and `Classify` falls back to its fail-open Transient default. Match
+it with `errors.Is` only. The coded variant for malformed retry policies is
+`paperless.invalid_retry` (Validation table above), which wraps the sentinel.
