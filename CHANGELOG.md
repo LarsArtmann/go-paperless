@@ -38,7 +38,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (pinned by test), so drop-in consumers are unaffected; what is new is
   that `errorfamily.Code`/`Classify` now speak
   (`paperless.invalid_config`/Rejection) instead of returning `""` and
-  the fail-open Transient default for a construction rejection.
+  the fail-open Transient default for a construction rejection. The
+  rejection message now names the missing credential ("baseURL must not
+  be empty" / "token must not be empty" / both) and carries the base URL
+  as error context instead of the generic sentinel text.
 - CI: the standalone gosec job is parked. gosec v2.29.0 (the latest
   release) cannot type-check a Go 1.27 module: its x/tools reads export
   data up to version 4 while Go 1.27 compilers emit version 5, so every
