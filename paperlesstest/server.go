@@ -168,7 +168,7 @@ type TestReporter interface {
 	Helper()
 	Errorf(format string, args ...any)
 	Fatalf(format string, args ...any)
-	Cleanup(func())
+	Cleanup(fn func())
 }
 
 // NewServer starts a fake Paperless-ngx server and registers its shutdown
