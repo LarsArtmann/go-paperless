@@ -23,9 +23,9 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   resolves the binary via the host PATH (`~/.local/bin/erraudit`), not a flake input — the
   hermetic pin is an open TODO_LIST item. Verify: `nix develop -c sh -c 'which erraudit'`.
 - **BuildFlow**: run it as `nix develop -c buildflow --fix …` (dev shell supplies Go 1.27.1
-  - every BuildFlow-probed tool). From a bare shell, `env -u GOTOOLCHAIN buildflow …` also
-    works: `.buildflow.yml` sets `env: GOTOOLCHAIN: auto`, but caller-wins env lets an
-    exported `GOTOOLCHAIN=local` preempt it (feedback filed in the BuildFlow repo, 2026-09-16).
+  and every BuildFlow-probed tool). From a bare shell, `env -u GOTOOLCHAIN buildflow …`
+  also works: `.buildflow.yml` sets `env: GOTOOLCHAIN: auto`, but caller-wins env lets an
+  exported `GOTOOLCHAIN=local` preempt it (feedback filed in the BuildFlow repo, 2026-09-16).
 - **go-auto-upgrade's samber/lo suggestions are accepted noise**: the two "manual Map" sites
   in client.go are pure type conversions (`StoragePath(payload)`, `CustomFieldValue(field)`);
   `lo.Map` would add a dependency for nothing. Don't add samber/lo for them.
