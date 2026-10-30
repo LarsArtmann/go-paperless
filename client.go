@@ -312,11 +312,20 @@ type Client struct {
 //nolint:branching-flow // public API; a swapped token fails scheme validation; brands are ROADMAP v2 scope
 func New(baseURL, token string, opts ...Option) (*Client, error) {
 	if baseURL == "" || token == "" {
+		missing := "baseURL and token"
+
+		switch {
+		case baseURL == "":
+			missing = "baseURL"
+		case token == "":
+			missing = "token"
+		}
+
 		return nil, errorfamily.WrapRejection(
 			ErrInvalidConfig,
 			"paperless.invalid_config",
-			ErrInvalidConfig.Error(),
-		)
+			missing+" must not be empty",
+		).WithContext("url", baseURL)
 	}
 
 	parsed, err := url.Parse(strings.TrimRight(baseURL, "/"))
