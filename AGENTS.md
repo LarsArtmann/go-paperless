@@ -45,12 +45,13 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   `slices.DeleteFunc`; the five fake entity/wire struct pairs merged into single tagged
   structs), 16 line-suppressed, 31 dismissed per rule. Mechanics that bite:
   - `//nolint:branching-flow // reason` works ONLY for the panic/phantom analyzers (tool
-    v0.6.4); a bare directive (no `:rule`) suppresses ALL branching-flow findings on that
+    v0.6.7); a bare directive (no `:rule`) suppresses ALL branching-flow findings on that
     line for those two (rule suffixes are accepted but unprobed). The directive must sit ON
     the finding line or directly above; keep anchor lines short or `nix fmt` (golines)
     reflows them and silently breaks suppression — always re-run the tool after formatting.
   - The 31 dismissals (DUPLICATE_TYPE, COMPOSITION_mixin, ANTI_PATTERN_large-struct in
-    `.branching-flow.yml` `disabled_rules`) cannot be line-suppressed in v0.6.4; per-site
+    `.branching-flow.yml` `disabled_rules`) cannot be line-suppressed (verified through
+    v0.6.7, 2026-10-30); per-site
     rationale lives as doc-comment paragraphs on the flagged declarations (public structs
     stay tag-free = compatibility contract; SDK↔fake mirrors = the fake's round-trip
     contract; input-vs-response shapes diverge by design; `Server` = fixture state).
