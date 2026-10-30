@@ -20,7 +20,9 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   golangci-lint additionally needs fresh temp dirs for all three caches.
 - Host `erraudit`/`go`: the machine profile ships Go 1.27.0, but the flake dev shell stays
   canonical (pinned toolchain, `GOEXPERIMENT=jsonv2`). Caveat: `nix develop -c erraudit …`
-  resolves the binary via the host PATH (`~/.local/bin/erraudit`), not a flake input — the
+  resolves the binary via the host system profile
+  (`/run/current-system/sw/bin/erraudit`, rev `256200c`; the old
+  `~/.local/bin` path is gone), not a flake input — the
   hermetic pin is an open TODO_LIST item. Verify: `nix develop -c sh -c 'which erraudit'`.
 - **BuildFlow**: run it as `nix develop -c buildflow --fix …` (dev shell supplies Go 1.27.1
   and every BuildFlow-probed tool). From a bare shell, `env -u GOTOOLCHAIN buildflow …`
