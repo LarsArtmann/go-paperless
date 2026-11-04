@@ -17,6 +17,7 @@ import (
 	"time"
 
 	errorfamily "github.com/larsartmann/go-error-family"
+	"github.com/larsartmann/go-retry"
 )
 
 func TestNewRejectsMissingConfig(t *testing.T) {
@@ -2025,12 +2026,16 @@ func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
 		t.Fatalf("requests = %d, want 3 (every attempt rate-limited)", requests)
 	}
 
-	if code := errorfamily.Code(err); code != "retry.exhausted" {
-		t.Fatalf("code = %q, want retry.exhausted (outermost coded classification)", code)
+	if code := errorfamily.Code(err); code != "paperless.rate_limited" {
+		t.Fatalf("code = %q, want paperless.rate_limited (go-retry v0.9.0 surfaces the last attempt's code outermost)", code)
+	}
+
+	if !errors.Is(err, retry.ErrExhausted) {
+		t.Fatalf("exhaustion bookkeeping must stay reachable via errors.Is, got %v", err)
 	}
 
 	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
-		t.Fatalf("expected Infrastructure family for exhaustion, got %v (%v)", family, err)
+		t.Fatalf("expected Infrastructure family for the client's exhaustion wrap, got %v (%v)", family, err)
 	}
 
 	if !strings.Contains(err.Error(), "request failed after retries") {
@@ -2049,8 +2054,9 @@ func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
 
 // TestWithRetryCancelDuringBackoffSurfacesRetryCanceled pins the WithRetry
 // half of the cancellation surface: a context canceled during a backoff
-// delay surfaces retry.canceled (Infrastructure), and context.Canceled stays
-// reachable through the chain.
+// delay keeps the canceled retry bookkeeping reachable via errors.Is
+// (go-retry v0.9.0) while the last attempt's coded error surfaces outermost,
+// and context.Canceled stays reachable through the chain.
 func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	t.Parallel()
 
@@ -2089,12 +2095,16 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 		t.Fatal("expected the canceled retry loop to surface")
 	}
 
-	if code := errorfamily.Code(err); code != "retry.canceled" {
-		t.Fatalf("code = %q, want retry.canceled (outermost coded classification)", code)
+	if code := errorfamily.Code(err); code != "paperless.request_failed" {
+		t.Fatalf("code = %q, want paperless.request_failed (go-retry v0.9.0 surfaces the last attempt's code outermost)", code)
+	}
+
+	if !errors.Is(err, retry.ErrCanceled) {
+		t.Fatalf("canceled-backoff bookkeeping must stay reachable via errors.Is, got %v", err)
 	}
 
 	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
-		t.Fatalf("expected Infrastructure family for a canceled backoff, got %v (%v)", family, err)
+		t.Fatalf("expected Infrastructure family for the client's canceled-backoff wrap, got %v (%v)", family, err)
 	}
 
 	if !errors.Is(err, context.Canceled) {
