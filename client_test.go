@@ -2027,7 +2027,10 @@ func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
 	}
 
 	if code := errorfamily.Code(err); code != "paperless.rate_limited" {
-		t.Fatalf("code = %q, want paperless.rate_limited (go-retry v0.9.0 surfaces the last attempt's code outermost)", code)
+		t.Fatalf(
+			"code = %q, want paperless.rate_limited (go-retry v0.9.0 surfaces the last attempt's code outermost)",
+			code,
+		)
 	}
 
 	if !errors.Is(err, retry.ErrExhausted) {
@@ -2035,7 +2038,11 @@ func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
 	}
 
 	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
-		t.Fatalf("expected Infrastructure family for the client's exhaustion wrap, got %v (%v)", family, err)
+		t.Fatalf(
+			"expected Infrastructure family for the client's exhaustion wrap, got %v (%v)",
+			family,
+			err,
+		)
 	}
 
 	if !strings.Contains(err.Error(), "request failed after retries") {
@@ -2096,7 +2103,10 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	}
 
 	if code := errorfamily.Code(err); code != "paperless.request_failed" {
-		t.Fatalf("code = %q, want paperless.request_failed (go-retry v0.9.0 surfaces the last attempt's code outermost)", code)
+		t.Fatalf(
+			"code = %q, want paperless.request_failed (go-retry v0.9.0 surfaces the last attempt's code outermost)",
+			code,
+		)
 	}
 
 	if !errors.Is(err, retry.ErrCanceled) {
@@ -2104,7 +2114,11 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	}
 
 	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
-		t.Fatalf("expected Infrastructure family for the client's canceled-backoff wrap, got %v (%v)", family, err)
+		t.Fatalf(
+			"expected Infrastructure family for the client's canceled-backoff wrap, got %v (%v)",
+			family,
+			err,
+		)
 	}
 
 	if !errors.Is(err, context.Canceled) {
