@@ -28,6 +28,14 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   and every BuildFlow-probed tool). From a bare shell, `env -u GOTOOLCHAIN buildflow …`
   also works: `.buildflow.yml` sets `env: GOTOOLCHAIN: auto`, but caller-wins env lets an
   exported `GOTOOLCHAIN=local` preempt it (feedback filed in the BuildFlow repo, 2026-09-16).
+- **Dependency bumps have a two-step tail that BuildFlow detects but cannot auto-fix**
+  (learned 2026-11-07 healing commit 97340ef): after a go.mod/go.sum bump run
+  `go mod vendor` (gomod-check only DETECTS the version mismatch) AND
+  `nix develop -c buildflow -s nix-hash-fix --fix` for the flake's `vendorHash`.
+  `vendor/` is gitignored (`.gitignore`), so the drift is invisible in `git status`;
+  it surfaces as gopls/golangci "inconsistent vendoring" red and would break the next
+  `nix build` with a hash mismatch. The golangci LSP can keep replaying the stale
+  vendor error even after `lsp_restart` — `nix flake check` is the ground truth.
 - **go-auto-upgrade's samber/lo suggestions are accepted noise**: the two "manual Map" sites
   in client.go are pure type conversions (`StoragePath(payload)`, `CustomFieldValue(field)`);
   `lo.Map` would add a dependency for nothing. Don't add samber/lo for them.
