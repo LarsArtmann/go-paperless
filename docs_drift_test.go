@@ -34,19 +34,48 @@ func snakeUpper(kind string) string {
 	return strings.ReplaceAll(kind, " ", "_")
 }
 
+// packageSourceFiles lists the root package's non-test .go files. The
+// error-code extraction parses all of them: the API is split across domain
+// files (client, upload, tasks, named, documents, transport, notes,
+// sharelinks, savedviews), and a single-file extraction would silently
+// miss every code constructed outside the file it names.
+func packageSourceFiles(t *testing.T) []string {
+	t.Helper()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("read package dir: %v", err)
+	}
+
+	files := []string{}
+
+	for _, entry := range entries {
+		name := entry.Name()
+
+		if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+			files = append(files, name)
+		}
+	}
+
+	if len(files) < 5 {
+		t.Fatalf(
+			"only %d package source files found — the extraction is broken, not the catalog",
+			len(files),
+		)
+	}
+
+	return files
+}
+
 // expectedDynamicCodes resolves the paperless.* codes the kind-parameterized
-// helpers construct at runtime, for every literal call site in client.go.
-// A call site whose kind is not a string literal fails the test: the catalog
-// can only stay complete if the test can see what the helper will emit.
+// helpers construct at runtime, for every literal call site in the package
+// sources. A call site whose kind is not a string literal fails the test:
+// the catalog can only stay complete if the test can see what the helper
+// will emit.
 func expectedDynamicCodes(t *testing.T) []string {
 	t.Helper()
 
 	fset := token.NewFileSet()
-
-	file, err := parser.ParseFile(fset, "client.go", nil, 0)
-	if err != nil {
-		t.Fatalf("parse client.go: %v", err)
-	}
 
 	codes := []string{}
 
@@ -55,6 +84,21 @@ func expectedDynamicCodes(t *testing.T) []string {
 			codes = append(codes, code)
 		}
 	}
+
+	for _, name := range packageSourceFiles(t) {
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+
+		collectDynamicCodes(t, file, fset, add)
+	}
+
+	return codes
+}
+
+func collectDynamicCodes(t *testing.T, file *ast.File, fset *token.FileSet, add func(string)) {
+	t.Helper()
 
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -95,8 +139,6 @@ func expectedDynamicCodes(t *testing.T) []string {
 			return true
 		})
 	}
-
-	return codes
 }
 
 // ownParamNames collects the enclosing helper's parameter names so kind
@@ -201,29 +243,31 @@ func TestErrorCodesAreDocumented(t *testing.T) {
 
 	catalog := readProjectFile(t, "docs/ERROR_CODES.md")
 
-	fset := token.NewFileSet()
-
-	file, err := parser.ParseFile(fset, "client.go", nil, 0)
-	if err != nil {
-		t.Fatalf("parse client.go: %v", err)
-	}
-
 	staticCode := regexp.MustCompile(`^paperless\.[a-z_]+$`)
 	codes := expectedDynamicCodes(t)
 
-	ast.Inspect(file, func(node ast.Node) bool {
-		literal, ok := node.(*ast.BasicLit)
-		if !ok || literal.Kind != token.STRING {
+	for _, name := range packageSourceFiles(t) {
+		fset := token.NewFileSet()
+
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+
+		ast.Inspect(file, func(node ast.Node) bool {
+			literal, ok := node.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+
+			value := strings.Trim(literal.Value, `"`)
+			if staticCode.MatchString(value) && !slices.Contains(codes, value) {
+				codes = append(codes, value)
+			}
+
 			return true
-		}
-
-		value := strings.Trim(literal.Value, `"`)
-		if staticCode.MatchString(value) && !slices.Contains(codes, value) {
-			codes = append(codes, value)
-		}
-
-		return true
-	})
+		})
+	}
 
 	if len(codes) < 30 {
 		t.Fatalf("only %d codes collected — the extraction is broken, not the catalog", len(codes))
