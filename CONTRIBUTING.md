@@ -30,6 +30,26 @@ toolchains (the module uses `encoding/json/v2`, see AGENTS.md):
     nix fmt              # format
     nix flake check      # all checks (what CI runs)
 
+Additional flake apps and checks, by name:
+
+    nix run .#coverage   # tests with coverage report
+    nix run .#fuzz -- 5m # every fuzz target, per-target budget (default 30s)
+    nix run .#integration          # real-server integration tests (opt-in: needs a live server)
+    nix run .#release-verify -- vX.Y.Z  # post-release ritual (maintainers)
+    checks.integration-vet         # vets the integration tests without running them
+    checks.branching-flow-clean    # the 0-active-findings design gate (AGENTS.md)
+
+Conventions the analyzers enforce:
+
+- `branching-flow all . --format finding --exit-code` must stay at zero
+  active findings — new findings go through the triage (fix in code,
+  line-suppress with a reason, or rule-dismiss with documented
+  rationale in `.branching-flow.yml`), never into the gate's red. See
+  `docs/status/2026-10-11_03-41_branching-flow-findings-triage.md`.
+- Error handling: every constructed error carries a `paperless.*` code
+  or is a `%w` wrap (ADR 0002); `TestEveryConstructedErrorIsCoded`
+  enforces it mechanically.
+
 The error-handling gate runs inside the dev shell (the host binary may
 differ): `erraudit ./... --type-aware --enforce-go-error-family
 --disable-extensions` — see AGENTS.md for the suppression conventions and

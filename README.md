@@ -68,11 +68,39 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(tagID)
+	fmt.Println(tagID.Get())
 }
 ```
 
 ## Common tasks
+
+Download a document's original bytes and update its metadata (IDs are
+branded types — construct from raw values with
+`docID := paperless.NewDocumentID(42)`, or reuse the IDs the SDK
+returns):
+
+```go
+content, err := client.DownloadDocument(ctx, docID)
+if err != nil {
+    panic(err)
+}
+
+title := "renamed statement" // pointer fields: nil leaves the field untouched
+err = client.UpdateDocument(ctx, docID, paperless.UpdateDocumentRequest{
+    Title:  &title,
+    TagIDs: []paperless.TagID{inboxTagID},
+})
+```
+
+Clearing a nullable foreign key sends an explicit null (the server's
+documented clearing shape — never a raw 0):
+
+```go
+zero := paperless.NewCorrespondentID(0)
+err = client.UpdateDocument(ctx, docID, paperless.UpdateDocumentRequest{
+    CorrespondentID: &zero,
+})
+```
 
 Document notes (IDs are branded types — construct from raw values with
 `docID := paperless.NewDocumentID(42)`, or reuse the IDs the SDK returns):
@@ -151,7 +179,32 @@ client, err := paperless.New(url, token, paperless.WithRetry(paperless.RetryPoli
 A `RetryPolicy` zero value (or any unset field) falls back to the package
 defaults: 3 attempts total, 100ms initial delay, doubling per attempt,
 capped at 5s (`DefaultRetryMaxAttempts`, `DefaultRetryInitialDelay`,
-`DefaultRetryMultiplier`, `DefaultRetryMaxDelay`).
+`DefaultRetryMultiplier`, `DefaultRetryMaxDelay`). `MaxDelay` caps BOTH
+the computed backoff and the server's `Retry-After` hint — a hint under
+the ceiling is honored exactly, one beyond it waits at most `MaxDelay`,
+so a hostile server cannot stall you for as long as its hint claims.
+
+When an upload should block until Paperless-ngx has consumed the
+document, poll the task:
+
+```go
+taskID, err := client.Upload(ctx, req)
+if err != nil {
+    panic(err)
+}
+
+ctx, cancel := context.WithTimeout(ctx, 5*time.Minute) // bounds the wait
+defer cancel()
+
+outcome, err := client.WaitForTask(ctx, taskID, 2*time.Second) // interval; <=0 selects DefaultTaskPollInterval
+if err != nil {
+    panic(err) // terminal failure (paperless.task_failed) or wait abandoned (paperless.task_poll_abandoned)
+}
+docID := outcome.DocumentID // set on success and duplicate refusals
+```
+
+Duplicate refusals are honest outcomes, not errors: `WaitForTask`
+returns them with a populated outcome and a nil error.
 
 ## Testing your integration with `paperlesstest`
 
@@ -192,6 +245,18 @@ nix flake check      # all checks (CI equivalent)
 nix run .#integration            # real-server integration tests
 nix run .#release-verify -- vX.Y.Z  # post-release ritual
 ```
+
+### For contributors
+
+- Migration guide for the v0.4→v0.5 branded-ID change:
+  [MIGRATION.md](MIGRATION.md) · error-code catalog:
+  [docs/ERROR_CODES.md](docs/ERROR_CODES.md) · decision records:
+  [docs/adr/](docs/adr/) (pagination policy, fake store==serve, error
+  model, branded IDs)
+- The 2026-10-11 review series (branded-ID migration, branching-flow
+  triage, full-code review) lives under `docs/status/` with verified
+  command appendixes — start at
+  `docs/status/2026-10-11_06-36_full-code-review-session-status.md`.
 
 ## License
 
