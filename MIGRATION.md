@@ -29,14 +29,18 @@ err = client.DeleteDocument(ctx, paperless.NewDocumentID(42))
 ### Constructors
 
 `NewTagID(3)`, `NewDocumentID(42)`, `NewTaskID("uuid")` — one per
-entity family (`ids.go` lists them all). Zero values are valid and
-mean "unset": a zero `DocumentID` marshals as JSON `null` and guards
-with `.IsZero()`. Constructors from an empty string or a negative
-number panic — construct from data you trust, or guard first.
+entity family (`ids.go` lists them all; note the backing types: most
+take `int`, `NewDocumentID` takes `int64`, `NewTaskID` takes a
+`string`). The constructors never panic and never validate — they wrap
+the value verbatim, so zero values are valid and mean "unset": a zero
+ID marshals as JSON `null` and guards with `.IsZero()`. Validate at
+the boundary yourself (go-branded-id's `MustValidateID` panics on zero
+if you want that behavior explicitly).
 
 ### Reading raw values back
 
-`.Get()` returns the underlying `int64`/`string` — that is what goes
+`.Get()` returns the underlying value (most families are `int`-backed;
+`DocumentID` is `int64`; `TaskID` is `string`) — that is what goes
 into `strconv.Itoa`, SQL parameters, log fields, and `fmt` verbs:
 
 ```go
