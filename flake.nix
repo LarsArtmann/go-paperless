@@ -11,6 +11,12 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The branching-flow analyzer gates the 0-active-findings invariant
+    # (AGENTS.md; triage: docs/status/2026-10-11_03-41_*). Private input —
+    # resolved via the nix-installer action's github-token in CI.
+    branching-flow = {
+      url = "github:LarsArtmann/branching-flow";
+    };
   };
 
   outputs =
@@ -18,6 +24,7 @@
       self,
       flake-parts,
       treefmt-nix,
+      branching-flow,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -173,6 +180,21 @@
             format = config.treefmt.build.check self;
 
             build = moduleBuild;
+
+            # The 0-active-findings gate: every finding here is either
+            # fixed in code, line-suppressed, or rule-dismissed with
+            # documented rationale (.branching-flow.yml). A new finding
+            # must go through that triage, not into the gate's red.
+            branching-flow-clean =
+              pkgs.runCommand "branching-flow-clean"
+                {
+                  nativeBuildInputs = [ branching-flow.packages.${pkgs.system}.default ];
+                }
+                ''
+                  cd "${self}"
+                  branching-flow all . --format finding --exit-code
+                  touch "$out"
+                '';
 
             # Race detector in CI-identical hermetic conditions: reuse the
             # vendored module build and force -race in its test phase.

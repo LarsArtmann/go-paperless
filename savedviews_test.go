@@ -284,7 +284,10 @@ func TestSavedViewFilterRulesNeverNil(t *testing.T) {
 
 	for _, view := range views {
 		if view.FilterRules == nil {
-			t.Errorf("view %q decoded nil FilterRules — the normalization contract makes every served shape a non-nil empty slice", view.Name)
+			t.Errorf(
+				"view %q decoded nil FilterRules — the normalization contract makes every served shape a non-nil empty slice",
+				view.Name,
+			)
 		}
 
 		if len(view.FilterRules) != 0 {
