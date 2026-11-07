@@ -21,6 +21,12 @@
 // asynchronous task semantics. Consumer domain logic (ledgers, pipelines,
 // projections) deliberately lives in the consumers, not here.
 //
+// The fake's two structural policies are decided in the ADRs: pagination
+// policy (bounded client walks, envelope-shaped serving — docs/adr/
+// 0005-fake-pagination-policy.md) and the store==serve convention (one
+// wire-tagged struct per entity family — docs/adr/
+// 0006-fake-store-serve-convention.md).
+//
 // # Dependencies
 //
 // Standard library plus the root paperless package's branded ID types
