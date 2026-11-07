@@ -39,6 +39,13 @@ Raw ideas:
   runs~~ → shipped: `WithRequestHook` / `WithResponseHook`
 - Streaming multipart upload for sources larger than the memory-safe
   envelope the current in-memory buffering assumes (`Upload`)
+- Encrypted-PDF ingestion helper as a sibling package here (`pdfdecrypt` or
+  similar): qpdf `--deterministic-id --decrypt`, cheap `/Encrypt`
+  head/tail detection, "encrypted"-tag fallback — currently InboxClean-
+  internal (`internal/papersync/pdf.go`, also serving its
+  `paperless --decrypt-repair` command). Demand-gated: extract when bank-sync
+  (encrypted statement PDFs are its canonical input) or a second consumer
+  needs it; the root client package stays exec-free
 - Share-link conveniences, demand-gated: a full-URL helper
   (`<base>/share/<slug>`) and a document-scoped listing
   (`GET /api/documents/{id}/share_links/`)
