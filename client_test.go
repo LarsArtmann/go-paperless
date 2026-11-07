@@ -2060,23 +2060,32 @@ func TestWithRetryExhaustionSurfacesRetryOutcome(t *testing.T) {
 }
 
 // TestWithRetryCancelDuringBackoffSurfacesRetryCanceled pins the WithRetry
-// half of the cancellation surface: a context canceled during a backoff
-// delay keeps the canceled retry bookkeeping reachable via errors.Is
-// (go-retry v0.9.0) while the last attempt's coded error surfaces outermost,
-// and context.Canceled stays reachable through the chain.
+// half of the cancellation surface: a context canceled while the first
+// attempt is in flight keeps the canceled retry bookkeeping reachable via
+// errors.Is (go-retry v0.9.0) while the last attempt's coded error surfaces
+// outermost, and context.Canceled stays reachable through the chain. The
+// handler gate makes the ordering deterministic: the cancel fires only
+// after the server has entered the handler, so attempt 1 always dies with a
+// transport-level cancel before any response exists, and the engine
+// observes the cancel inside its backoff — the outcome no longer depends on
+// whether the cancel goroutine outruns response processing, the race this
+// test used to lose under parallel-build load.
 func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	t.Parallel()
 
-	firstSeen := make(chan struct{})
+	entered := make(chan struct{})
 
 	var once sync.Once
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		once.Do(func() { close(firstSeen) })
-		// A 30s hint bridges the backoff delay, so the cancel below lands
-		// squarely inside the backoff wait rather than inside an attempt.
-		w.Header().Set("Retry-After", "30")
-		w.WriteHeader(http.StatusTooManyRequests)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		once.Do(func() { close(entered) })
+		// Hold attempt 1 in flight until the test's cancel wins the
+		// ordering by construction. The ceiling only exists so
+		// server.Close can never wedge if the connection were to linger.
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
 	}))
 	defer server.Close()
 
@@ -2093,7 +2102,7 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	defer cancel()
 
 	go func() {
-		<-firstSeen
+		<-entered
 		cancel()
 	}()
 
@@ -2116,6 +2125,94 @@ func TestWithRetryCancelDuringBackoffSurfacesRetryCanceled(t *testing.T) {
 	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
 		t.Fatalf(
 			"expected Infrastructure family for the client's canceled-backoff wrap, got %v (%v)",
+			family,
+			err,
+		)
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want it to reach context.Canceled through the chain", err)
+	}
+}
+
+// TestWithRetryCancelDuringBackoffPromotesRateLimitedCode pins the sibling
+// ordering: attempt 1 has already completed as a rate limit (a
+// *RetryAfterError is the last attempt on the books) and the context is
+// canceled during the ensuing Retry-After-driven backoff. go-retry v0.9.0
+// then surfaces the LAST attempt's code outermost — paperless.rate_limited,
+// NOT paperless.request_failed — while retry.canceled and context.Canceled
+// stay reachable via errors.Is (ERROR_CODES.md "Retry outcomes"). The
+// response hook makes the ordering deterministic: the cancel fires only
+// after the hook observed attempt 1's response, so the 30s hint window
+// always outlives the scheduling gap before cancel runs. (This outcome was
+// previously mislabeled a flake: the predecessor test raced the cancel
+// against attempt 1's response processing and asserted the
+// cancel-preempts-response winner's code for both orderings.)
+func TestWithRetryCancelDuringBackoffPromotesRateLimitedCode(t *testing.T) {
+	t.Parallel()
+
+	hookSeen := make(chan struct{})
+
+	var requests int
+
+	var once sync.Once
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		// Only attempt 1 carries the 30s hint the cancel must interrupt;
+		// later attempts (reachable only under pathological scheduling)
+		// stay hint-free so the loop fails fast instead of hanging.
+		if requests == 1 {
+			w.Header().Set("Retry-After", "30")
+		}
+
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	client, err := New(
+		server.URL,
+		"token",
+		WithRetry(RetryPolicy{
+			MaxAttempts:  3,
+			InitialDelay: time.Millisecond,
+			MaxDelay:     2 * time.Millisecond,
+		}),
+		WithResponseHook(func(_ ResponseInfo) {
+			once.Do(func() { close(hookSeen) })
+		}),
+	)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	go func() {
+		<-hookSeen
+		cancel()
+	}()
+
+	_, err = client.ListStoragePaths(ctx)
+	if err == nil {
+		t.Fatal("expected the canceled retry loop to surface")
+	}
+
+	if code := errorfamily.Code(err); code != "paperless.rate_limited" {
+		t.Fatalf(
+			"code = %q, want paperless.rate_limited (go-retry v0.9.0 surfaces the last attempt's code outermost)",
+			code,
+		)
+	}
+
+	if !errors.Is(err, retry.ErrCanceled) {
+		t.Fatalf("canceled-backoff bookkeeping must stay reachable via errors.Is, got %v", err)
+	}
+
+	if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
+		t.Fatalf(
+			"expected Infrastructure family for the canceled-backoff wrap, got %v (%v)",
 			family,
 			err,
 		)
