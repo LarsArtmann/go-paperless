@@ -13,11 +13,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1793934572,
-        "narHash": "sha256-l91NFy/oznTtyDpgNOg0PUaSHaclvuJMJYKLRhvLRP8=",
+        "lastModified": 1794095446,
+        "narHash": "sha256-8Ue8lojJNs0NIhvtap3Ike/QGuns8hSXPFQjUQzoCKY=",
         "owner": "LarsArtmann",
         "repo": "branching-flow",
-        "rev": "8fd75a742970ad258a288abf24a6c349c820d202",
+        "rev": "bbdb8b1d5bdb90d0f7686ba55cf8d60af9ea89f5",
         "type": "github"
       },
       "original": {
