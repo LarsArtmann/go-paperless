@@ -59,3 +59,35 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go test -race ./...
+
+  api-compatibility:
+    name: api-diff vs newest tag (breaking changes must be intentional)
+    runs-on: ubuntu-24.04
+    env:
+      GOEXPERIMENT: jsonv2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gorelease resolves the newest tag as its comparison base and
+          # refuses a shallow clone (no tag history, no comparison).
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      # gorelease reports breaking changes in the report but exits 0, so
+      # the gate greps the report instead of trusting the exit code. An
+      # intentional break (the compatibility contract allows shipping one
+      # as a 0.x minor) skips the gate when the HEAD commit message
+      # carries the [api-break] marker — the release commit is then the
+      # documented re-baseline point.
+      - run: |
+          if git log -1 --pretty=%B | grep -q '\[api-break\]'; then
+            echo "::notice::HEAD commit declares an intentional API break ([api-break] marker) — gate skipped; ship as a 0.x minor."
+            exit 0
+          fi
+          report=$(GOFLAGS= go run golang.org/x/exp/cmd/gorelease@latest -base="$(git describe --tags --abbrev=0)")
+          echo "$report"
+          if echo "$report" | grep -q '^## incompatible changes'; then
+            echo "::error::Breaking API changes vs $(git describe --tags --abbrev=0). Ship them as an intentional 0.x minor: mark the release commit with [api-break]."
+            exit 1
+          fi
