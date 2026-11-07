@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **FK-clearing document updates silently did nothing.** The document
+  PATCH payload's `correspondent` and `document_type` fields carried
+  `omitempty`; under `encoding/json/v2` (the default on the module's Go
+  1.27 floor), an `omitempty` field whose encoding is null is dropped —
+  so `UpdateDocument` with a pointer to a zero branded ID (the SDK's
+  documented clearing idiom) sent `{}`, a no-op that reported success.
+  The fields now carry no `omitempty`: a nil pointer is still omitted
+  by the standard rules, and the pointer-to-zero null reaches the wire.
+  Pinned by the new wire-shape golden tests, which is where the bug was
+  found — the goldens exist precisely to catch this class before a
+  consumer's reconcile pass silently stops clearing foreign keys.
+
 ## [0.5.2] - 2026-11-07
 
 ### Changed

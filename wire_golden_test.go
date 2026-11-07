@@ -59,7 +59,12 @@ func goldenBodyServer(t *testing.T, method, pathSuffix, respond string) (*Client
 func TestGoldenNamedCreateBodySendsNullID(t *testing.T) {
 	t.Parallel()
 
-	client, body := goldenBodyServer(t, http.MethodPost, "/api/tags/", `{"id":1,"name":"provenance","matching_algorithm":0,"slug":"provenance"}`)
+	client, body := goldenBodyServer(
+		t,
+		http.MethodPost,
+		"/api/tags/",
+		`{"id":1,"name":"provenance","matching_algorithm":0,"slug":"provenance"}`,
+	)
 
 	tagID, err := client.EnsureTag(t.Context(), "provenance")
 	if err != nil {
@@ -87,7 +92,8 @@ func TestGoldenUploadCustomFieldsPartSendsFieldAndValue(t *testing.T) {
 	var once bool
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !once && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/api/documents/post_document/") {
+		if !once && r.Method == http.MethodPost &&
+			strings.HasSuffix(r.URL.Path, "/api/documents/post_document/") {
 			rawBody, _ = io.ReadAll(r.Body)
 
 			contentType = r.Header.Get("Content-Type")

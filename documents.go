@@ -292,13 +292,20 @@ func (c *Client) UpdateDocument(
 // document serializer. Pointer fields are emitted only when set; an empty
 // TagIDs slice is omitted so other-field updates never touch tags.
 //
+// The ID pointer fields carry NO omitempty — deliberately. A pointer to a
+// zero branded ID marshals as null (the FK-clearing contract), and under
+// encoding/json/v2 an omitempty field whose encoding is null is dropped
+// entirely, which would silently turn a clearing update into a no-op. A
+// nil pointer is omitted by the standard rules anyway; the pointer-to-zero
+// null must survive.
+//
 // SDK↔fake wire-shape mirror is deliberate: the fake must serialize exactly the SDK's parse shape.
 type documentUpdatePayload struct {
 	Title         *string                   `json:"title,omitempty"`
 	Created       *string                   `json:"created,omitempty"`
-	Correspondent *CorrespondentID          `json:"correspondent,omitempty"`
+	Correspondent *CorrespondentID          `json:"correspondent"`
 	TagIDs        []TagID                   `json:"tags,omitempty"`
-	DocumentType  *DocumentTypeID           `json:"document_type,omitempty"`
+	DocumentType  *DocumentTypeID           `json:"document_type"`
 	CustomFields  []customFieldValuePayload `json:"custom_fields,omitempty"`
 }
 
