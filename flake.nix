@@ -188,9 +188,14 @@
             branching-flow-clean =
               pkgs.runCommand "branching-flow-clean"
                 {
-                  nativeBuildInputs = [ branching-flow.packages.${pkgs.system}.default ];
+                  nativeBuildInputs = [
+                    branching-flow.packages.${pkgs.system}.default
+                    goPkg
+                  ];
                 }
                 ''
+                  export HOME=$TMPDIR
+                  export GOCACHE=$TMPDIR/go-cache
                   cd "${self}"
                   branching-flow all . --format finding --exit-code
                   touch "$out"
