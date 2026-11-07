@@ -202,3 +202,97 @@ func ExampleClient_ProbeCapabilities() {
 
 	fmt.Println(caps.ChecksumShape(), caps.DocumentsSampled)
 }
+
+// ExampleClient_UpdateDocument patches one document's metadata: pointer
+// fields left nil stay untouched, and clearing a nullable foreign key is
+// a pointer to a zero ID (an explicit null on the wire, pinned by the
+// wire-shape goldens).
+//
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_UpdateDocument() {
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	title := "Statement 2026-10"
+
+	err = client.UpdateDocument(ctx, paperless.NewDocumentID(42), paperless.UpdateDocumentRequest{
+		Title: &title,
+		TagIDs: []paperless.TagID{
+			paperless.NewTagID(7),
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// ExampleClient_ListDocumentMetas walks every document's list-view fields
+// (title, checksum, tag and correspondent IDs, OCR text) with bounded
+// pagination handled by the SDK.
+//
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_ListDocumentMetas() {
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	metas, err := client.ListDocumentMetas(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, meta := range metas {
+		fmt.Println(meta.ID.Get(), meta.Title, meta.Checksum)
+	}
+}
+
+// ExampleClient_EnsureStoragePath idempotently provisions a storage path:
+// found means reuse (no POST), missing means create.
+//
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_EnsureStoragePath() {
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	pathID, err := client.EnsureStoragePath(ctx, "Statements", "/documents/statements")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(pathID.Get())
+}
+
+// ExampleClient_DownloadDocument fetches a document's original bytes
+// (the same file that was uploaded).
+//
+//nolint:testableexamples // illustrative; running it would need a live server
+func ExampleClient_DownloadDocument() {
+	//art-dupl:accept doc-example boilerplate
+	client, err := paperless.New("http://paperless.local:8000", "my-token")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	content, err := client.DownloadDocument(ctx, paperless.NewDocumentID(42))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(len(content))
+}
