@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`RetryPolicy.MaxDelay` now caps a server's Retry-After hint the same
+  way it caps computed exponential backoff.** Hints previously bypassed
+  the ceiling verbatim, so a broken or hostile server could stall a
+  caller for as long as the hint claimed (`Retry-After: 86400` waited a
+  day). Hints under the ceiling are still honored exactly; hints beyond
+  it wait at most MaxDelay. Consumers that already clamp hints in an
+  outer wrapper (papersync's `retryafter.Clamp`) can drop that wrapper
+  and set `MaxDelay: 60 * time.Second` for identical behavior.
+
 ## [0.5.1] - 2026-11-07
 
 ### Added

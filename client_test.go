@@ -2176,7 +2176,9 @@ func TestWithRetryCancelDuringBackoffPromotesRateLimitedCode(t *testing.T) {
 		WithRetry(RetryPolicy{
 			MaxAttempts:  3,
 			InitialDelay: time.Millisecond,
-			MaxDelay:     2 * time.Millisecond,
+			// Above the 30s hint so the hint IS the backoff window the
+			// cancel must land inside.
+			MaxDelay: 45 * time.Second,
 		}),
 		WithResponseHook(func(_ ResponseInfo) {
 			once.Do(func() { close(hookSeen) })
@@ -2340,7 +2342,9 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
 		MaxAttempts:  2,
 		InitialDelay: time.Millisecond,
-		MaxDelay:     2 * time.Millisecond,
+		// Above the 1s hint so the assertion stays "hint honored" rather
+		// than "ceiling clamped" — the computed backoff would be ~1ms.
+		MaxDelay: 2 * time.Second,
 	}))
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -2370,8 +2374,15 @@ func TestRetryPolicyDelayFuncBridgesRetryAfterHint(t *testing.T) {
 
 	delayFunc := (RetryPolicy{MaxAttempts: 2}).retryConfig().DelayFunc
 
-	if got := delayFunc(1, &RetryAfterError{After: 7 * time.Second}); got != 7*time.Second {
-		t.Fatalf("DelayFunc = %s, want the server hint 7s", got)
+	// Below the default MaxDelay ceiling the hint is honored verbatim.
+	if got := delayFunc(1, &RetryAfterError{After: 3 * time.Second}); got != 3*time.Second {
+		t.Fatalf("DelayFunc = %s, want the server hint 3s", got)
+	}
+
+	// Beyond the ceiling the hint is clamped, so a broken or hostile
+	// server cannot stall the caller indefinitely.
+	if got := delayFunc(1, &RetryAfterError{After: 7 * time.Second}); got != DefaultRetryMaxDelay {
+		t.Fatalf("DelayFunc = %s, want the hint clamped to MaxDelay %s", got, DefaultRetryMaxDelay)
 	}
 
 	if got := delayFunc(1, errUnrelatedFailure); got != 0 {

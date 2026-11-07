@@ -197,8 +197,11 @@ type RetryPolicy struct {
 	// InitialDelay is the pause before the second attempt. Zero (or
 	// negative) selects DefaultRetryInitialDelay.
 	InitialDelay time.Duration
-	// MaxDelay caps the backoff between attempts. Zero (or negative)
-	// selects DefaultRetryMaxDelay.
+	// MaxDelay caps the backoff between attempts — computed exponential
+	// backoff AND a server's Retry-After hint alike. Zero (or negative)
+	// selects DefaultRetryMaxDelay. Capping hints keeps a broken or hostile
+	// server from stalling the caller indefinitely while still honoring
+	// every hint that stays under the ceiling.
 	MaxDelay time.Duration
 	// Multiplier is the exponential backoff factor. Zero (or negative)
 	// selects DefaultRetryMultiplier.
@@ -285,7 +288,10 @@ func (p RetryPolicy) retryConfig() retry.Config {
 		Multiplier:   multiplier,
 		DelayFunc: func(_ int, err error) time.Duration {
 			if hint, ok := errors.AsType[*RetryAfterError](err); ok {
-				return hint.After
+				// The hint overrides the computed backoff but honors the
+				// same MaxDelay ceiling; 0 (or below) keeps the computed
+				// backoff per go-retry's DelayFunc contract.
+				return min(hint.After, maxDelay)
 			}
 
 			return 0
