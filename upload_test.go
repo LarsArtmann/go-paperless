@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -501,5 +502,46 @@ func TestWriteCustomFieldsFieldWriteFailureCarriesCodedError(t *testing.T) {
 
 	if coded.Family() != errorfamily.Infrastructure {
 		t.Fatalf("family = %v, want Infrastructure", coded.Family())
+	}
+}
+
+// TestUploadOmitsOptionalFieldsWhenZero pins the inverse multipart
+// branches: a zero Created omits the created field entirely, and a
+// correspondent/document-type/custom-fields-free request carries none of
+// their parts (the consumption endpoint treats absent as unset, so
+// sending empty strings would clobber server-side defaults).
+func TestUploadOmitsOptionalFieldsWhenZero(t *testing.T) {
+	t.Parallel()
+
+	var form url.Values
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseMultipartForm(1 << 20)
+
+		form = r.Form
+
+		w.Header().Set("Content-Type", "application/json")
+
+		_, _ = w.Write([]byte(`"task-omit"`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	_, err = client.Upload(t.Context(), UploadRequest{
+		Filename: "minimal.pdf",
+		Content:  []byte("%PDF-1.4"),
+	})
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+
+	for _, absent := range []string{"created", "correspondent", "document_type", "custom_fields", "title"} {
+		if form.Has(absent) {
+			t.Errorf("form carries %q — zero-value optional fields must be omitted, not sent empty", absent)
+		}
 	}
 }
