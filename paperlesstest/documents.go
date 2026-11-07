@@ -450,7 +450,7 @@ func (s *Server) handleDocumentPatch(
 	}
 
 	if patch.Created != nil {
-		doc.Created = parseServedCreated(*patch.Created)
+		doc.Created = parseCreated(*patch.Created)
 	}
 
 	if patch.Correspondent != nil {
@@ -541,9 +541,12 @@ func (s *Server) findDocumentLocked(id paperless.DocumentID) *Document {
 	return nil
 }
 
-// parseServedCreated parses the created values the fake serves/accepts
-// (RFC 3339 and date-only, mirroring the SDK's parser tolerance).
-func parseServedCreated(raw string) time.Time {
+// parseCreated is the fake's single created-field parser, shared by the
+// upload form path and the served JSON path: RFC 3339 and date-only both
+// parse (mirroring the SDK's parser tolerance), anything else stores as
+// the zero time. The SDK writes date-only on upload; the tolerance exists
+// because the real server accepts both forms.
+func parseCreated(raw string) time.Time {
 	for _, layout := range []string{time.RFC3339, time.DateOnly} {
 		if parsed, err := time.Parse(layout, raw); err == nil {
 			return parsed

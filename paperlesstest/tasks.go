@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/larsartmann/go-paperless"
 )
@@ -333,7 +332,7 @@ func (s *Server) storeConsumedLocked(upload Upload) *Document {
 		Content:  upload.Content,
 		Checksum: ChecksumOf(upload.Content),
 		//nolint:branching-flow // upload form-field wire string parsed at the boundary
-		Created: parseUploadDate(upload.Created),
+		Created: parseCreated(upload.Created),
 		//nolint:branching-flow // upload form-field wire string parsed at the boundary
 		Correspondent: paperless.NewCorrespondentID(atoiOrZero(upload.Correspondent)),
 		TagIDs:        atoiSlice(upload.Tags),
@@ -457,21 +456,6 @@ func consumptionTitle(upload Upload) string {
 	}
 
 	return base
-}
-
-// parseUploadDate parses the date-only created form field the SDK sends;
-// unparseable values store the zero time.
-func parseUploadDate(raw string) time.Time {
-	if raw == "" {
-		return time.Time{}
-	}
-
-	parsed, err := time.Parse(time.DateOnly, raw)
-	if err != nil {
-		return time.Time{}
-	}
-
-	return parsed
 }
 
 // atoiOrZero parses a decimal form field; garbage stores as 0 (the real

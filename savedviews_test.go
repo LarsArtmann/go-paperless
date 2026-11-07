@@ -249,3 +249,46 @@ func TestDeleteSavedViewSurfacesServerError(t *testing.T) {
 		t.Errorf("error should name the saved view ID: %v", err)
 	}
 }
+
+// TestSavedViewFilterRulesNeverNil pins the normalization contract: a
+// served view with an absent filter_rules field and one with an explicit
+// empty array BOTH decode into a non-nil empty slice on SavedView, so
+// consumers range over view.FilterRules without nil checks and compare
+// "no rules" as len == 0 in every shape the server can serve.
+func TestSavedViewFilterRulesNeverNil(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; version=10")
+
+		_, _ = w.Write([]byte(`{"results": [
+			{"id": 1, "name": "absent", "filter_rules": null},
+			{"id": 2, "name": "empty-array", "filter_rules": []}
+		], "count": 2, "next": null, "previous": null}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "token")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	views, err := client.ListSavedViews(t.Context())
+	if err != nil {
+		t.Fatalf("ListSavedViews: %v", err)
+	}
+
+	if len(views) != 2 {
+		t.Fatalf("views = %d, want 2", len(views))
+	}
+
+	for _, view := range views {
+		if view.FilterRules == nil {
+			t.Errorf("view %q decoded nil FilterRules — the normalization contract makes every served shape a non-nil empty slice", view.Name)
+		}
+
+		if len(view.FilterRules) != 0 {
+			t.Errorf("view %q decoded %d rules, want 0", view.Name, len(view.FilterRules))
+		}
+	}
+}
