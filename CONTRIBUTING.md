@@ -34,6 +34,10 @@ Additional flake apps and checks, by name:
 
     nix run .#coverage   # tests with coverage report
     nix run .#fuzz -- 5m # every fuzz target, per-target budget (default 30s)
+                         # overnight sweep: nix run .#fuzz -- 45m (45m per target,
+                         # ~2h wall) or leave `-- 8h` on an idle machine; crashes
+                         # land in the target's testdata/fuzz/ — commit the
+                         # reproducing seed with the fix
     nix run .#integration          # real-server integration tests (opt-in: needs a live server)
     nix run .#release-verify -- vX.Y.Z  # post-release ritual (maintainers)
     checks.integration-vet         # vets the integration tests without running them

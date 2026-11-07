@@ -17,6 +17,12 @@ func FuzzParseRetryAfter(f *testing.F) {
 	f.Add("Sun, 13 Sep 2026 12:00:00 GMT", int64(1789000000))
 	f.Add("not-a-date", int64(1789000000))
 	f.Add(" 42 ", int64(1789000000))
+	// Overflow edges: MaxInt64 seconds overflows the duration multiply
+	// (treated as unparseable); MaxInt64/1e9-1 is the largest parseable
+	// delay. Both must stay non-negative when accepted.
+	f.Add("9223372036854775807", int64(0))
+	f.Add("9223372036854", int64(0))
+	f.Add("99999999999999999999", int64(0))
 
 	f.Fuzz(func(t *testing.T, value string, nowUnix int64) {
 		now := time.Unix(nowUnix, 0)
@@ -103,6 +109,8 @@ func FuzzDecodeShareLinkPayload(f *testing.F) {
 	f.Add([]byte(`{"id":1,"created":"2026-09-14T10:00:00Z","slug":"s","document":1,` +
 		`"file_version":"original"}`))
 	f.Add([]byte(`{"id":2,"slug":"","document":0,"file_version":""}`))
+	// Real v10 share-link shape with null expiration and the full field set.
+	f.Add([]byte(`{"id":4,"created":"2026-11-07T20:00:00Z","expiration":null,"slug":"a1b2c3","document":77,"file_version":"archive","label":null}`))
 	f.Add([]byte(`{"id":3,"slug":"s","document":5,"file_version":"weird-version"}`))
 	f.Add([]byte(`{"slug":"s"}`))
 	f.Add([]byte(`{`))
@@ -196,6 +204,9 @@ func FuzzClassifyTask(f *testing.F) {
 	f.Add([]byte(`{"task_id":"t4","status":"PENDING","related_document_ids":[9,8]}`))
 	f.Add([]byte(`{`))
 	f.Add([]byte(`{"result_data":{"document_id":null,"duplicate_of":null}}`))
+	// Real v10 TaskSerializerV10 shape: acknowledged flag, created/started
+	// timestamps around the core fields the SDK decodes.
+	f.Add([]byte(`{"task_id":"t5","document_id":31,"status":"SUCCESS","result_data":{"document_id":31},"created":"2026-11-07T20:00:00Z","started":"2026-11-07T20:00:01Z","acknowledged":false}`))
 
 	f.Fuzz(func(t *testing.T, payloadJSON []byte) {
 		var payload taskPayload

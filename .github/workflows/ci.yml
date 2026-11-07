@@ -91,3 +91,32 @@ jobs:
             echo "::error::Breaking API changes vs $(git describe --tags --abbrev=0). Ship them as an intentional 0.x minor: mark the release commit with [api-break]."
             exit 1
           fi
+
+  fuzz:
+    name: fuzz smoke (2m per target)
+    runs-on: ubuntu-24.04
+    env:
+      GOEXPERIMENT: jsonv2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      # go test fuzzes one target per invocation; a failing input is
+      # written to the target's testdata/fuzz/ so the upload below
+      # captures it for diagnosis.
+      - run: |
+          go test -run '^$' -fuzz '^FuzzParseRetryAfter$' -fuzztime 2m .
+          go test -run '^$' -fuzz '^FuzzParseDocumentCreated$' -fuzztime 2m .
+          go test -run '^$' -fuzz '^FuzzDecodeSavedViewPayload$' -fuzztime 2m .
+          go test -run '^$' -fuzz '^FuzzDecodeShareLinkPayload$' -fuzztime 2m .
+          go test -run '^$' -fuzz '^FuzzChecksumFrom$' -fuzztime 2m .
+          go test -run '^$' -fuzz '^FuzzClassifyTask$' -fuzztime 2m .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: fuzz-crash-corpus
+          path: |
+            testdata/fuzz/
+            paperlesstest/testdata/fuzz/
+          if-no-files-found: ignore
