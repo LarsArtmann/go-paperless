@@ -11,12 +11,6 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Hermetic erraudit pin: the error-model gate (AGENTS.md) used to
-    # resolve the host system profile's binary, which can trail the flake.
-    # The dev shell now carries the flake-pinned build.
-    erraudit = {
-      url = "github:LarsArtmann/erraudit";
-    };
     # The branching-flow analyzer gates the 0-active-findings invariant
     # (AGENTS.md; triage: docs/status/2026-10-11_03-41_*). Private input —
     # resolved via the nix-installer action's github-token in CI.
@@ -31,7 +25,6 @@
       flake-parts,
       treefmt-nix,
       branching-flow,
-      erraudit,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -146,7 +139,6 @@
               # stays hermetic.
               packages = [
                 goPkg
-                erraudit.packages.${pkgs.system}.default
                 pkgs.dprint
                 pkgs.go-licenses
                 pkgs.golangci-lint
@@ -188,26 +180,6 @@
             format = config.treefmt.build.check self;
 
             build = moduleBuild;
-
-            # The 0-active-findings gate: every finding here is either
-            # fixed in code, line-suppressed, or rule-dismissed with
-            # documented rationale (.branching-flow.yml). A new finding
-            # must go through that triage, not into the gate's red.
-            branching-flow-clean =
-              pkgs.runCommand "branching-flow-clean"
-                {
-                  nativeBuildInputs = [
-                    branching-flow.packages.${pkgs.system}.default
-                    goPkg
-                  ];
-                }
-                ''
-                  export HOME=$TMPDIR
-                  export GOCACHE=$TMPDIR/go-cache
-                  cd "${self}"
-                  branching-flow all . --format finding --exit-code
-                  touch "$out"
-                '';
 
             # Race detector in CI-identical hermetic conditions: reuse the
             # vendored module build and force -race in its test phase.
@@ -276,6 +248,27 @@
           };
 
           apps = {
+            # The 0-active-findings design gate, run LOCALLY (not as a
+            # check: `nix flake check` evaluates checks in CI, where the
+            # default GITHUB_TOKEN cannot fetch sibling private repos —
+            # a cross-repo PAT would re-promote this to checks.*).
+            # Every finding here is either fixed in code, line-suppressed,
+            # or rule-dismissed with documented rationale
+            # (.branching-flow.yml); a new finding goes through that
+            # triage, not into the gate's red.
+            branching-flow =
+              mkApp "branching-flow" "0-active-findings design gate (run locally: nix run .#branching-flow)"
+                [
+                  branching-flow.packages.${pkgs.system}.default
+                  goPkg
+                ]
+                ''
+                  export HOME=''${TMPDIR:-/tmp}
+                  export GOCACHE=$HOME/go-cache
+                  cd "$PWD"
+                  branching-flow all . --format finding --exit-code
+                '';
+
             check =
               mkApp "check" "Run every flake check (build, test, lint, format) — CI equivalent" [ pkgs.nix ]
                 ''
