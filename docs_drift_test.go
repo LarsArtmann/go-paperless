@@ -795,6 +795,51 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 
 	guide := readProjectFile(t, "MIGRATION.md")
 
+	t.Run("constructors exist", func(t *testing.T) {
+		t.Parallel()
+
+		migrationConstructorsExist(t, guide)
+	})
+
+	t.Run("branded-ID shapes match the guide", func(t *testing.T) {
+		t.Parallel()
+
+		migrationIDShapesMatch(t)
+	})
+
+	t.Run("paperlesstest helpers exist", func(t *testing.T) {
+		t.Parallel()
+
+		fakeMethods := fakeServerMethodNames(t)
+
+		for _, helper := range []string{"AddDocument", "AddTag", "SeedTask"} {
+			if !fakeMethods[helper] {
+				t.Errorf(
+					"MIGRATION.md documents paperlesstest helper %s, which no longer exists on the fake's Server",
+					helper,
+				)
+			}
+		}
+	})
+
+	t.Run("FK-clearing idiom types", func(t *testing.T) {
+		t.Parallel()
+
+		migrationFKIdiomTypes(t)
+	})
+
+	t.Run("wire deltas match the goldens", func(t *testing.T) {
+		t.Parallel()
+
+		migrationWireDeltasMatch(t)
+	})
+}
+
+// migrationConstructorsExist requires every `New…ID(` constructor
+// mentioned in MIGRATION.md to exist as a package function.
+func migrationConstructorsExist(t *testing.T, guide string) {
+	t.Helper()
+
 	extractedConstructors := map[string]bool{}
 
 	fset := token.NewFileSet()
@@ -831,6 +876,14 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 			)
 		}
 	}
+}
+
+// migrationIDShapesMatch pins the guide's backing-type claims (most ID
+// families int, DocumentID int64, TaskID string) and its method
+// vocabulary (.Get/.IsZero/.String/.Equal) against the real branded
+// types via reflection.
+func migrationIDShapesMatch(t *testing.T) {
+	t.Helper()
 
 	for _, documented := range []struct {
 		constructor   any
@@ -846,7 +899,7 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 		if constructorType == nil || constructorType.Kind() != reflect.Func ||
 			constructorType.NumIn() != 1 {
 			t.Fatalf(
-				"%s is not a single-argument constructor — the extraction above should have caught this",
+				"%s is not a single-argument constructor — the constructor extraction is broken",
 				documented.constructorID,
 			)
 		}
@@ -889,6 +942,65 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 			}
 		}
 	}
+}
+
+// migrationFKIdiomTypes pins the FK-clearing idiom's shape: the two
+// UpdateDocumentRequest fields stay pointers to branded-ID structs, so
+// the documented pointer-to-zero null reaches the wire.
+func migrationFKIdiomTypes(t *testing.T) {
+	t.Helper()
+
+	updateRequest := reflect.TypeFor[UpdateDocumentRequest]()
+
+	for _, fieldName := range []string{"CorrespondentID", "DocumentTypeID"} {
+		field, ok := updateRequest.FieldByName(fieldName)
+		if !ok {
+			t.Fatalf(
+				"UpdateDocumentRequest lost field %s, which MIGRATION.md's FK-clearing idiom uses",
+				fieldName,
+			)
+		}
+
+		if field.Type.Kind() != reflect.Pointer || field.Type.Elem().Kind() != reflect.Struct {
+			t.Errorf(
+				"UpdateDocumentRequest.%s is %s, want a pointer to a branded ID struct (the pointer-to-zero clearing idiom)",
+				fieldName,
+				field.Type,
+			)
+		}
+	}
+}
+
+// migrationWireDeltasMatch ties MIGRATION.md's two wire-delta claims to
+// the exact bytes the golden constants pin.
+func migrationWireDeltasMatch(t *testing.T) {
+	t.Helper()
+
+	for _, delta := range []struct {
+		golden string
+		marker string
+	}{
+		{goldenNamedCreateBody, `"id":null`},
+		{goldenFKClearingPatchBody, `"correspondent":null`},
+		{goldenFKClearingPatchBody, `"document_type":null`},
+	} {
+		if !strings.Contains(delta.golden, delta.marker) {
+			t.Errorf(
+				"wire golden no longer carries %s — MIGRATION.md's wire-delta section drifted from the pinned bodies",
+				delta.marker,
+			)
+		}
+	}
+}
+
+// fakeServerMethodNames parses the paperlesstest package's non-test
+// sources and collects every method name declared on the fake's types
+// (the root package cannot import paperlesstest without an import
+// cycle, so the guide's fixture-helper claims are checked by AST).
+func fakeServerMethodNames(t *testing.T) map[string]bool {
+	t.Helper()
+
+	fset := token.NewFileSet()
 
 	fakeDir := "paperlesstest"
 
@@ -919,48 +1031,5 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 		}
 	}
 
-	for _, helper := range []string{"AddDocument", "AddTag", "SeedTask"} {
-		if !fakeMethods[helper] {
-			t.Errorf(
-				"MIGRATION.md documents paperlesstest helper %s, which no longer exists on the fake's Server",
-				helper,
-			)
-		}
-	}
-
-	updateRequest := reflect.TypeFor[UpdateDocumentRequest]()
-
-	for _, fieldName := range []string{"CorrespondentID", "DocumentTypeID"} {
-		field, ok := updateRequest.FieldByName(fieldName)
-		if !ok {
-			t.Fatalf(
-				"UpdateDocumentRequest lost field %s, which MIGRATION.md's FK-clearing idiom uses",
-				fieldName,
-			)
-		}
-
-		if field.Type.Kind() != reflect.Pointer || field.Type.Elem().Kind() != reflect.Struct {
-			t.Errorf(
-				"UpdateDocumentRequest.%s is %s, want a pointer to a branded ID struct (the pointer-to-zero clearing idiom)",
-				fieldName,
-				field.Type,
-			)
-		}
-	}
-
-	for _, delta := range []struct {
-		golden string
-		marker string
-	}{
-		{goldenNamedCreateBody, `"id":null`},
-		{goldenFKClearingPatchBody, `"correspondent":null`},
-		{goldenFKClearingPatchBody, `"document_type":null`},
-	} {
-		if !strings.Contains(delta.golden, delta.marker) {
-			t.Errorf(
-				"wire golden no longer carries %s — MIGRATION.md's wire-delta section drifted from the pinned bodies",
-				delta.marker,
-			)
-		}
-	}
+	return fakeMethods
 }
