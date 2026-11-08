@@ -13,9 +13,12 @@
 > Ops cadence (set 2026-11-08): fuzz smoke runs in CI (2m/target here;
 > InboxClean schedules its papersync targets weekly); real-server
 > integration tests run before every release and at least monthly
-> (CONTRIBUTING); parked triggers re-verified 2026-11-08 — erraudit still
-> proxy-404 (stays parked), gosec UNPARKED (v2.30.0 reads Go 1.27),
-> govalid still proxy-404 (stays skipped in .buildflow.yml).
+> (CONTRIBUTING); the branching-flow design gate runs locally via
+> `nix run .#branching-flow` (an app, not a check — private inputs break
+> CI's flake check; a cross-repo PAT re-promotes it); parked triggers
+> re-verified 2026-11-08 — erraudit still proxy-404 (stays parked),
+> gosec UNPARKED (v2.30.0 reads Go 1.27), govalid still proxy-404
+> (stays skipped in .buildflow.yml).
 
 ## Status legend
 

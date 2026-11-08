@@ -128,7 +128,10 @@ the compiler walks migrations when they upgrade.
 - **erraudit gate works (healed upstream, verified 2026-09-23)**: run `erraudit ./...
   --type-aware --enforce-go-error-family --disable-extensions` inside `nix develop` (the
   machine's bare `go` is too old); exits 0 on the clean state and correctly flags real
-  violations. Deliberate stdlib-constructor sites carry `//nolint:erraudit // reason` ON
+  violations. The hermetic flake-input pin was attempted and REVERTED (2026-11-08): a
+  private input inside the devShell breaks CI's `nix flake check` (GITHUB_TOKEN cannot
+  fetch sibling private repos) — the pin returns when erraudit is on the public proxy or
+  a cross-repo PAT lands as a CI secret. Deliberate stdlib-constructor sites carry `//nolint:erraudit // reason` ON
   the anchor line (`nix fmt` may move it to the closing paren — suppression still
   anchors). golangci's "Found unknown linters: erraudit" warning is unavoidable noise.
   `//nolint` suppressions are honored even in audit modes (`--no-suppress`/`--max`).
