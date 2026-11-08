@@ -229,7 +229,12 @@ func TestGoldenBodiesAreStableJSON(t *testing.T) {
 		}
 
 		if !strings.Contains(golden.body, golden.contractMarker) {
-			t.Errorf("golden %s lost its contract marker %s: %s", name, golden.contractMarker, golden.body)
+			t.Errorf(
+				"golden %s lost its contract marker %s: %s",
+				name,
+				golden.contractMarker,
+				golden.body,
+			)
 		}
 	}
 }

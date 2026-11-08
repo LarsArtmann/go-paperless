@@ -825,7 +825,10 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 		name := strings.TrimSuffix(strings.TrimPrefix(match[0], "`"), "(")
 
 		if !extractedConstructors[name] {
-			t.Errorf("MIGRATION.md documents constructor %s, which no longer exists in the package", name)
+			t.Errorf(
+				"MIGRATION.md documents constructor %s, which no longer exists in the package",
+				name,
+			)
 		}
 	}
 
@@ -840,8 +843,12 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 		{NewTaskID, "NewTaskID", TaskID{}, reflect.String},
 	} {
 		constructorType := reflect.TypeOf(documented.constructor)
-		if constructorType == nil || constructorType.Kind() != reflect.Func || constructorType.NumIn() != 1 {
-			t.Fatalf("%s is not a single-argument constructor — the extraction above should have caught this", documented.constructorID)
+		if constructorType == nil || constructorType.Kind() != reflect.Func ||
+			constructorType.NumIn() != 1 {
+			t.Fatalf(
+				"%s is not a single-argument constructor — the extraction above should have caught this",
+				documented.constructorID,
+			)
 		}
 
 		if got := constructorType.In(0).Kind(); got != documented.backing {
@@ -857,7 +864,10 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 
 		getMethod, ok := idType.MethodByName("Get")
 		if !ok {
-			t.Fatalf("%s has no Get method — the branded-ID contract drifted", documented.constructorID)
+			t.Fatalf(
+				"%s has no Get method — the branded-ID contract drifted",
+				documented.constructorID,
+			)
 		}
 
 		if got := getMethod.Type.Out(0).Kind(); got != documented.backing {
@@ -871,7 +881,11 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 
 		for _, methodName := range []string{"IsZero", "String", "Equal"} {
 			if _, ok := idType.MethodByName(methodName); !ok {
-				t.Errorf("%s lost its %s method, which MIGRATION.md documents", documented.constructorID, methodName)
+				t.Errorf(
+					"%s lost its %s method, which MIGRATION.md documents",
+					documented.constructorID,
+					methodName,
+				)
 			}
 		}
 	}
@@ -907,7 +921,10 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 
 	for _, helper := range []string{"AddDocument", "AddTag", "SeedTask"} {
 		if !fakeMethods[helper] {
-			t.Errorf("MIGRATION.md documents paperlesstest helper %s, which no longer exists on the fake's Server", helper)
+			t.Errorf(
+				"MIGRATION.md documents paperlesstest helper %s, which no longer exists on the fake's Server",
+				helper,
+			)
 		}
 	}
 
@@ -916,7 +933,10 @@ func TestMigrationGuideMatchesPackage(t *testing.T) {
 	for _, fieldName := range []string{"CorrespondentID", "DocumentTypeID"} {
 		field, ok := updateRequest.FieldByName(fieldName)
 		if !ok {
-			t.Fatalf("UpdateDocumentRequest lost field %s, which MIGRATION.md's FK-clearing idiom uses", fieldName)
+			t.Fatalf(
+				"UpdateDocumentRequest lost field %s, which MIGRATION.md's FK-clearing idiom uses",
+				fieldName,
+			)
 		}
 
 		if field.Type.Kind() != reflect.Pointer || field.Type.Elem().Kind() != reflect.Struct {

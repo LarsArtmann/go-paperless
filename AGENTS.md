@@ -45,6 +45,16 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
 - **go-auto-upgrade's samber/lo suggestions are accepted noise**: the two "manual Map" sites
   in client.go are pure type conversions (`StoragePath(payload)`, `CustomFieldValue(field)`);
   `lo.Map` would add a dependency for nothing. Don't add samber/lo for them.
+- **`parseRetryAfter` accepts only whole seconds or HTTP-dates** (transport.go) — a
+  sub-second Retry-After hint is impossible on the wire, so wire-level hint tests cannot
+  avoid a full second by "using a smaller hint". The wire→delay seam is covered instead by
+  the ceiling clamp (`TestWithRetryClampsWireHintAtMaxDelay`: 2s hint vs 50ms MaxDelay);
+  verbatim honoring below the ceiling stays with the pure DelayFunc unit test. Don't
+  reintroduce a real-sleep hint test.
+- **Test layout**: tests join the domain file of the code they exercise (the nine-file
+  2026-11 split); `wire_golden_test.go` is the one documented cross-domain bucket (its
+  golden bodies live in package constants shared with `TestGoldenBodiesAreStableJSON` and
+  `TestMigrationGuideMatchesPackage`). CONTRIBUTING carries the rule.
 - **Race coverage is deliberate and redundant by design**: CI runs `nix flake check` (which
   builds `checks.test-race`) AND an explicit `go test -race ./…` job, matching the
   standalone govulncheck/gosec job pattern — the explicit job exists so tooling that only

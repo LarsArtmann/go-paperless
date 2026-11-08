@@ -745,11 +745,17 @@ func TestWithRetryClampsWireHintAtMaxDelay(t *testing.T) {
 	}
 
 	if elapsed < 45*time.Millisecond {
-		t.Fatalf("elapsed = %s, want >= ~45ms so the server's hint reaches the retry delay", elapsed)
+		t.Fatalf(
+			"elapsed = %s, want >= ~45ms so the server's hint reaches the retry delay",
+			elapsed,
+		)
 	}
 
 	if elapsed >= 2*time.Second {
-		t.Fatalf("elapsed = %s, want well under the verbatim 2s hint — MaxDelay must clamp wire hints", elapsed)
+		t.Fatalf(
+			"elapsed = %s, want well under the verbatim 2s hint — MaxDelay must clamp wire hints",
+			elapsed,
+		)
 	}
 }
 
