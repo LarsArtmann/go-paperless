@@ -783,3 +783,164 @@ func TestErrorCodeCatalogRowsAreUnique(t *testing.T) {
 		}
 	}
 }
+
+// TestMigrationGuideMatchesPackage pins MIGRATION.md (the v0.4→v0.5
+// consumer guide) against the package it documents: every constructor,
+// method, fixture helper, and field the guide names must still exist
+// with the documented shape, and the two wire deltas must still be what
+// the wire goldens pin. A renamed symbol or changed wire shape fails
+// here instead of leaving consumers a guide that lies.
+func TestMigrationGuideMatchesPackage(t *testing.T) {
+	t.Parallel()
+
+	guide := readProjectFile(t, "MIGRATION.md")
+
+	extractedConstructors := map[string]bool{}
+
+	fset := token.NewFileSet()
+
+	for _, name := range packageSourceFiles(t) {
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && strings.HasPrefix(fn.Name.Name, "New") &&
+				strings.HasSuffix(fn.Name.Name, "ID") {
+				extractedConstructors[fn.Name.Name] = true
+			}
+		}
+	}
+
+	if len(extractedConstructors) < 10 {
+		t.Fatalf(
+			"only %d New…ID constructors found — the extraction is broken, not the guide",
+			len(extractedConstructors),
+		)
+	}
+
+	constructorPattern := regexp.MustCompile("`New[A-Z][A-Za-z]*ID\\(")
+	for _, match := range constructorPattern.FindAllStringSubmatch(guide, -1) {
+		name := strings.TrimSuffix(strings.TrimPrefix(match[0], "`"), "(")
+
+		if !extractedConstructors[name] {
+			t.Errorf("MIGRATION.md documents constructor %s, which no longer exists in the package", name)
+		}
+	}
+
+	for _, documented := range []struct {
+		constructor   any
+		constructorID string
+		typeName      any
+		backing       reflect.Kind
+	}{
+		{NewTagID, "NewTagID", TagID{}, reflect.Int},
+		{NewDocumentID, "NewDocumentID", DocumentID{}, reflect.Int64},
+		{NewTaskID, "NewTaskID", TaskID{}, reflect.String},
+	} {
+		constructorType := reflect.TypeOf(documented.constructor)
+		if constructorType == nil || constructorType.Kind() != reflect.Func || constructorType.NumIn() != 1 {
+			t.Fatalf("%s is not a single-argument constructor — the extraction above should have caught this", documented.constructorID)
+		}
+
+		if got := constructorType.In(0).Kind(); got != documented.backing {
+			t.Errorf(
+				"%s takes %s, MIGRATION.md pins backing kind %s",
+				documented.constructorID,
+				got,
+				documented.backing,
+			)
+		}
+
+		idType := reflect.TypeOf(documented.typeName)
+
+		getMethod, ok := idType.MethodByName("Get")
+		if !ok {
+			t.Fatalf("%s has no Get method — the branded-ID contract drifted", documented.constructorID)
+		}
+
+		if got := getMethod.Type.Out(0).Kind(); got != documented.backing {
+			t.Errorf(
+				"%s.Get() returns %s, MIGRATION.md pins backing kind %s",
+				documented.constructorID,
+				got,
+				documented.backing,
+			)
+		}
+
+		for _, methodName := range []string{"IsZero", "String", "Equal"} {
+			if _, ok := idType.MethodByName(methodName); !ok {
+				t.Errorf("%s lost its %s method, which MIGRATION.md documents", documented.constructorID, methodName)
+			}
+		}
+	}
+
+	fakeDir := "paperlesstest"
+
+	fakeEntries, err := os.ReadDir(fakeDir)
+	if err != nil {
+		t.Fatalf("read paperlesstest dir: %v", err)
+	}
+
+	fakeMethods := map[string]bool{}
+
+	for _, entry := range fakeEntries {
+		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+
+		file, err := parser.ParseFile(fset, fakeDir+string(os.PathSeparator)+entry.Name(), nil, 0)
+		if err != nil {
+			t.Fatalf("parse paperlesstest/%s: %v", entry.Name(), err)
+		}
+
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil {
+				continue
+			}
+
+			fakeMethods[fn.Name.Name] = true
+		}
+	}
+
+	for _, helper := range []string{"AddDocument", "AddTag", "SeedTask"} {
+		if !fakeMethods[helper] {
+			t.Errorf("MIGRATION.md documents paperlesstest helper %s, which no longer exists on the fake's Server", helper)
+		}
+	}
+
+	updateRequest := reflect.TypeFor[UpdateDocumentRequest]()
+
+	for _, fieldName := range []string{"CorrespondentID", "DocumentTypeID"} {
+		field, ok := updateRequest.FieldByName(fieldName)
+		if !ok {
+			t.Fatalf("UpdateDocumentRequest lost field %s, which MIGRATION.md's FK-clearing idiom uses", fieldName)
+		}
+
+		if field.Type.Kind() != reflect.Pointer || field.Type.Elem().Kind() != reflect.Struct {
+			t.Errorf(
+				"UpdateDocumentRequest.%s is %s, want a pointer to a branded ID struct (the pointer-to-zero clearing idiom)",
+				fieldName,
+				field.Type,
+			)
+		}
+	}
+
+	for _, delta := range []struct {
+		golden string
+		marker string
+	}{
+		{goldenNamedCreateBody, `"id":null`},
+		{goldenFKClearingPatchBody, `"correspondent":null`},
+		{goldenFKClearingPatchBody, `"document_type":null`},
+	} {
+		if !strings.Contains(delta.golden, delta.marker) {
+			t.Errorf(
+				"wire golden no longer carries %s — MIGRATION.md's wire-delta section drifted from the pinned bodies",
+				delta.marker,
+			)
+		}
+	}
+}
