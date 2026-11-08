@@ -36,6 +36,12 @@ Paperless-ngx REST client SDK. Single-module repo, root package `paperless`.
   it surfaces as gopls/golangci "inconsistent vendoring" red and would break the next
   `nix build` with a hash mismatch. The golangci LSP can keep replaying the stale
   vendor error even after `lsp_restart` — `nix flake check` is the ground truth.
+  Diagnosed 2026-11-08: the replay has TWO causes. (a) A dead `/mnt/buildcache`
+  window breaks `GOLANGCI_LINT_CACHE` (`~/.cache/golangci-lint` mkdir fails
+  "no such device"), every fresh load errors, and the LSP keeps serving its
+  last successful diagnostics — fix the mount/real-dir FIRST (`df /mnt/buildcache`,
+  re-create the dir), then `lsp_restart`. (b) The in-process package graph
+  simply predates the fix — a plain `lsp_restart` covers that one.
 - **go-auto-upgrade's samber/lo suggestions are accepted noise**: the two "manual Map" sites
   in client.go are pure type conversions (`StoragePath(payload)`, `CustomFieldValue(field)`);
   `lo.Map` would add a dependency for nothing. Don't add samber/lo for them.
