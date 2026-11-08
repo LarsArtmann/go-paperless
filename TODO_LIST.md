@@ -6,6 +6,9 @@
 > are deleted (they live in `CHANGELOG.md`), never retained.
 > DONE evidence lives in `CHANGELOG.md` for repo work and in the executing
 > session's status report for consumer-repo work.
+> Consumer-facing rows must record the consumers' current go-paperless
+> pins (and re-verify them against the consumers' go.mod before acting —
+> row premises have gone stale when consumers bumped first).
 
 ## Status legend
 
