@@ -41,6 +41,13 @@ Raw ideas:
   envelope the current in-memory buffering assumes (`Upload`)
 - Encrypted-PDF ingestion helper as a sibling package here (`pdfdecrypt` or
   similar): qpdf `--deterministic-id --decrypt`, cheap `/Encrypt`
+  detection (the InboxClean papersync `PDFDecryptor` + `MaybeEncryptedPDF`
+  pair is the reference implementation; its fixture set carries over:
+  password-protected bank-statement PDFs — one linearized (first-page
+  cross-reference /Encrypt), one with the dictionary only in the trailer,
+  one qpdf-unreadable corrupt file, and one false positive (a readable PDF
+  mentioning /Encrypt in a text object) — see
+  InboxClean `internal/papersync/pdf_test.go` for the served shapes
   head/tail detection, "encrypted"-tag fallback — currently InboxClean-
   internal (`internal/papersync/pdf.go`, also serving its
   `paperless --decrypt-repair` command). Demand-gated: extract when bank-sync
