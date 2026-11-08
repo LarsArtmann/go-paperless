@@ -42,8 +42,8 @@ Additional flake apps and checks, by name:
                                    # cadence: run before every release AND at least monthly
                                    # (PAPERLESS_URL/PAPERLESS_TOKEN env against any reachable instance)
     nix run .#release-verify -- vX.Y.Z  # post-release ritual (maintainers)
+    nix run .#branching-flow       # the 0-active-findings design gate (AGENTS.md)
     checks.integration-vet         # vets the integration tests without running them
-    checks.branching-flow-clean    # the 0-active-findings design gate (AGENTS.md)
 
 Conventions the analyzers enforce:
 
@@ -55,6 +55,12 @@ Conventions the analyzers enforce:
 - Error handling: every constructed error carries a `paperless.*` code
   or is a `%w` wrap (ADR 0002); `TestEveryConstructedErrorIsCoded`
   enforces it mechanically.
+- Test layout: tests live in the domain file of the code they exercise
+  (`tasks_test.go`, `documents_test.go`, …; the nine-file 2026-11 split).
+  The one deliberate cross-domain bucket is `wire_golden_test.go` — the
+  wire-shape goldens share its `goldenBodyServer` helper and pin
+  contracts that span several domains; new goldens go there, every
+  other new test joins its domain file.
 
 The error-handling gate runs inside the dev shell (the host binary may
 differ): `erraudit ./... --type-aware --enforce-go-error-family

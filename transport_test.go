@@ -687,6 +687,14 @@ func TestClassifyStatusMatrix(t *testing.T) {
 			)
 		}
 	})
+
+	t.Run("nil classifies Rejection", func(t *testing.T) {
+		t.Parallel()
+
+		if errorfamily.Classify(nil) != errorfamily.Rejection {
+			t.Error("errorfamily contract drifted: nil must classify Rejection")
+		}
+	})
 }
 
 // TestWithRetryClampsWireHintAtMaxDelay pins the wire-to-delay seam

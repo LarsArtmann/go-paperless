@@ -10,8 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	errorfamily "github.com/larsartmann/go-error-family"
 )
 
 // goldenBodyServer captures the raw body of the first request matching
@@ -55,6 +53,12 @@ func goldenBodyServer(t *testing.T, method, pathSuffix, respond string) (*Client
 // nulls through pointer-to-zero fields, and an empty saved-view filter
 // rule set stays an empty array rather than vanishing. A wire-shape drift
 // breaks these tests before it can break a consumer's archive.
+const (
+	goldenNamedCreateBody        = `{"id":null,"name":"provenance","matching_algorithm":0}`
+	goldenUploadCustomFieldsPart = `[{"field":7,"value":"msg-1"}]`
+	goldenFKClearingPatchBody    = `{"correspondent":null,"document_type":null}`
+	goldenSavedViewCreateBody    = `{"name":"inbox","show_on_dashboard":true,"show_in_sidebar":false,"sort_field":"","sort_reverse":false,"filter_rules":[]}`
+)
 
 func TestGoldenNamedCreateBodySendsNullID(t *testing.T) {
 	t.Parallel()
@@ -75,7 +79,7 @@ func TestGoldenNamedCreateBodySendsNullID(t *testing.T) {
 		t.Fatal("EnsureTag returned a zero ID")
 	}
 
-	const want = `{"id":null,"name":"provenance","matching_algorithm":0}`
+	const want = goldenNamedCreateBody
 
 	if got := body(); got != want {
 		t.Fatalf("create body = %s, want golden %s", got, want)
@@ -146,7 +150,7 @@ func TestGoldenUploadCustomFieldsPartSendsFieldAndValue(t *testing.T) {
 		}
 	}
 
-	const want = `[{"field":7,"value":"msg-1"}]`
+	const want = goldenUploadCustomFieldsPart
 
 	if customFields != want {
 		t.Fatalf("custom_fields part = %s, want golden %s", customFields, want)
@@ -169,7 +173,7 @@ func TestGoldenFKClearingPatchSendsExplicitNulls(t *testing.T) {
 		t.Fatalf("UpdateDocument: %v", err)
 	}
 
-	const want = `{"correspondent":null,"document_type":null}`
+	const want = goldenFKClearingPatchBody
 
 	if got := body(); got != want {
 		t.Fatalf("patch body = %s, want golden %s", got, want)
@@ -193,36 +197,39 @@ func TestGoldenSavedViewCreateBodyKeepsEmptyFilterRules(t *testing.T) {
 		t.Fatal("CreateSavedView returned a zero ID")
 	}
 
-	const want = `{"name":"inbox","show_on_dashboard":true,"show_in_sidebar":false,"sort_field":"","sort_reverse":false,"filter_rules":[]}`
+	const want = goldenSavedViewCreateBody
 
 	if got := body(); got != want {
 		t.Fatalf("create body = %s, want golden %s", got, want)
 	}
 }
 
-// TestGoldenBodiesAreStableJSON double-checks the goldens themselves: every
-// pinned body must round-trip as valid JSON, so a malformed golden fails
-// here instead of silently pinning garbage.
+// TestGoldenBodiesAreStableJSON double-checks the goldens themselves:
+// every pinned body must parse as valid JSON (a malformed golden fails
+// here instead of silently pinning garbage), and each body keeps the
+// exact substring its wire contract is written in — a re-tag that drops
+// an explicit null or empties the filter-rules array fails here even
+// when the golden test itself was edited to match the drift.
 func TestGoldenBodiesAreStableJSON(t *testing.T) {
 	t.Parallel()
 
-	for name, golden := range map[string]string{
-		"named create":      `{"id":null,"name":"provenance","matching_algorithm":0}`,
-		"fk-clearing patch": `{"correspondent":null,"document_type":null}`,
-		"saved view create": `{"name":"inbox","show_on_dashboard":true,"show_in_sidebar":false,"sort_field":"","sort_reverse":false,"filter_rules":[]}`,
+	for name, golden := range map[string]struct {
+		body           string
+		contractMarker string
+	}{
+		"named create":         {goldenNamedCreateBody, `"id":null`},
+		"upload custom fields": {goldenUploadCustomFieldsPart, `"field":7`},
+		"fk-clearing patch":    {goldenFKClearingPatchBody, `"correspondent":null`},
+		"saved view create":    {goldenSavedViewCreateBody, `"filter_rules":[]`},
 	} {
 		var decoded any
 
-		if err := json.Unmarshal([]byte(golden), &decoded); err != nil {
+		if err := json.Unmarshal([]byte(golden.body), &decoded); err != nil {
 			t.Errorf("golden %s is not valid JSON: %v", name, err)
 		}
 
-		if !strings.Contains(golden, "null") && name != "saved view create" {
-			t.Errorf("golden %s lost its null-contract marker: %s", name, golden)
+		if !strings.Contains(golden.body, golden.contractMarker) {
+			t.Errorf("golden %s lost its contract marker %s: %s", name, golden.contractMarker, golden.body)
 		}
-	}
-
-	if errorfamily.Classify(nil) != errorfamily.Rejection {
-		t.Error("errorfamily contract drifted: nil must classify Rejection")
 	}
 }
