@@ -39,6 +39,8 @@ Additional flake apps and checks, by name:
                          # land in the target's testdata/fuzz/ — commit the
                          # reproducing seed with the fix
     nix run .#integration          # real-server integration tests (opt-in: needs a live server)
+                                   # cadence: run before every release AND at least monthly
+                                   # (PAPERLESS_URL/PAPERLESS_TOKEN env against any reachable instance)
     nix run .#release-verify -- vX.Y.Z  # post-release ritual (maintainers)
     checks.integration-vet         # vets the integration tests without running them
     checks.branching-flow-clean    # the 0-active-findings design gate (AGENTS.md)

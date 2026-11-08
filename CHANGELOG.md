@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- CI: the standalone gosec scan is restored, now on v2.30.0. The scan
+  had been parked since 2026-10-11 because gosec v2.29.0 could not
+  type-check a Go 1.27 module (export data v5 > maximum v4); v2.30.0
+  loads the module cleanly (verified locally, 0 issues) and one
+  G125 path-traversal false positive carries a gosec-syntax
+  suppression with rationale (every request path is an SDK-owned
+  constant or a branded-ID interpolation — the public API has no
+  string-path input).
+
 ### Fixed
 
 - **FK-clearing document updates silently did nothing.** The document

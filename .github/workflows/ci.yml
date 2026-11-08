@@ -32,21 +32,22 @@ jobs:
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
   gosec:
-    name: gosec (parked until a Go 1.27-capable gosec release)
+    name: gosec
     runs-on: ubuntu-24.04
+    env:
+      GOEXPERIMENT: jsonv2
     steps:
-      # Parked 2026-10-11: gosec v2.29.0, the latest release, cannot
-      # type-check this module. Its x/tools reads export data up to
-      # version 4, while Go 1.27 compilers emit version 5, so every
-      # stdlib import fails ("export data version 5 is greater than
-      # maximum supported version 4") and the run exits 1 over "Golang
-      # errors" with Issues: 0. A scanner that cannot load the module
-      # measured nothing; per the fail-closed rule it must not gate.
-      # Restore the scan step when gosec ships a release whose x/tools
-      # understands Go 1.27 export data, and verify locally first:
-      #   GOEXPERIMENT=jsonv2 go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...
-      - run: |
-          echo "::notice::gosec parked: latest gosec (v2.29.0) cannot read Go 1.27 export data (version 5 > maximum 4), so the scan type-checks nothing on this module. Restore when a go1.27-capable gosec release ships. Security coverage continues via the govulncheck, golangci-lint, race, and fuzz jobs."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      # Unparked 2026-11-08: v2.30.0's x/tools reads Go 1.27 export data
+      # (v5), so the scan type-checks the whole module again (verified
+      # locally: 20 files, exit 0, Issues 0). The scanner honors only
+      # its own `// #nosec` annotations — suppressions aimed here use
+      # gosec syntax with a preceding rationale comment (the v0.4.2
+      # lesson).
+      - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.30.0 ./...
 
   test-race:
     name: test-race

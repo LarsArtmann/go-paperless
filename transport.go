@@ -124,6 +124,12 @@ func (c *Client) doRequestDetail(
 	body io.Reader,
 	contentType string,
 ) ([]byte, http.Header, error) {
+	// #nosec G125 -- false positive: `path` is never caller-controlled.
+	// Every doRequest/doRequestDetail call site passes an SDK-owned
+	// constant (pathDocuments, pathTags, ...) or a constant template with
+	// a branded ID interpolated (pathDocumentDetail + DocumentID, whose
+	// int64 backing cannot carry traversal segments). The public API has
+	// no string-path input (gosec v2.30.0, G125, medium/medium).
 	endpoint := c.baseURL.JoinPath(path)
 	endpoint.RawQuery = rawQuery
 

@@ -9,6 +9,13 @@
 > Consumer-facing rows must record the consumers' current go-paperless
 > pins (and re-verify them against the consumers' go.mod before acting —
 > row premises have gone stale when consumers bumped first).
+>
+> Ops cadence (set 2026-11-08): fuzz smoke runs in CI (2m/target here;
+> InboxClean schedules its papersync targets weekly); real-server
+> integration tests run before every release and at least monthly
+> (CONTRIBUTING); parked triggers re-verified 2026-11-08 — erraudit still
+> proxy-404 (stays parked), gosec UNPARKED (v2.30.0 reads Go 1.27),
+> govalid still proxy-404 (stays skipped in .buildflow.yml).
 
 ## Status legend
 

@@ -174,17 +174,15 @@ the compiler walks migrations when they upgrade.
   (`docs_drift_test.go`) enforces the first two mechanically; `nix run .#release-verify --
   vX.Y.Z` checks all three plus push status, CI, pkg.go.dev, and a race run. Bump both
   files inside the release commit (the v0.3.1 flow; the v0.3.0 drift is closed).
-- **gosec in CI**: the standalone job runs the bare scanner, which honors only gosec's own
+- **gosec in CI (UNPARKED 2026-11-08)**: v2.30.0 reads Go 1.27 export data — the scan
+  type-checks the module again (verified locally: 20 files, exit 0, Issues 0; the probe
+  command pattern stays `nix develop -c sh -c 'GOEXPERIMENT=jsonv2 go run
+  github.com/securego/gosec/v2/cmd/gosec@vX ./...'`). The scanner honors only gosec's own
   `// #nosec Gxxx` annotations — a golangci-style `//nolint:gosec` suppresses nothing
   there (the v0.4.2 red CI); suppressions aimed at the CI gate go in gosec syntax with a
-  preceding rationale comment. **The job is PARKED (since 2026-10-11)**: v2.29.0 (latest)
-  cannot type-check Go 1.27 modules — its x/tools reads export data v4, Go 1.27 emits v5,
-  so every stdlib import fails and the run exits 1 with Issues: 0 (`encoding/json/v2` was
-  a red herring). Fail-closed: an instrument that cannot load the module measured nothing,
-  so it must not gate. Restore the scan step in `.github/workflows/ci.yml` when gosec
-  ships a go1.27-capable release, verifying locally first: `nix develop -c sh -c
-  'GOEXPERIMENT=jsonv2 go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...'`
-  (expect Issues: 0, exit 0). Same pattern as the govalid skip in `.buildflow.yml`.
+  preceding rationale comment. Current suppression: G125 on the doRequest JoinPath (all
+  request paths are SDK constants or branded-ID interpolations; no public string-path
+  input).
 - **Doc-drift tests are the catalog's CI** (`docs_drift_test.go`):
   `TestErrorCodesAreDocumented` extracts every `paperless.*` code — static literals AND
   the kind-parameterized helper sites (`findNamed`, `createNamed`, `findByName`, ...)
