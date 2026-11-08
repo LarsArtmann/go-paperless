@@ -110,7 +110,11 @@ func FuzzDecodeShareLinkPayload(f *testing.F) {
 		`"file_version":"original"}`))
 	f.Add([]byte(`{"id":2,"slug":"","document":0,"file_version":""}`))
 	// Real v10 share-link shape with null expiration and the full field set.
-	f.Add([]byte(`{"id":4,"created":"2026-11-07T20:00:00Z","expiration":null,"slug":"a1b2c3","document":77,"file_version":"archive","label":null}`))
+	f.Add(
+		[]byte(
+			`{"id":4,"created":"2026-11-07T20:00:00Z","expiration":null,"slug":"a1b2c3","document":77,"file_version":"archive","label":null}`,
+		),
+	)
 	f.Add([]byte(`{"id":3,"slug":"s","document":5,"file_version":"weird-version"}`))
 	f.Add([]byte(`{"slug":"s"}`))
 	f.Add([]byte(`{`))
@@ -206,7 +210,11 @@ func FuzzClassifyTask(f *testing.F) {
 	f.Add([]byte(`{"result_data":{"document_id":null,"duplicate_of":null}}`))
 	// Real v10 TaskSerializerV10 shape: acknowledged flag, created/started
 	// timestamps around the core fields the SDK decodes.
-	f.Add([]byte(`{"task_id":"t5","document_id":31,"status":"SUCCESS","result_data":{"document_id":31},"created":"2026-11-07T20:00:00Z","started":"2026-11-07T20:00:01Z","acknowledged":false}`))
+	f.Add(
+		[]byte(
+			`{"task_id":"t5","document_id":31,"status":"SUCCESS","result_data":{"document_id":31},"created":"2026-11-07T20:00:00Z","started":"2026-11-07T20:00:01Z","acknowledged":false}`,
+		),
+	)
 
 	f.Fuzz(func(t *testing.T, payloadJSON []byte) {
 		var payload taskPayload

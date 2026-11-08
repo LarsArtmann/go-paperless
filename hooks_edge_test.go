@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-
 // TestResponseHookFiresOnEveryAttemptIncludingFailures pins the hook
 // branches the happy-path tests miss: the response hook observes error
 // responses too (the capped error body, not a skipped call), and with

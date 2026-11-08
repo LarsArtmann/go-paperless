@@ -541,7 +541,10 @@ func TestUploadOmitsOptionalFieldsWhenZero(t *testing.T) {
 
 	for _, absent := range []string{"created", "correspondent", "document_type", "custom_fields", "title"} {
 		if form.Has(absent) {
-			t.Errorf("form carries %q — zero-value optional fields must be omitted, not sent empty", absent)
+			t.Errorf(
+				"form carries %q — zero-value optional fields must be omitted, not sent empty",
+				absent,
+			)
 		}
 	}
 }

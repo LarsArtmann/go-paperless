@@ -15,13 +15,13 @@ func TestClassifyTaskEdgeMix(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name                string
-		body                string
-		wantStatus          TaskStatus
-		wantDocumentID      int64
-		wantDuplicate       bool
+		name                 string
+		body                 string
+		wantStatus           TaskStatus
+		wantDocumentID       int64
+		wantDuplicate        bool
 		wantDuplicateInTrash bool
-		wantErrorMessage    string
+		wantErrorMessage     string
 	}{
 		{
 			name:       "unknown status lowercased and surfaced verbatim",
@@ -52,11 +52,13 @@ func TestClassifyTaskEdgeMix(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.Header().Set("Content-Type", "application/json; version=10")
+			server := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json; version=10")
 
-				_, _ = w.Write([]byte(testCase.body))
-			}))
+					_, _ = w.Write([]byte(testCase.body))
+				}),
+			)
 			defer server.Close()
 
 			client, err := New(server.URL, "token")
@@ -78,15 +80,27 @@ func TestClassifyTaskEdgeMix(t *testing.T) {
 			}
 
 			if testCase.wantDocumentID != 0 && outcome.DocumentID.Get() != testCase.wantDocumentID {
-				t.Errorf("document id = %d, want %d", outcome.DocumentID.Get(), testCase.wantDocumentID)
+				t.Errorf(
+					"document id = %d, want %d",
+					outcome.DocumentID.Get(),
+					testCase.wantDocumentID,
+				)
 			}
 
 			if outcome.DuplicateRefused != testCase.wantDuplicate {
-				t.Errorf("duplicate refused = %v, want %v", outcome.DuplicateRefused, testCase.wantDuplicate)
+				t.Errorf(
+					"duplicate refused = %v, want %v",
+					outcome.DuplicateRefused,
+					testCase.wantDuplicate,
+				)
 			}
 
 			if outcome.ErrorMessage != testCase.wantErrorMessage {
-				t.Errorf("error message = %q, want %q", outcome.ErrorMessage, testCase.wantErrorMessage)
+				t.Errorf(
+					"error message = %q, want %q",
+					outcome.ErrorMessage,
+					testCase.wantErrorMessage,
+				)
 			}
 		})
 	}

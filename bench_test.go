@@ -14,7 +14,11 @@ func BenchmarkEnsureTag(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; version=10")
 
-		_, _ = w.Write([]byte(`{"results": [{"id": 7, "name": "inboxclean", "matching_algorithm": 0, "slug": "inboxclean"}], "count": 1, "next": null, "previous": null}`))
+		_, _ = w.Write(
+			[]byte(
+				`{"results": [{"id": 7, "name": "inboxclean", "matching_algorithm": 0, "slug": "inboxclean"}], "count": 1, "next": null, "previous": null}`,
+			),
+		)
 	}))
 	defer server.Close()
 

@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"regexp"
@@ -649,6 +651,135 @@ func TestREADMEListsLookupVerbs(t *testing.T) {
 			if !strings.Contains(readme, name) {
 				t.Errorf("exported lookup verb %s is missing from README.md", name)
 			}
+		}
+	}
+}
+
+// TestREADMEOptionsTableMatchesExportedOptions pins the README options
+// table against the real exported Option-returning functions: every table
+// row names an existing exported option, and every exported option not in
+// the zero-value core (With*) must have a row — a renamed or new option
+// fails here instead of drifting out of the docs.
+func TestREADMEOptionsTableMatchesExportedOptions(t *testing.T) {
+	t.Parallel()
+
+	readme := readProjectFile(t, "README.md")
+
+	fset := token.NewFileSet()
+
+	options := map[string]bool{}
+
+	for _, name := range packageSourceFiles(t) {
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !fn.Name.IsExported() || !strings.HasPrefix(fn.Name.Name, "With") {
+				continue
+			}
+
+			if fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+				continue
+			}
+
+			if ident, ok := fn.Type.Results.List[0].Type.(*ast.Ident); ok &&
+				ident.Name == "Option" {
+				options[fn.Name.Name] = true
+			}
+		}
+	}
+
+	if len(options) < 5 {
+		t.Fatalf(
+			"only %d exported options found — the extraction is broken, not the table",
+			len(options),
+		)
+	}
+
+	rowPattern := regexp.MustCompile("`With[A-Z][A-Za-z]*\\(")
+
+	for name := range options {
+		if !rowPattern.MatchString(readme) || !strings.Contains(readme, "`"+name+"(") {
+			t.Errorf("exported option %s has no README options-table row", name)
+		}
+	}
+
+	for _, match := range rowPattern.FindAllStringSubmatch(readme, -1) {
+		name := strings.TrimSuffix(strings.TrimPrefix(match[0], "`"), "(")
+
+		if !options[name] {
+			t.Errorf("README documents option %s, which no longer exists in the package", name)
+		}
+	}
+}
+
+// TestOutgoingRequestsCarryVersionAndTokenHeaders pins the wire headers
+// every request must carry: the static token Authorization scheme and the
+// Accept-based API version negotiation (apiVersion constant, echoed back
+// by the server as negotiatedAPIVersion).
+func TestOutgoingRequestsCarryVersionAndTokenHeaders(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Token secret" {
+			t.Errorf("Authorization = %q, want the static token scheme", got)
+		}
+
+		accept := r.Header.Get("Accept")
+		if !strings.Contains(accept, "version="+apiVersion) {
+			t.Errorf("Accept = %q, want version negotiation for %q", accept, apiVersion)
+		}
+
+		w.Header().Set("Content-Type", "application/json; version=10")
+
+		_, _ = w.Write([]byte(`{"results": [], "count": 0, "next": null, "previous": null}`))
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "secret")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if _, err = client.ListStoragePaths(t.Context()); err != nil {
+		t.Fatalf("ListStoragePaths: %v", err)
+	}
+}
+
+// TestErrorCodeCatalogRowsAreUnique pins the catalog's one-code-one-row
+// rule (ADR 0002: one code, one meaning, one family): a duplicated
+// catalog row means two meanings share a code, which breaks code-based
+// alerting and routing.
+func TestErrorCodeCatalogRowsAreUnique(t *testing.T) {
+	t.Parallel()
+
+	catalog := readProjectFile(t, "docs/ERROR_CODES.md")
+
+	rowPattern := regexp.MustCompile(`(?m)^\|\s*` + "`(paperless\\.[a-z_]+)`")
+
+	counts := map[string]int{}
+
+	for _, match := range rowPattern.FindAllStringSubmatch(catalog, -1) {
+		counts[match[1]]++
+	}
+
+	if len(counts) < 20 {
+		t.Fatalf(
+			"only %d catalog rows parsed — the extraction is broken, not the catalog",
+			len(counts),
+		)
+	}
+
+	for code, count := range counts {
+		if count > 1 {
+			t.Errorf(
+				"catalog row for %s appears %d times — one code, one meaning, one row",
+				code,
+				count,
+			)
 		}
 	}
 }
