@@ -11,6 +11,12 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Hermetic erraudit pin: the error-model gate (AGENTS.md) used to
+    # resolve the host system profile's binary, which can trail the flake.
+    # The dev shell now carries the flake-pinned build.
+    erraudit = {
+      url = "github:LarsArtmann/erraudit";
+    };
     # The branching-flow analyzer gates the 0-active-findings invariant
     # (AGENTS.md; triage: docs/status/2026-10-11_03-41_*). Private input —
     # resolved via the nix-installer action's github-token in CI.
@@ -25,6 +31,7 @@
       flake-parts,
       treefmt-nix,
       branching-flow,
+      erraudit,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -139,6 +146,7 @@
               # stays hermetic.
               packages = [
                 goPkg
+                erraudit.packages.${pkgs.system}.default
                 pkgs.dprint
                 pkgs.go-licenses
                 pkgs.golangci-lint
