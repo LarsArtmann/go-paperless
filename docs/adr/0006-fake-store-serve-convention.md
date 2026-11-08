@@ -10,10 +10,11 @@ paperlesstest is the consumer-testing fake (plan:
 `docs/planning/2026-09-23_16-19_paperlesstest-consumer-testing-sdk.md`). Its
 original design kept internal store structs (state fixtures) separate from
 wire structs (HTTP serialization), five entity families at a time: `namedEntity`
-+ wire payload, `customField` + payload, `storagePath` + payload, `savedView`
-+ `savedViewRule`, `shareLink` + payload. Every read paid a conversion, every
-new field had to be threaded through two structs, and the branching-flow
-review (2026-10-11 triage) flagged the pairs as DUPLICATE_TYPE findings.
+
+- wire payload, `customField` + payload, `storagePath` + payload, `savedView`
+- `savedViewRule`, `shareLink` + payload. Every read paid a conversion, every
+  new field had to be threaded through two structs, and the branching-flow
+  review (2026-10-11 triage) flagged the pairs as DUPLICATE_TYPE findings.
 
 The alternative — one struct per family, serving the store struct directly —
 had one catch: unexported store state (mutex-adjacent fields, future
