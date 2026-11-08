@@ -11,12 +11,6 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # The branching-flow analyzer gates the 0-active-findings invariant
-    # (AGENTS.md; triage: docs/status/2026-10-11_03-41_*). Private input —
-    # resolved via the nix-installer action's github-token in CI.
-    branching-flow = {
-      url = "github:LarsArtmann/branching-flow";
-    };
   };
 
   outputs =
@@ -24,7 +18,6 @@
       self,
       flake-parts,
       treefmt-nix,
-      branching-flow,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -248,25 +241,23 @@
           };
 
           apps = {
-            # The 0-active-findings design gate, run LOCALLY (not as a
-            # check: `nix flake check` evaluates checks in CI, where the
-            # default GITHUB_TOKEN cannot fetch sibling private repos —
-            # a cross-repo PAT would re-promote this to checks.*).
-            # Every finding here is either fixed in code, line-suppressed,
-            # or rule-dismissed with documented rationale
+            # The 0-active-findings design gate, run LOCALLY against the
+            # machine-installed branching-flow (host profile). Deliberately
+            # an app with NO private flake input: `nix flake check`
+            # evaluates apps too, and the workflow GITHUB_TOKEN cannot
+            # fetch sibling private repos (404). A cross-repo PAT would
+            # let this return to a flake input + checks.* gate. Every
+            # finding here is either fixed in code, line-suppressed, or
+            # rule-dismissed with documented rationale
             # (.branching-flow.yml); a new finding goes through that
             # triage, not into the gate's red.
             branching-flow =
-              mkApp "branching-flow" "0-active-findings design gate (run locally: nix run .#branching-flow)"
-                [
-                  branching-flow.packages.${pkgs.system}.default
-                  goPkg
-                ]
+              mkApp "branching-flow"
+                "0-active-findings design gate (uses the machine-installed branching-flow; run: nix run .#branching-flow)"
+                [ ]
                 ''
-                  export HOME=''${TMPDIR:-/tmp}
-                  export GOCACHE=$HOME/go-cache
                   cd "$PWD"
-                  branching-flow all . --format finding --exit-code
+                  exec branching-flow all . --format finding --exit-code
                 '';
 
             check =
