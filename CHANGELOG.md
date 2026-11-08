@@ -6,8 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **api-diff CI gate — the bank-sync drop-in contract is now enforced,
+  not just documented.** gorelease compares HEAD against the newest tag
+  on every push; the gate greps the report for incompatible changes
+  (gorelease exits 0 on breaks, so the report is the signal). An
+  intentional 0.x break skips the gate when the HEAD commit message
+  carries `[api-break]`. Both paths exercised end to end on a throwaway
+  branch (2026-11-08): an unmarked `ProbeCapabilities` removal went
+  red with the incompatible-change report, the marked commit skipped
+  green.
+- **Three mechanical drift guards** (`docs_drift_test.go`): the README
+  options table must match the exported `With*` set in both directions,
+  every outgoing request carries the token-scheme and Accept-version
+  headers, and the error-code catalog stays one-code-one-row.
+- **ADR 0005 (fake pagination policy)** and **ADR 0006 (the
+  store==serve entity-family convention)**: the paperlesstest design
+  decisions consumers build against, written down with the tests that
+  pin them. The fake's two created-string parsers are consolidated into
+  one tolerant `parseCreated`, and `SavedView.FilterRules` is pinned
+  never-nil (`TestSavedViewFilterRulesNeverNil`).
+- **MIGRATION.md**, the v0.4→v0.5 consumer guide (branded-ID idioms,
+  `.Get()` vs `.String()` printing contract, the two wire deltas,
+  upgrade checklist), pinned by `TestMigrationGuideMatchesPackage` —
+  every constructor, method, fixture helper, and wire shape the guide
+  names must still exist with the documented backing types, so the
+  guide cannot silently rot.
+- **The wire-shape goldens** now live in named constants shared by
+  their tests and by `TestGoldenBodiesAreStableJSON`, whose per-golden
+  contract markers (the explicit `"id":null`, the FK-clearing nulls,
+  the empty `filter_rules:[]`) fail if a re-tag drops the exact bytes
+  the consumers depend on. The misplaced `Classify(nil)` canary moved
+  into `TestClassifyStatusMatrix` where the classification contract
+  lives.
+- **Test layout, documented** (CONTRIBUTING): tests join the domain
+  file of the code they exercise; `wire_golden_test.go` is the one
+  deliberate cross-domain bucket. The two 2026-11-08 stray edge files
+  are folded into their domain files, and CONTRIBUTING's stale
+  `checks.branching-flow-clean` reference now points at the real flake
+  app (`nix run .#branching-flow`).
+- **Benchmark + fuzz depth**: `BenchmarkEnsureTag` and the branded-ID
+  hot-path benchmarks (marshal, construct+Get) with a benchstat recipe
+  in bench_test.go; Retry-After overflow seeds (MaxInt64 seconds,
+  largest parseable) and real v10 serializer shapes in the fuzz
+  corpora; a CI fuzz-smoke job (2m/target, crash-corpus artifacts) and
+  an overnight recipe in CONTRIBUTING.
+- **Runnable godoc examples** for `UpdateDocument`, `ListDocumentMetas`,
+  `EnsureStoragePath`, and `DownloadDocument`; the README's "Common
+  tasks" section shows the download/update flows and links the
+  2026-10-11 review series for contributors.
+
 ### Changed
 
+- **The last real-time sleep left the test suite.**
+  `TestWithRetryHonorsRetryAfterHint` paid a real ~1s per run because
+  `Retry-After` hints parse only in whole seconds — a faster verbatim
+  hint is impossible on the wire. It is now
+  `TestWithRetryClampsWireHintAtMaxDelay`: a 2s hint against a 50ms
+  ceiling proves the hint was parsed from the response and reaches the
+  retry delay (elapsed ≥ ~45ms, far above the ~1ms computed backoff)
+  and that the ceiling clamps it. Verbatim honoring below the ceiling
+  stays pinned pure by `TestRetryPolicyDelayFuncBridgesRetryAfterHint`.
+  The suite is ~1s faster and the hint contract is covered at both
+  seams.
 - CI: the standalone gosec scan is restored, now on v2.30.0. The scan
   had been parked since 2026-10-11 because gosec v2.29.0 could not
   type-check a Go 1.27 module (export data v5 > maximum v4); v2.30.0
@@ -16,6 +78,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   suppression with rationale (every request path is an SDK-owned
   constant or a branded-ID interpolation — the public API has no
   string-path input).
+- External-claim hygiene: the `max_length=128` title cap cited in
+  consumers' pipelines is re-verified against upstream paperless-ngx
+  `src/documents/models.py` (2026-11-08; the cap lives on the Document
+  model, and InboxClean's citation now says so with the verify date);
+  the govulncheck CI pin (v1.9.0) is confirmed current against the
+  module proxy, and go.mod carries no indirects to audit.
 
 ### Fixed
 
