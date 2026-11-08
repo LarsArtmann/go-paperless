@@ -689,7 +689,15 @@ func TestClassifyStatusMatrix(t *testing.T) {
 	})
 }
 
-func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
+// TestWithRetryClampsWireHintAtMaxDelay pins the wire-to-delay seam
+// without a real second-long sleep: parseRetryAfter only accepts whole
+// seconds, so a verbatim wire hint costs a full second of test time.
+// Instead a 2s hint with a 50ms ceiling proves the hint was parsed from
+// the response and reaches the retry delay (elapsed >= ~45ms, above the
+// ~1ms computed backoff) AND that the ceiling clamps it (elapsed well
+// under the verbatim 2s). Verbatim hint honoring below the ceiling is
+// pinned pure by TestRetryPolicyDelayFuncBridgesRetryAfterHint.
+func TestWithRetryClampsWireHintAtMaxDelay(t *testing.T) {
 	t.Parallel()
 
 	var requests int
@@ -697,7 +705,7 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		if requests == 1 {
-			w.Header().Set("Retry-After", "1")
+			w.Header().Set("Retry-After", "2")
 			w.WriteHeader(http.StatusServiceUnavailable)
 
 			return
@@ -710,9 +718,7 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 	client, err := New(server.URL, "token", WithRetry(RetryPolicy{
 		MaxAttempts:  2,
 		InitialDelay: time.Millisecond,
-		// Above the 1s hint so the assertion stays "hint honored" rather
-		// than "ceiling clamped" — the computed backoff would be ~1ms.
-		MaxDelay: 2 * time.Second,
+		MaxDelay:     50 * time.Millisecond,
 	}))
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -730,8 +736,12 @@ func TestWithRetryHonorsRetryAfterHint(t *testing.T) {
 		t.Fatalf("requests = %d, want 2", requests)
 	}
 
-	if elapsed < 900*time.Millisecond {
-		t.Fatalf("elapsed = %s, want >= ~1s so the server's Retry-After hint is honored", elapsed)
+	if elapsed < 45*time.Millisecond {
+		t.Fatalf("elapsed = %s, want >= ~45ms so the server's hint reaches the retry delay", elapsed)
+	}
+
+	if elapsed >= 2*time.Second {
+		t.Fatalf("elapsed = %s, want well under the verbatim 2s hint — MaxDelay must clamp wire hints", elapsed)
 	}
 }
 
