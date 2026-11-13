@@ -30,6 +30,10 @@ const (
 	// invalidCreateDetail is the DRF detail message for undecodable create
 	// payloads.
 	invalidCreateDetail = "invalid create payload"
+
+	// invalidPatchDetail is the DRF detail message for undecodable patch
+	// payloads.
+	invalidPatchDetail = "invalid patch payload"
 )
 
 // ChecksumShape selects the document checksum wire shape the fake serves
@@ -275,6 +279,22 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, payload any) {
 	if _, writeErr := w.Write(encoded); writeErr != nil {
 		s.t.Errorf("paperlesstest: write response body: %v", writeErr)
 	}
+}
+
+// decodeBody decodes one JSON request body into payload. A decode failure
+// means the test code under development sent a malformed body: it fails
+// the test, answers the DRF invalid-payload 400 (detail carries the
+// create/patch distinction), and reports false.
+func (s *Server) decodeBody(w http.ResponseWriter, r *http.Request, label, detail string, payload any) bool {
+	err := json.Unmarshal(readBody(r), payload)
+	if err == nil {
+		return true
+	}
+
+	s.t.Errorf("paperlesstest: decode %s body: %v", label, err)
+	s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: detail})
+
+	return false
 }
 
 // readBody snapshots the request body so it can be recorded and parsed

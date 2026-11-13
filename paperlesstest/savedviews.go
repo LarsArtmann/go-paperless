@@ -1,9 +1,7 @@
 package paperlesstest
 
 import (
-	"encoding/json/v2"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -92,14 +90,7 @@ func (s *Server) handleSavedViewList(w http.ResponseWriter, r *http.Request) {
 // handleSavedViewCreate stores one saved view and answers its payload.
 func (s *Server) handleSavedViewCreate(w http.ResponseWriter, r *http.Request) {
 	var payload savedViewCreateWire
-	if err := json.Unmarshal(readBody(r), &payload); err != nil {
-		s.t.Errorf("paperlesstest: decode saved view create body: %v", err)
-		s.writeJSON(
-			w,
-			http.StatusBadRequest,
-			map[string]string{detailKey: invalidCreateDetail},
-		)
-
+	if !s.decodeBody(w, r, "saved view create", invalidCreateDetail, &payload) {
 		return
 	}
 
@@ -129,17 +120,7 @@ func (s *Server) handleSavedViewDelete(w http.ResponseWriter, viewID paperless.S
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	before := len(s.savedViews)
-
-	s.savedViews = slices.DeleteFunc(s.savedViews, func(view savedView) bool {
+	deleteOne(s, w, &s.savedViews, func(view savedView) bool {
 		return view.ID.Equal(viewID)
 	})
-
-	if len(s.savedViews) == before {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
-
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }

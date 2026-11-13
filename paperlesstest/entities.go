@@ -1,9 +1,9 @@
 package paperlesstest
 
 import (
-	"encoding/json/v2"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +20,14 @@ const (
 	prefixStoragePaths   = "/api/storage_paths/"
 )
 
+// namedListView is the read view the shared named-family list handler
+// filters on: the entity's display name. namedEntity, customField, and
+// storagePath adopt it so all five named-entity families share one list
+// body.
+type namedListView interface {
+	entityName() string
+}
+
 // namedEntity is one tag, correspondent, or document type. The fake stores
 // and serves the same shape, so the struct carries the wire tags directly;
 // the brand parameter binds the stored ID to the entity family's branded
@@ -33,6 +41,8 @@ type namedEntity[B any] struct {
 	MatchingAlgorithm int           `json:"matching_algorithm"`
 }
 
+func (e namedEntity[B]) entityName() string { return e.Name }
+
 // customField is one custom-field definition. The fake stores and serves
 // the same shape, so the struct carries the wire tags directly.
 type customField struct {
@@ -40,6 +50,8 @@ type customField struct {
 	Name     string                  `json:"name"`
 	DataType string                  `json:"data_type"`
 }
+
+func (f customField) entityName() string { return f.Name }
 
 // storagePath is one storage path definition. The fake stores and serves
 // the same shape, so the struct carries the wire tags the SDK relies on
@@ -50,6 +62,8 @@ type storagePath struct {
 	Name string                  `json:"name"`
 	Path string                  `json:"path"`
 }
+
+func (p storagePath) entityName() string { return p.Name }
 
 // matchingAlgorithmWire is the PATCH body for a named object's matching
 // algorithm.
@@ -247,13 +261,14 @@ func (s *Server) CustomFieldID(name string) (paperless.CustomFieldID, bool) {
 func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {
 	switch {
 	case strings.HasPrefix(r.URL.Path, prefixTags):
-		return routeNamedFamily(s, w, r, prefixTags, &s.tags, &s.nextTagID)
+		return routeNamedFamily(s, w, r, prefixTags, "tag", &s.tags, &s.nextTagID)
 	case strings.HasPrefix(r.URL.Path, prefixCorrespondents):
 		return routeNamedFamily(
 			s,
 			w,
 			r,
 			prefixCorrespondents,
+			"correspondent",
 			&s.correspondents,
 			&s.nextCorrespondentID,
 		)
@@ -263,6 +278,7 @@ func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {
 			w,
 			r,
 			prefixDocumentTypes,
+			"document type",
 			&s.documentTypes,
 			&s.nextDocumentTypeID,
 		)
@@ -271,41 +287,29 @@ func (s *Server) routeEntities(w http.ResponseWriter, r *http.Request) bool {
 	case strings.HasPrefix(r.URL.Path, prefixStoragePaths):
 		return s.routeStoragePaths(w, r)
 	default:
-		return false
+		return false //art-dupl:accept unmatched-route fallthrough is the router contract, not shared logic
 	}
 }
 
 // routeNamedFamily serves one tag/correspondent/document-type family:
 // a filtered list, creates, detail lookups, and the matching-algorithm
-// PATCH the tag self-heal flow uses. It reports whether the request
-// matched. It is a free generic function because Go methods cannot carry
-// type parameters; the brand binds the family's store and IDs to one
-// entity type.
+// PATCH the tag self-heal flow uses. label names the family in decode
+// diagnostics. It reports whether the request matched. It is a free
+// generic function because Go methods cannot carry type parameters; the
+// brand binds the family's store and IDs to one entity type.
 func routeNamedFamily[B any](
 	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	prefix string,
+	label string,
 	store *[]namedEntity[B],
 	nextID *id.ID[B, int],
 ) bool {
 	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, prefix), "/")
 
 	if rest == "" {
-		switch r.Method {
-		case http.MethodGet:
-			handleNamedList(server, w, r, store)
-
-			return true
-		case http.MethodPost:
-			handleNamedCreate(server, w, r, store, nextID)
-
-			return true
-		default:
-			server.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-
-			return true
-		}
+		return routeNamedCollection(server, w, r, label, store, nextID, assignNamedEntityID[B])
 	}
 
 	rawID, err := strconv.Atoi(rest)
@@ -321,7 +325,7 @@ func routeNamedFamily[B any](
 
 		return true
 	case http.MethodPatch:
-		handleNamedPatch(server, w, r, entityID, store)
+		handleNamedPatch(server, w, r, label, entityID, store)
 
 		return true
 	default:
@@ -331,28 +335,64 @@ func routeNamedFamily[B any](
 	}
 }
 
-// handleNamedList serves the family's paginated list, honoring the
-// name__iexact filter the SDK's by-name lookups send.
-func handleNamedList[B any](
+// assignNamedEntityID is the named families' finalize hook: the decoded
+// payload is stored as sent, with only the server-assigned ID applied.
+func assignNamedEntityID[B any](payload *namedEntity[B], entityID id.ID[B, int]) {
+	payload.ID = entityID
+}
+
+// routeNamedCollection serves one named family's collection routes: the
+// name-filtered paginated list and the create. label names the family in
+// decode diagnostics; finalize assigns the server-side ID to the decoded
+// payload and applies family defaults (slug, data type) under the lock,
+// before the payload is stored. It reports whether the request matched.
+func routeNamedCollection[B any, E namedListView](
 	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
-	store *[]namedEntity[B],
+	label string,
+	store *[]E,
+	nextID *id.ID[B, int],
+	finalize func(payload *E, entityID id.ID[B, int]),
+) bool {
+	switch r.Method {
+	case http.MethodGet:
+		handleNamedList(server, w, r, *store)
+
+		return true
+	case http.MethodPost:
+		handleNamedCreate(server, w, r, label, store, nextID, finalize)
+
+		return true
+	default:
+		server.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
+
+		return true
+	}
+}
+
+// handleNamedList serves the family's paginated list, honoring the
+// name__iexact filter the SDK's by-name lookups send.
+func handleNamedList[E namedListView](
+	server *Server,
+	w http.ResponseWriter,
+	r *http.Request,
+	store []E,
 ) {
 	filter := r.URL.Query().Get("name__iexact")
 
 	server.mu.Lock()
 	defer server.mu.Unlock()
 
-	matches := make([]namedEntity[B], 0, len(*store))
-	for _, entity := range *store {
-		if filter == "" || strings.EqualFold(entity.Name, filter) {
+	matches := make([]E, 0, len(store))
+	for _, entity := range store {
+		if filter == "" || strings.EqualFold(entity.entityName(), filter) {
 			matches = append(matches, entity)
 		}
 	}
 
 	server.writePage(w, r, len(matches), func(start, end int) any {
-		entities := make([]namedEntity[B], 0, end-start)
+		entities := make([]E, 0, end-start)
 		entities = append(entities, matches[start:end]...)
 
 		return entities
@@ -361,22 +401,17 @@ func handleNamedList[B any](
 
 // handleNamedCreate stores one named object and answers the created
 // payload.
-func handleNamedCreate[B any](
+func handleNamedCreate[B any, E any](
 	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
-	store *[]namedEntity[B],
+	label string,
+	store *[]E,
 	nextID *id.ID[B, int],
+	finalize func(payload *E, entityID id.ID[B, int]),
 ) {
-	var payload namedEntity[B]
-	if err := json.Unmarshal(readBody(r), &payload); err != nil {
-		server.t.Errorf("paperlesstest: decode %s create body: %v", r.URL.Path, err)
-		server.writeJSON(
-			w,
-			http.StatusBadRequest,
-			map[string]string{detailKey: invalidCreateDetail},
-		)
-
+	var payload E
+	if !server.decodeBody(w, r, label+" create", invalidCreateDetail, &payload) {
 		return
 	}
 
@@ -384,7 +419,7 @@ func handleNamedCreate[B any](
 	defer server.mu.Unlock()
 
 	*nextID = id.NewID[B](nextID.Get() + 1)
-	payload.ID = *nextID
+	finalize(&payload, *nextID)
 
 	*store = append(*store, payload)
 
@@ -417,18 +452,12 @@ func handleNamedPatch[B any](
 	server *Server,
 	w http.ResponseWriter,
 	r *http.Request,
+	label string,
 	entityID id.ID[B, int],
 	store *[]namedEntity[B],
 ) {
 	var patch matchingAlgorithmWire
-	if err := json.Unmarshal(readBody(r), &patch); err != nil {
-		server.t.Errorf("paperlesstest: decode %s patch body: %v", r.URL.Path, err)
-		server.writeJSON(
-			w,
-			http.StatusBadRequest,
-			map[string]string{detailKey: "invalid patch payload"},
-		)
-
+	if !server.decodeBody(w, r, label+" patch", invalidPatchDetail, &patch) {
 		return
 	}
 
@@ -447,131 +476,51 @@ func handleNamedPatch[B any](
 	server.writeJSON(w, http.StatusOK, *entity)
 }
 
-// routeCustomFields serves the custom-field definitions family.
+// routeCustomFields serves the custom-field definitions family: the
+// filtered list and creates (the SDK defines no detail routes). Creates
+// default an omitted data_type to "string", the DRF serializer default.
 func (s *Server) routeCustomFields(w http.ResponseWriter, r *http.Request) bool {
-	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, prefixCustomFields), "/")
-
-	if rest != "" {
+	if rest := strings.Trim(strings.TrimPrefix(r.URL.Path, prefixCustomFields), "/"); rest != "" {
 		return false
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		filter := r.URL.Query().Get("name__iexact")
+	return routeNamedCollection(
+		s,
+		w,
+		r,
+		"custom field",
+		&s.customFields,
+		&s.nextCustomFieldID,
+		func(field *customField, entityID paperless.CustomFieldID) {
+			field.ID = entityID
 
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		matches := make([]customField, 0, len(s.customFields))
-		for _, field := range s.customFields {
-			if filter == "" || strings.EqualFold(field.Name, filter) {
-				matches = append(matches, field)
+			if field.DataType == "" {
+				field.DataType = "string"
 			}
-		}
-
-		s.writePage(w, r, len(matches), func(start, end int) any {
-			fields := make([]customField, 0, end-start)
-			fields = append(fields, matches[start:end]...)
-
-			return fields
-		})
-
-		return true
-	case http.MethodPost:
-		var payload customField
-		if err := json.Unmarshal(readBody(r), &payload); err != nil {
-			s.t.Errorf("paperlesstest: decode custom field create body: %v", err)
-			s.writeJSON(
-				w,
-				http.StatusBadRequest,
-				map[string]string{detailKey: invalidCreateDetail},
-			)
-
-			return true
-		}
-
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		s.nextCustomFieldID = paperless.NewCustomFieldID(s.nextCustomFieldID.Get() + 1)
-		payload.ID = s.nextCustomFieldID
-
-		if payload.DataType == "" {
-			payload.DataType = "string"
-		}
-
-		s.customFields = append(s.customFields, payload)
-
-		s.writeJSON(w, http.StatusCreated, payload)
-
-		return true
-	default:
-		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-
-		return true
-	}
+		},
+	)
 }
 
-// routeStoragePaths serves the storage path definitions family.
+// routeStoragePaths serves the storage path definitions family: the
+// filtered list and creates (the SDK defines no detail routes). Creates
+// derive the deterministic path-N slug from the assigned ID.
 func (s *Server) routeStoragePaths(w http.ResponseWriter, r *http.Request) bool {
-	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, prefixStoragePaths), "/")
-
-	if rest != "" {
+	if rest := strings.Trim(strings.TrimPrefix(r.URL.Path, prefixStoragePaths), "/"); rest != "" {
 		return false
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		filter := r.URL.Query().Get("name__iexact")
-
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		matches := make([]storagePath, 0, len(s.storagePaths))
-		for _, path := range s.storagePaths {
-			if filter == "" || strings.EqualFold(path.Name, filter) {
-				matches = append(matches, path)
-			}
-		}
-
-		s.writePage(w, r, len(matches), func(start, end int) any {
-			paths := make([]storagePath, 0, end-start)
-			paths = append(paths, matches[start:end]...)
-
-			return paths
-		})
-
-		return true
-	case http.MethodPost:
-		var payload storagePath
-		if err := json.Unmarshal(readBody(r), &payload); err != nil {
-			s.t.Errorf("paperlesstest: decode storage path create body: %v", err)
-			s.writeJSON(
-				w,
-				http.StatusBadRequest,
-				map[string]string{detailKey: invalidCreateDetail},
-			)
-
-			return true
-		}
-
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		s.nextStoragePathID = paperless.NewStoragePathID(s.nextStoragePathID.Get() + 1)
-		payload.ID = s.nextStoragePathID
-		payload.Slug = fmt.Sprintf("path-%d", payload.ID.Get())
-
-		s.storagePaths = append(s.storagePaths, payload)
-
-		s.writeJSON(w, http.StatusCreated, payload)
-
-		return true
-	default:
-		s.methodNotAllowed(w, r, http.MethodGet, http.MethodPost)
-
-		return true
-	}
+	return routeNamedCollection(
+		s,
+		w,
+		r,
+		"storage path",
+		&s.storagePaths,
+		&s.nextStoragePathID,
+		func(path *storagePath, entityID paperless.StoragePathID) {
+			path.ID = entityID
+			path.Slug = fmt.Sprintf("path-%d", entityID.Get())
+		},
+	)
 }
 
 // findNamedLocked locates one named entity by ID, or nil. The caller must
@@ -584,4 +533,21 @@ func findNamedLocked[B any](store []namedEntity[B], entityID id.ID[B, int]) *nam
 	}
 
 	return nil
+}
+
+// deleteOne removes the entries matching matches from one store and
+// answers the delete outcome: 404 (Not found.) when nothing matched, 204
+// No Content otherwise. The caller must hold s.mu.
+func deleteOne[E any](server *Server, w http.ResponseWriter, store *[]E, matches func(entry E) bool) {
+	before := len(*store)
+
+	*store = slices.DeleteFunc(*store, matches)
+
+	if len(*store) == before {
+		server.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
+
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
