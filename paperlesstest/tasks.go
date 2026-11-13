@@ -39,15 +39,13 @@ func (s *Server) Uploads() []Upload {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	uploads := make([]Upload, 0, len(s.uploads))
-	for _, upload := range s.uploads {
+	return snapshotCopies(s.uploads, func(upload Upload) Upload {
 		copied := upload
 		copied.Content = slices.Clone(upload.Content)
 		copied.Tags = slices.Clone(upload.Tags)
-		uploads = append(uploads, copied)
-	}
 
-	return uploads
+		return copied
+	})
 }
 
 // TaskPlanKind selects the terminal outcome of a scripted consumption task.

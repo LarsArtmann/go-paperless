@@ -538,7 +538,12 @@ func findNamedLocked[B any](store []namedEntity[B], entityID id.ID[B, int]) *nam
 // deleteOne removes the entries matching matches from one store and
 // answers the delete outcome: 404 (Not found.) when nothing matched, 204
 // No Content otherwise. The caller must hold s.mu.
-func deleteOne[E any](server *Server, w http.ResponseWriter, store *[]E, matches func(entry E) bool) {
+func deleteOne[E any](
+	server *Server,
+	w http.ResponseWriter,
+	store *[]E,
+	matches func(entry E) bool,
+) {
 	before := len(*store)
 
 	*store = slices.DeleteFunc(*store, matches)

@@ -1,10 +1,8 @@
 package paperlesstest
 
 import (
-	"encoding/json/v2"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -88,14 +86,7 @@ func (s *Server) handleShareLinkList(w http.ResponseWriter, r *http.Request) {
 // handleShareLinkCreate stores one share link with a server-generated slug.
 func (s *Server) handleShareLinkCreate(w http.ResponseWriter, r *http.Request) {
 	var payload shareLinkCreateWire
-	if err := json.Unmarshal(readBody(r), &payload); err != nil {
-		s.t.Errorf("paperlesstest: decode share link create body: %v", err)
-		s.writeJSON(
-			w,
-			http.StatusBadRequest,
-			map[string]string{detailKey: invalidCreateDetail},
-		)
-
+	if !s.decodeBody(w, r, "share link create", invalidCreateDetail, &payload) {
 		return
 	}
 
@@ -134,17 +125,7 @@ func (s *Server) handleShareLinkDelete(w http.ResponseWriter, linkID paperless.S
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	before := len(s.shareLinks)
-
-	s.shareLinks = slices.DeleteFunc(s.shareLinks, func(link shareLink) bool {
+	deleteOne(s, w, &s.shareLinks, func(link shareLink) bool {
 		return link.ID.Equal(linkID)
 	})
-
-	if len(s.shareLinks) == before {
-		s.writeJSON(w, http.StatusNotFound, map[string]string{detailKey: notFoundDetail})
-
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }

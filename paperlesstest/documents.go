@@ -3,7 +3,6 @@ package paperlesstest
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json/v2"
 	"fmt"
 	"net/http"
 	"slices"
@@ -64,22 +63,33 @@ func ChecksumOf(content []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// snapshotCopies maps one store slice to independent copies: snapshot
+// deep-copies each stored record (slice fields cloned), so mutating the
+// returned slice never reaches fake state. Documents, Patches, and
+// Uploads share it.
+func snapshotCopies[S, T any](source []S, snapshot func(record S) T) []T {
+	copies := make([]T, 0, len(source))
+	for _, record := range source {
+		copies = append(copies, snapshot(record))
+	}
+
+	return copies
+}
+
 // Documents returns a copy of every stored document fixture, oldest first.
 // Mutating the copies does not affect the fake.
 func (s *Server) Documents() []Document {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	documents := make([]Document, 0, len(s.documents))
-	for _, doc := range s.documents {
+	return snapshotCopies(s.documents, func(doc *Document) Document {
 		copied := *doc //nolint:branching-flow // nil deref impossible: appendDocumentLocked only ever appends &stored
 		copied.Content = slices.Clone(doc.Content)
 		copied.TagIDs = slices.Clone(doc.TagIDs)
 		copied.CustomFields = slices.Clone(doc.CustomFields)
-		documents = append(documents, copied)
-	}
 
-	return documents
+		return copied
+	})
 }
 
 // AddDocument stores one document fixture at runtime (the locking
@@ -311,14 +321,12 @@ func (s *Server) Patches() []DocumentPatch {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	patches := make([]DocumentPatch, 0, len(s.patches))
-	for _, patch := range s.patches {
+	return snapshotCopies(s.patches, func(patch DocumentPatch) DocumentPatch {
 		copied := patch
 		copied.Body = slices.Clone(patch.Body)
-		patches = append(patches, copied)
-	}
 
-	return patches
+		return copied
+	})
 }
 
 // DeletedDocuments returns the IDs of every document the fake has deleted
@@ -371,7 +379,7 @@ func (s *Server) routeDocumentDetail(w http.ResponseWriter, r *http.Request) boo
 
 		return true
 	default:
-		return false
+		return false //art-dupl:accept unmatched-route fallthrough is the router contract, not shared logic
 	}
 }
 
@@ -428,10 +436,7 @@ func (s *Server) handleDocumentPatch(
 	raw := readBody(r)
 
 	var patch documentUpdateWire
-	if err := json.Unmarshal(raw, &patch); err != nil {
-		s.t.Errorf("paperlesstest: decode document patch: %v", err)
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{detailKey: "invalid patch payload"})
-
+	if !s.decodeBody(w, r, "document patch", invalidPatchDetail, &patch) {
 		return
 	}
 

@@ -285,7 +285,12 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, payload any) {
 // means the test code under development sent a malformed body: it fails
 // the test, answers the DRF invalid-payload 400 (detail carries the
 // create/patch distinction), and reports false.
-func (s *Server) decodeBody(w http.ResponseWriter, r *http.Request, label, detail string, payload any) bool {
+func (s *Server) decodeBody(
+	w http.ResponseWriter,
+	r *http.Request,
+	label, detail string,
+	payload any,
+) bool {
 	err := json.Unmarshal(readBody(r), payload)
 	if err == nil {
 		return true

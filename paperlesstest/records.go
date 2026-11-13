@@ -3,6 +3,7 @@ package paperlesstest
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"testing"
 )
 
@@ -27,10 +28,7 @@ func (s *Server) Requests() []RequestRecord {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	records := make([]RequestRecord, 0, len(s.requests))
-	records = append(records, s.requests...)
-
-	return records
+	return slices.Clone(s.requests)
 }
 
 // RequireAuthorized fails the test when any request the fake received was
