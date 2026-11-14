@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-14
+
 ### Added
 
 - **api-diff CI gate — the bank-sync drop-in contract is now enforced,
