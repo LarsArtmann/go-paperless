@@ -199,6 +199,13 @@ the compiler walks migrations when they upgrade.
   (`docs_drift_test.go`) enforces the first two mechanically; `nix run .#release-verify --
   vX.Y.Z` checks all three plus push status, CI, pkg.go.dev, and a race run. Bump both
   files inside the release commit (the v0.3.1 flow; the v0.3.0 drift is closed).
+  Release-flow gaps found cutting v0.5.3 (2026-11-14): `release-verify` does NOT check
+  the GitHub Releases page — v0.5.1/v0.5.2 shipped with tags + proxy versions but no
+  Release entries (backfilled 2026-11-14), so run `gh release create` as part of every
+  cut; and any `gh release create` can steal the `latest` flag (the v0.5.1 backfill did)
+  — verify with `gh release list` and pin with `gh release edit vX.Y.Z --latest=true`.
+  Proxy propagation check: fetch `proxy.golang.org/github.com/larsartmann/go-paperless/@v/vX.Y.Z.info`
+  directly — in-repo `go list -m -versions` dies on the local `vendor/` (needs `-mod`).
 - **gosec in CI (UNPARKED 2026-11-08)**: v2.30.0 reads Go 1.27 export data — the scan
   type-checks the module again (verified locally: 20 files, exit 0, Issues 0; the probe
   command pattern stays `nix develop -c sh -c 'GOEXPERIMENT=jsonv2 go run
