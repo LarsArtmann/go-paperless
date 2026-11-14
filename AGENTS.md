@@ -201,9 +201,13 @@ the compiler walks migrations when they upgrade.
   files inside the release commit (the v0.3.1 flow; the v0.3.0 drift is closed).
   Release-flow gaps found cutting v0.5.3 (2026-11-14): `release-verify` does NOT check
   the GitHub Releases page — v0.5.1/v0.5.2 shipped with tags + proxy versions but no
-  Release entries (backfilled 2026-11-14), so run `gh release create` as part of every
-  cut; and any `gh release create` can steal the `latest` flag (the v0.5.1 backfill did)
-  — verify with `gh release list` and pin with `gh release edit vX.Y.Z --latest=true`.
+  Release entries; on discovery the full tag↔Release set was audited and ALL 13 tags
+  now carry Release entries (backfilled 2026-11-14, owner directive; the in-flight
+  v0.5.1/v0.5.2 backfill had missed 5 older tags — always diff `git tag` against
+  `gh release list`, never sample the list head), so run `gh release create` as part
+  of every cut; and any `gh release create` can steal the `latest` flag (the v0.5.1
+  backfill did; GitHub auto-pick is NOT highest-semver) — pass `--latest`/`--latest=false`
+  explicitly on EVERY create and verify with `gh release list`.
   Proxy propagation check: fetch `proxy.golang.org/github.com/larsartmann/go-paperless/@v/vX.Y.Z.info`
   directly — in-repo `go list -m -versions` dies on the local `vendor/` (needs `-mod`).
 - **gosec in CI (UNPARKED 2026-11-08)**: v2.30.0 reads Go 1.27 export data — the scan

@@ -46,7 +46,7 @@ immediately preceding session; its open questions reappear in (g)).
   CHANGELOG.md, flake.nix, AGENTS.md, TODO_LIST.md).
 - Consumer repos (bank-sync, journal/InboxClean) not touched and not
   inspected — out of scope; state taken from TODO_LIST rows.
-- Whether v0.1.0's missing Release is intentional: unknown (see (g)).
+- Whether v0.1.0's missing Release is intentional: ~~unknown (see (g)).~~ answered by owner directive 2026-11-14: backfill all — done.
 
 ---
 
@@ -84,14 +84,14 @@ immediately preceding session; its open questions reappear in (g)).
 
 ## b) PARTIALLY DONE
 
-1. **GitHub Releases page completeness — 9 of 14 version tags covered.**
-   Works: v0.5.0–v0.5.3, v0.3.0, v0.3.1, v0.2.0, v0.1.1 have Releases.
+1. **GitHub Releases page completeness — ~~9 of 14 version tags covered~~ 13 of 13 (RESOLVED 2026-11-14 ~02:20, owner directive "Backfill all missing GitHub Releases!").**
+   ~~Works: v0.5.0–v0.5.3, v0.3.0, v0.3.1, v0.2.0, v0.1.1 have Releases.
    Missing (verified by per-tag `gh release view`): **v0.1.0, v0.3.2,
-   v0.4.0, v0.4.1, v0.4.2**. My in-session backfill covered only the two
-   most recent gaps; the full set-equality check happened afterwards,
-   during this report. Remaining: 5 note drafts + `gh release create` each
-   (CHANGELOG sections exist for all five). Effort: S–M. Caveat: v0.1.0 is
-   the repo's earliest tag — its absence may be intentional-era, not drift.
+   v0.4.0, v0.4.1, v0.4.2**.~~ All five backfilled from their CHANGELOG
+   sections with explicit `--latest=false`; post-backfill per-tag
+   `gh release view` loop resolves 13/13 tags, no steals, v0.5.3 remains
+   `Latest`. (Report's original count was wrong: 8 had Releases, not 9;
+   13 tags total, not 14 — arithmetic corrected here, not rewritten.)
 2. **Consumer propagation to v0.5.3.** Works: the TODO row exists, is
    High/Medium-impact, and now names the two-step vendor tail. Not done:
    the actual bumps (bank-sync, journal/InboxClean), because timing is an
@@ -194,7 +194,7 @@ TODO_LIST or ROADMAP per rigor.
 
 | # | Task | Impact | Effort | Category |
 |---|------|--------|--------|----------|
-| 1 | Backfill the 5 missing Releases (v0.1.0, v0.3.2, v0.4.0, v0.4.1, v0.4.2) from their CHANGELOG sections, explicit `--latest=false` | High | S | Cleanup |
+| ~~1~~ | ~~Backfill the 5 missing Releases (v0.1.0, v0.3.2, v0.4.0, v0.4.1, v0.4.2) from their CHANGELOG sections, explicit `--latest=false`~~ DONE 2026-11-14 02:20 — 13/13 verified, v0.5.3 Latest intact | ~~High~~ | ~~S~~ | Cleanup |
 | 2 | Bump bank-sync to v0.5.3: go.mod, `go mod vendor` + `buildflow -s nix-hash-fix --fix`, re-prove suite | High | M | Feature |
 | 3 | Bump journal/InboxClean to v0.5.3, same two-step tail + suite re-proof | High | M | Feature |
 | 4 | Extend `release-verify` with a Releases-page existence check (fails when `gh release view vX.Y.Z` 404s) | High | S | Quality |
@@ -238,11 +238,7 @@ observed — the 01-32 report made the same call and it was the right one.
    billing-dead (row 36), or does the billing fix land first? I cannot
    decide consumer priorities, and I cannot pay the GitHub bill. This
    gates the only consumer-visible reason v0.5.3 exists.
-2. **Releases-page intent for the old five.** v0.1.0's missing Release may
-   be intentional (earliest tag, pre-practice) rather than drift like
-   v0.3.2/v0.4.x. Should I backfill all five (f#1), or backfill from
-   v0.3.2 up and leave v0.1.0 as-is? I tried to infer intent from
-   `gh release list` history and repo docs; nothing records a decision.
+2. ~~**Releases-page intent for the old five.**~~ ANSWERED 2026-11-14 by owner directive: backfill ALL, including v0.1.0 — no intentional-era carve-out exists.
 3. **Carry-over, still unanswered from the 01-32 report:** enforce the
    paperlesstest 0-actionable state mechanically (`.art-dupl-baseline.json`
    + CI `art-dupl check` at `-t 1`) vs keep prose+manual sweeps, and is
@@ -258,3 +254,24 @@ row 36 covers f#7; items f#1, #4, #6, #8–#11, #19, #20, #26, #29, #30 are
 new and TODO_LIST-eligible; the watch items (#17, #21, #22) belong in
 ROADMAP or the AGENTS.md watch lists. Per the standing instruction this
 report ends in WAIT — harvest runs when you say so or answer (g).
+
+---
+
+## Appendix: backfill execution (2026-11-14 ~02:20 CET, owner directive)
+
+All five missing Releases created from their CHANGELOG sections, every one
+with explicit `--latest=false` (per the flag-steal lesson in (e)(3)):
+
+| Tag | Title | CHANGELOG section |
+|-----|-------|-------------------|
+| v0.1.0 | initial release: Paperless-ngx REST client (API v10) | `[0.1.0]` |
+| v0.3.2 | EnsureTag self-heal PATCH no longer rejected with 400 | `[0.3.2]` (incl. the recovered-verbatim blockquote) |
+| v0.4.0 | paperlesstest fake, drift guards, fuzzers, typed saved-view rules | `[0.4.0]` (Added/Changed/Fixed/Verified) |
+| v0.4.1 | paperlesstest fixture seeding and in-place reshaping | `[0.4.1]` |
+| v0.4.2 | paperlesstest introspection for consumer migrations | `[0.4.2]` |
+
+Evidence: `gh release create` returned all five URLs; the per-tag
+`gh release view` loop over `git tag` resolves **13/13** with zero
+"STILL MISSING" lines; `gh release list` shows v0.5.3 still marked
+`Latest` (no steal this time — explicit flags on every create).
+Releases page: https://github.com/LarsArtmann/go-paperless/releases
