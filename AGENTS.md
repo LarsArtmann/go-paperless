@@ -129,7 +129,14 @@ the compiler walks migrations when they upgrade.
   amendment) — no SDK logic, no other third-party imports (round-trip tests live in its
   `_test.go` files); fixtures, counters, and introspection speak the SDK's branded ID
   vocabulary so fake state compares equal to SDK results. The shared named-family routing
-  is free generic functions (`routeNamedFamily[B]`) for the same golines reason. Every
+  is free generic functions for the same golines reason: `routeNamedFamily[B]` (tags /
+  correspondents / document types, incl. detail + matching-algorithm PATCH) and
+  `routeNamedCollection[B, E namedListView]` (list + create for ALL five families;
+  custom fields and storage paths are thin shells over it, with the family's
+  ID-assignment/defaults living in the `finalize` hook — storage-path slug,
+  custom-field `data_type` default). Shared request/response helpers:
+  `decodeBody` (server.go), `deleteOne` (entities.go), `snapshotCopies`
+  (documents.go). Every
   route must be registered in `servedRoutes` AND round-tripped through the real `Client`;
   `TestFakeCoversEveryClientRoute` enforces set equality with client.go's `path*`
   constants in both directions, so a new SDK endpoint fails the suite until the fake
@@ -175,7 +182,12 @@ the compiler walks migrations when they upgrade.
   sanctioned audit invocation).
 - `// art-dupl:<scope>` comments mark accepted duplication for the clone scanner (e.g. the
   Ping/`ProbeCapabilities` first-page query pair) — don't "fix" them away without checking
-  the paired site named in the comment.
+  the paired site named in the comment. The deep sweep at `-t 1` (with and without
+  `--type-aware`) is at 0 actionable as of 2026-11-13; the only marker-accepted sites are
+  the Ping pair, the savedviews/sharelinks route shells, the named.go findByName tails,
+  the example_test doc-example boilerplate, and the two `default: return false` router
+  fallthroughs (routeEntities / routeDocumentDetail). Same golines fragility as
+  branching-flow: re-run the scanner after `nix fmt`.
 - Errors: `github.com/larsartmann/go-error-family` (`New*`/`Wrap*` with dot-notation codes).
 - **Test cleanup: `defer server.Close()` stays** (2026-09-16 decision): httptest servers
   and body readers close via `defer` at the top of the test that created them (~63 sites,
