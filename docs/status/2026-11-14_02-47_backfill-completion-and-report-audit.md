@@ -129,8 +129,8 @@ report), plus an audit of that report's own quality — where it caught
    same failure mode (sampling instead of measuring), two artifacts
    (process, then report).
 3. **The backfill execution itself had no failures**: five creates, zero
-   retries, zero steals, no 404s. Nothing else is fucked up *in this
-   continuation* — (d) is short because the work was small and the
+   retries, zero steals, no 404s. Nothing else is fucked up _in this
+   continuation_ — (d) is short because the work was small and the
    verification loop closed everything it touched.
 
 ## e) WHAT WE SHOULD IMPROVE
@@ -162,38 +162,38 @@ Refreshed from the 02:09 report's table (30 items, #1 now DONE — removed).
 Same harvest routing: TODO_LIST-eligible items marked; watch items route
 to ROADMAP/AGENTS.md watch lists. Items gated on (g) questions say so.
 
-| # | Task | Impact | Effort | Category |
-|---|------|--------|--------|----------|
-| 1 | Bump bank-sync to v0.5.3: go.mod, `go mod vendor` + `buildflow -s nix-hash-fix --fix`, re-prove suite (gated Q1) | High | M | Feature |
-| 2 | Bump journal/InboxClean to v0.5.3, same two-step tail + suite re-proof (gated Q1) | High | M | Feature |
-| 3 | Resolve consumer Actions billing — owner action; unblocks CI re-proof of #1/#2 | High | S | Bug |
-| 4 | Extend `release-verify` with a Releases-page existence check (`gh release view vX.Y.Z` must resolve) (gated Q3) | High | S | Quality |
-| 5 | Script the tag↔Release set-equality sweep as a flake app (third manual run = rule of three) | High | S | Quality |
-| 6 | Drop papersync's `retryafter.Clamp` for `MaxDelay: 60s` during the bank-sync bump | Medium | S | Cleanup |
-| 7 | Add a `release-create` flake app: CHANGELOG-section notes draft, explicit-flag create, run the sweep (gated Q3) | Medium | M | Feature |
-| 8 | Add proxy `.info` step to `release-verify` before the pkg.go.dev step | Medium | S | Quality |
-| 9 | Normalize the two bare release titles (v0.3.1, v0.2.0) to the `vX.Y.Z — headline` style | Low | S | Cleanup |
-| 10 | Decide + record the wire-correctness SLA (immediate patch cut for consumer-visible wire bugs) in AGENTS.md | Medium | S | Documentation |
-| 11 | Carry-over: art-dupl baseline gate policy — baseline file + CI job at `-t 1` vs prose sweeps (gated Q3 / 01-32 report) | Medium | M | Quality |
-| 12 | Carry-over: record the dedup scope-floor decision in AGENTS.md (gated Q3) | Medium | S | Documentation |
-| 13 | Verify CI on daemon commit `7817425` (in progress at write time) and archive evidence | Low | S | Documentation |
-| 14 | Carry-over: savedviews/sharelinks prose de-dup | Low | S | Cleanup |
-| 15 | Carry-over: `rejectWrongMethod` negative test | Medium | S | Quality |
-| 16 | Carry-over: full buildflow loop (last full run predates today's docs commits) | Medium | M | Quality |
-| 17 | Carry-over: erraudit public-proxy re-check (unblocks the CI job) | Medium | S | Quality |
-| 18 | Carry-over: govalid-skip removal watch (machine Go ≥ 1.27 rebuild) | Low | S | Cleanup |
-| 19 | Carry-over: branching-flow v2 revisit (line-suppression for dupe/composition) | Low | L | Quality |
-| 20 | Carry-over: v2 typed-API migration design (ROADMAP) | Low | L | Feature |
-| 21 | Local `nix flake check` for a fresh post-release all-gates artifact | Low | M | Quality |
-| 22 | CONTRIBUTING: document the release command sequence proven this session (gorelease → bump → CI watch → tag → proxy .info → gh release → release-verify → set-equality) | Medium | S | Documentation |
-| 23 | Confirm MIGRATION.md renders in the pkg.go.dev doc set for v0.5.3 | Low | S | Documentation |
-| 24 | Tag consumers' changelogs when the v0.5.3 bumps land (part of #1/#2) | Low | S | Documentation |
-| 25 | Decide the CHANGELOG `[Unreleased]` convention (bare vs placeholders) in CONTRIBUTING | Low | S | Documentation |
-| 26 | Backfill-provenance footer: promote the italic format from report convention to AGENTS.md line (superseded if #7 lands) | Low | S | Documentation |
-| 27 | Triage the 2026-11-08 Dependabot update runs (what did they bump?) | Low | S | Cleanup |
-| 28 | Fuzz watch: confirm the next scheduled run exercises the 2026-11-08 corpus additions | Low | S | Quality |
-| 29 | `release-verify` SSH-signature assertion (config regression would go unnoticed today) | Low | S | Quality |
-| 30 | Update FEATURES.md if the Releases-page completeness counts as an ops feature worth listing (likely not — decide and close) | Low | S | Documentation |
+| #  | Task                                                                                                                                                                   | Impact | Effort | Category      |
+| -- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ------------- |
+| 1  | Bump bank-sync to v0.5.3: go.mod, `go mod vendor` + `buildflow -s nix-hash-fix --fix`, re-prove suite (gated Q1)                                                       | High   | M      | Feature       |
+| 2  | Bump journal/InboxClean to v0.5.3, same two-step tail + suite re-proof (gated Q1)                                                                                      | High   | M      | Feature       |
+| 3  | Resolve consumer Actions billing — owner action; unblocks CI re-proof of #1/#2                                                                                         | High   | S      | Bug           |
+| 4  | Extend `release-verify` with a Releases-page existence check (`gh release view vX.Y.Z` must resolve) (gated Q3)                                                        | High   | S      | Quality       |
+| 5  | Script the tag↔Release set-equality sweep as a flake app (third manual run = rule of three)                                                                            | High   | S      | Quality       |
+| 6  | Drop papersync's `retryafter.Clamp` for `MaxDelay: 60s` during the bank-sync bump                                                                                      | Medium | S      | Cleanup       |
+| 7  | Add a `release-create` flake app: CHANGELOG-section notes draft, explicit-flag create, run the sweep (gated Q3)                                                        | Medium | M      | Feature       |
+| 8  | Add proxy `.info` step to `release-verify` before the pkg.go.dev step                                                                                                  | Medium | S      | Quality       |
+| 9  | Normalize the two bare release titles (v0.3.1, v0.2.0) to the `vX.Y.Z — headline` style                                                                                | Low    | S      | Cleanup       |
+| 10 | Decide + record the wire-correctness SLA (immediate patch cut for consumer-visible wire bugs) in AGENTS.md                                                             | Medium | S      | Documentation |
+| 11 | Carry-over: art-dupl baseline gate policy — baseline file + CI job at `-t 1` vs prose sweeps (gated Q3 / 01-32 report)                                                 | Medium | M      | Quality       |
+| 12 | Carry-over: record the dedup scope-floor decision in AGENTS.md (gated Q3)                                                                                              | Medium | S      | Documentation |
+| 13 | Verify CI on daemon commit `7817425` (in progress at write time) and archive evidence                                                                                  | Low    | S      | Documentation |
+| 14 | Carry-over: savedviews/sharelinks prose de-dup                                                                                                                         | Low    | S      | Cleanup       |
+| 15 | Carry-over: `rejectWrongMethod` negative test                                                                                                                          | Medium | S      | Quality       |
+| 16 | Carry-over: full buildflow loop (last full run predates today's docs commits)                                                                                          | Medium | M      | Quality       |
+| 17 | Carry-over: erraudit public-proxy re-check (unblocks the CI job)                                                                                                       | Medium | S      | Quality       |
+| 18 | Carry-over: govalid-skip removal watch (machine Go ≥ 1.27 rebuild)                                                                                                     | Low    | S      | Cleanup       |
+| 19 | Carry-over: branching-flow v2 revisit (line-suppression for dupe/composition)                                                                                          | Low    | L      | Quality       |
+| 20 | Carry-over: v2 typed-API migration design (ROADMAP)                                                                                                                    | Low    | L      | Feature       |
+| 21 | Local `nix flake check` for a fresh post-release all-gates artifact                                                                                                    | Low    | M      | Quality       |
+| 22 | CONTRIBUTING: document the release command sequence proven this session (gorelease → bump → CI watch → tag → proxy .info → gh release → release-verify → set-equality) | Medium | S      | Documentation |
+| 23 | Confirm MIGRATION.md renders in the pkg.go.dev doc set for v0.5.3                                                                                                      | Low    | S      | Documentation |
+| 24 | Tag consumers' changelogs when the v0.5.3 bumps land (part of #1/#2)                                                                                                   | Low    | S      | Documentation |
+| 25 | Decide the CHANGELOG `[Unreleased]` convention (bare vs placeholders) in CONTRIBUTING                                                                                  | Low    | S      | Documentation |
+| 26 | Backfill-provenance footer: promote the italic format from report convention to AGENTS.md line (superseded if #7 lands)                                                | Low    | S      | Documentation |
+| 27 | Triage the 2026-11-08 Dependabot update runs (what did they bump?)                                                                                                     | Low    | S      | Cleanup       |
+| 28 | Fuzz watch: confirm the next scheduled run exercises the 2026-11-08 corpus additions                                                                                   | Low    | S      | Quality       |
+| 29 | `release-verify` SSH-signature assertion (config regression would go unnoticed today)                                                                                  | Low    | S      | Quality       |
+| 30 | Update FEATURES.md if the Releases-page completeness counts as an ops feature worth listing (likely not — decide and close)                                            | Low    | S      | Documentation |
 
 Honest stop at 30, same rationale as 02:09: the remaining known work is
 represented above; padding to 50 would invent items no session observed.

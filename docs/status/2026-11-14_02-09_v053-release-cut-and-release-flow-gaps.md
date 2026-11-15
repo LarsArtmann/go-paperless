@@ -125,7 +125,7 @@ immediately preceding session; its open questions reappear in (g)).
    sections but nothing on the Releases page, and nothing caught it:
    `release-verify` checks tag/CHANGELOG/flake/push/CI/pkg.go.dev/race and
    is structurally blind to the Releases page. Severity: moderate —
-   release *discovery* was broken (the page humans and some tooling read),
+   release _discovery_ was broken (the page humans and some tooling read),
    downloads were never broken. Root cause: the release flow had no
    mechanical gate for this artifact. Mitigation: backfilled; lesson in
    AGENTS.md. Residual: **it can recur tomorrow** — the guard is prose.
@@ -192,38 +192,38 @@ items 1–2 and 15 are already in TODO_LIST (row 37 retarget, row 36);
 items gated on (g) answers should wait for them; the rest route to
 TODO_LIST or ROADMAP per rigor.
 
-| # | Task | Impact | Effort | Category |
-|---|------|--------|--------|----------|
-| ~~1~~ | ~~Backfill the 5 missing Releases (v0.1.0, v0.3.2, v0.4.0, v0.4.1, v0.4.2) from their CHANGELOG sections, explicit `--latest=false`~~ DONE 2026-11-14 02:20 — 13/13 verified, v0.5.3 Latest intact | ~~High~~ | ~~S~~ | Cleanup |
-| 2 | Bump bank-sync to v0.5.3: go.mod, `go mod vendor` + `buildflow -s nix-hash-fix --fix`, re-prove suite | High | M | Feature |
-| 3 | Bump journal/InboxClean to v0.5.3, same two-step tail + suite re-proof | High | M | Feature |
-| 4 | Extend `release-verify` with a Releases-page existence check (fails when `gh release view vX.Y.Z` 404s) | High | S | Quality |
-| 5 | Drop papersync's `retryafter.Clamp` for `MaxDelay: 60s` during the bank-sync bump (v0.5.2 made it redundant) | Medium | S | Cleanup |
-| 6 | Add tag↔Release set-equality sweep to the release checklist (one `comm` command, documented in AGENTS.md release bullet) | Medium | S | Quality |
-| 7 | Resolve consumer Actions billing (TODO row 36) — owner action; unblocks suite re-proof in CI | High | S | Bug |
-| 8 | Add proxy `.info` step to `release-verify` before the pkg.go.dev step | Medium | S | Quality |
-| 9 | Add a `release-create` flake app: draft notes from the `[X.Y.Z]` CHANGELOG section, `gh release create --latest`, run set-equality | Medium | M | Feature |
-| 10 | Confirm CI green on docs commit `cf83641` (run 43538242206) and archive the evidence in this report's follow-up | Low | S | Documentation |
-| 11 | Decide + record the wire-correctness SLA (immediate patch cut for consumer-visible wire bugs) in AGENTS.md | Medium | S | Documentation |
-| 12 | Carry-over: art-dupl baseline gate policy — `.art-dupl-baseline.json` + CI job at `-t 1` vs prose sweeps (owner question open since 01-32 report) | Medium | M | Quality |
-| 13 | Carry-over: record the dedup scope-floor decision (scanner-flagged only vs proactive near-miss like `writeNotFound`) in AGENTS.md | Medium | S | Documentation |
-| 14 | Carry-over: savedviews/sharelinks prose de-dup (leftover from the dedup session) | Low | S | Cleanup |
-| 15 | Carry-over: `rejectWrongMethod` negative test | Medium | S | Quality |
-| 16 | Carry-over: full buildflow loop on this repo (last full run predates the docs commits) | Medium | M | Quality |
-| 17 | Watch fuzz schedule: next scheduled run after the 2026-11-08 corpus additions (runs have been green; confirm the new seeds exercise) | Low | S | Quality |
-| 18 | Triage the two Dependabot update runs from 2026-11-08 (go_modules + github_actions both succeeded — check what they bumped) | Low | S | Cleanup |
-| 19 | CHANGELOG placeholder convention: decide bare `[Unreleased]` (current repo style) vs skill-style placeholders, write the answer into CONTRIBUTING | Low | S | Documentation |
-| 20 | Document the backfill note format in AGENTS.md if manual backfills persist (superseded if #9 lands) | Low | S | Documentation |
-| 21 | Carry-over: erraudit hermetic flake pin — re-check whether erraudit reached the public proxy (unblocks CI job; currently host-profile-resolved) | Medium | S | Quality |
-| 22 | Carry-over: remove the govalid-generate skip once the machine rebuilds on Go ≥ 1.27 | Low | S | Cleanup |
-| 23 | Carry-over: branching-flow v2 revisit — re-run dispositions when line-suppression ships for dupe/composition (v0.6.7 honors panic/phantom only) | Low | L | Quality |
-| 24 | Carry-over: v2 typed-API migration design (ROADMAP "Growing with the API"; decides FK-clearing contract, branded string params) | Low | L | Feature |
-| 25 | Re-run `nix flake check` locally post-release for a fresh local all-gates artifact (CI is green; this is belt-and-suspenders for the release commit) | Low | M | Quality |
-| 26 | Add a release smoke test to CONTRIBUTING: the exact command sequence this session used (gorelease → bump → CI watch → tag → proxy .info → gh release → release-verify) | Medium | S | Documentation |
-| 27 | Verify MIGRATION.md renders correctly on pkg.go.dev for v0.5.3 (file is repo-root; confirm it's served in the doc set) | Low | S | Documentation |
-| 28 | Consider tagging `v0.5.3` in consumers' changelogs/notes when bumps land (part of #2/#3, easy to forget) | Low | S | Documentation |
-| 29 | Audit `gh release` titles for consistency (`vX.Y.Z — headline` em-dash style is now used by 5 of 9; normalize the older five during #1) | Low | S | Cleanup |
-| 30 | Decide whether `release-verify` should also assert the tag is SSH-signed (currently implicit via git config; a config regression would go unnoticed) | Low | S | Quality |
+| #     | Task                                                                                                                                                                                               | Impact   | Effort | Category      |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------ | ------------- |
+| ~~1~~ | ~~Backfill the 5 missing Releases (v0.1.0, v0.3.2, v0.4.0, v0.4.1, v0.4.2) from their CHANGELOG sections, explicit `--latest=false`~~ DONE 2026-11-14 02:20 — 13/13 verified, v0.5.3 Latest intact | ~~High~~ | ~~S~~  | Cleanup       |
+| 2     | Bump bank-sync to v0.5.3: go.mod, `go mod vendor` + `buildflow -s nix-hash-fix --fix`, re-prove suite                                                                                              | High     | M      | Feature       |
+| 3     | Bump journal/InboxClean to v0.5.3, same two-step tail + suite re-proof                                                                                                                             | High     | M      | Feature       |
+| 4     | Extend `release-verify` with a Releases-page existence check (fails when `gh release view vX.Y.Z` 404s)                                                                                            | High     | S      | Quality       |
+| 5     | Drop papersync's `retryafter.Clamp` for `MaxDelay: 60s` during the bank-sync bump (v0.5.2 made it redundant)                                                                                       | Medium   | S      | Cleanup       |
+| 6     | Add tag↔Release set-equality sweep to the release checklist (one `comm` command, documented in AGENTS.md release bullet)                                                                           | Medium   | S      | Quality       |
+| 7     | Resolve consumer Actions billing (TODO row 36) — owner action; unblocks suite re-proof in CI                                                                                                       | High     | S      | Bug           |
+| 8     | Add proxy `.info` step to `release-verify` before the pkg.go.dev step                                                                                                                              | Medium   | S      | Quality       |
+| 9     | Add a `release-create` flake app: draft notes from the `[X.Y.Z]` CHANGELOG section, `gh release create --latest`, run set-equality                                                                 | Medium   | M      | Feature       |
+| 10    | Confirm CI green on docs commit `cf83641` (run 43538242206) and archive the evidence in this report's follow-up                                                                                    | Low      | S      | Documentation |
+| 11    | Decide + record the wire-correctness SLA (immediate patch cut for consumer-visible wire bugs) in AGENTS.md                                                                                         | Medium   | S      | Documentation |
+| 12    | Carry-over: art-dupl baseline gate policy — `.art-dupl-baseline.json` + CI job at `-t 1` vs prose sweeps (owner question open since 01-32 report)                                                  | Medium   | M      | Quality       |
+| 13    | Carry-over: record the dedup scope-floor decision (scanner-flagged only vs proactive near-miss like `writeNotFound`) in AGENTS.md                                                                  | Medium   | S      | Documentation |
+| 14    | Carry-over: savedviews/sharelinks prose de-dup (leftover from the dedup session)                                                                                                                   | Low      | S      | Cleanup       |
+| 15    | Carry-over: `rejectWrongMethod` negative test                                                                                                                                                      | Medium   | S      | Quality       |
+| 16    | Carry-over: full buildflow loop on this repo (last full run predates the docs commits)                                                                                                             | Medium   | M      | Quality       |
+| 17    | Watch fuzz schedule: next scheduled run after the 2026-11-08 corpus additions (runs have been green; confirm the new seeds exercise)                                                               | Low      | S      | Quality       |
+| 18    | Triage the two Dependabot update runs from 2026-11-08 (go_modules + github_actions both succeeded — check what they bumped)                                                                        | Low      | S      | Cleanup       |
+| 19    | CHANGELOG placeholder convention: decide bare `[Unreleased]` (current repo style) vs skill-style placeholders, write the answer into CONTRIBUTING                                                  | Low      | S      | Documentation |
+| 20    | Document the backfill note format in AGENTS.md if manual backfills persist (superseded if #9 lands)                                                                                                | Low      | S      | Documentation |
+| 21    | Carry-over: erraudit hermetic flake pin — re-check whether erraudit reached the public proxy (unblocks CI job; currently host-profile-resolved)                                                    | Medium   | S      | Quality       |
+| 22    | Carry-over: remove the govalid-generate skip once the machine rebuilds on Go ≥ 1.27                                                                                                                | Low      | S      | Cleanup       |
+| 23    | Carry-over: branching-flow v2 revisit — re-run dispositions when line-suppression ships for dupe/composition (v0.6.7 honors panic/phantom only)                                                    | Low      | L      | Quality       |
+| 24    | Carry-over: v2 typed-API migration design (ROADMAP "Growing with the API"; decides FK-clearing contract, branded string params)                                                                    | Low      | L      | Feature       |
+| 25    | Re-run `nix flake check` locally post-release for a fresh local all-gates artifact (CI is green; this is belt-and-suspenders for the release commit)                                               | Low      | M      | Quality       |
+| 26    | Add a release smoke test to CONTRIBUTING: the exact command sequence this session used (gorelease → bump → CI watch → tag → proxy .info → gh release → release-verify)                             | Medium   | S      | Documentation |
+| 27    | Verify MIGRATION.md renders correctly on pkg.go.dev for v0.5.3 (file is repo-root; confirm it's served in the doc set)                                                                             | Low      | S      | Documentation |
+| 28    | Consider tagging `v0.5.3` in consumers' changelogs/notes when bumps land (part of #2/#3, easy to forget)                                                                                           | Low      | S      | Documentation |
+| 29    | Audit `gh release` titles for consistency (`vX.Y.Z — headline` em-dash style is now used by 5 of 9; normalize the older five during #1)                                                            | Low      | S      | Cleanup       |
+| 30    | Decide whether `release-verify` should also assert the tag is SSH-signed (currently implicit via git config; a config regression would go unnoticed)                                               | Low      | S      | Quality       |
 
 Honest stop at 30: the remaining known items are already represented above
 (consumer work #2/#3/#5/#7, release tooling #4/#6/#8/#9, carry-overs
@@ -241,10 +241,10 @@ observed — the 01-32 report made the same call and it was the right one.
 2. ~~**Releases-page intent for the old five.**~~ ANSWERED 2026-11-14 by owner directive: backfill ALL, including v0.1.0 — no intentional-era carve-out exists.
 3. **Carry-over, still unanswered from the 01-32 report:** enforce the
    paperlesstest 0-actionable state mechanically (`.art-dupl-baseline.json`
-   + CI `art-dupl check` at `-t 1`) vs keep prose+manual sweeps, and is
-   the dedup scope floor scanner-flagged-only or does it include proactive
-   near-miss consolidations? Both are owner-preference questions I
-   explicitly cannot settle from the codebase; they gate f#12/#13.
+   - CI `art-dupl check` at `-t 1`) vs keep prose+manual sweeps, and is
+     the dedup scope floor scanner-flagged-only or does it include proactive
+     near-miss consolidations? Both are owner-preference questions I
+     explicitly cannot settle from the codebase; they gate f#12/#13.
 
 ---
 
@@ -262,13 +262,13 @@ report ends in WAIT — harvest runs when you say so or answer (g).
 All five missing Releases created from their CHANGELOG sections, every one
 with explicit `--latest=false` (per the flag-steal lesson in (e)(3)):
 
-| Tag | Title | CHANGELOG section |
-|-----|-------|-------------------|
-| v0.1.0 | initial release: Paperless-ngx REST client (API v10) | `[0.1.0]` |
-| v0.3.2 | EnsureTag self-heal PATCH no longer rejected with 400 | `[0.3.2]` (incl. the recovered-verbatim blockquote) |
-| v0.4.0 | paperlesstest fake, drift guards, fuzzers, typed saved-view rules | `[0.4.0]` (Added/Changed/Fixed/Verified) |
-| v0.4.1 | paperlesstest fixture seeding and in-place reshaping | `[0.4.1]` |
-| v0.4.2 | paperlesstest introspection for consumer migrations | `[0.4.2]` |
+| Tag    | Title                                                             | CHANGELOG section                                   |
+| ------ | ----------------------------------------------------------------- | --------------------------------------------------- |
+| v0.1.0 | initial release: Paperless-ngx REST client (API v10)              | `[0.1.0]`                                           |
+| v0.3.2 | EnsureTag self-heal PATCH no longer rejected with 400             | `[0.3.2]` (incl. the recovered-verbatim blockquote) |
+| v0.4.0 | paperlesstest fake, drift guards, fuzzers, typed saved-view rules | `[0.4.0]` (Added/Changed/Fixed/Verified)            |
+| v0.4.1 | paperlesstest fixture seeding and in-place reshaping              | `[0.4.1]`                                           |
+| v0.4.2 | paperlesstest introspection for consumer migrations               | `[0.4.2]`                                           |
 
 Evidence: `gh release create` returned all five URLs; the per-tag
 `gh release view` loop over `git tag` resolves **13/13** with zero
